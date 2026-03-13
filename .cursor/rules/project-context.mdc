@@ -1,0 +1,39 @@
+---
+description: Context cho đồ án tốt nghiệp - Hệ thống quản lý thư viện
+globs:
+alwaysApply: true
+---
+
+# Project Context
+
+Đây là đồ án tốt nghiệp cử nhân CNTT (ĐH Bách Khoa Hà Nội, ngành Việt Nhật).
+
+## Quick Summary
+- **Dự án**: Web app quản lý mượn trả sách thư viện + RAG chatbot + NFC
+- **Trọng tâm**: Backend SpringBoot (đào sâu kiến trúc, patterns, testing)
+- **Solo project**, timeline 4-5 tháng
+- **Tech**: SpringBoot 3 + React 18 + FastAPI (RAG) + PostgreSQL + Redis + Elasticsearch + Docker
+
+## Khi hỗ trợ code, lưu ý:
+1. Đọc `docs/PROJECT_OVERVIEW.md` để nắm kiến trúc tổng thể
+2. Đọc `docs/PROGRESS.md` để biết đang ở giai đoạn nào
+3. Đọc `docs/BACKEND.md` cho context về backend patterns đang dùng
+4. Đọc `docs/DATABASE.md` cho schema hiện tại
+5. Đọc `docs/API_SPEC.md` cho API contracts
+6. Đọc `docs/ISSUES.md` cho known issues
+
+## Coding conventions:
+- Backend: Java 17+, follow Spring Boot best practices
+- DTO pattern bắt buộc (không expose Entity ra Controller)
+- MapStruct cho entity-DTO mapping
+- Global exception handling qua @ControllerAdvice
+- API response format thống nhất (xem BACKEND.md)
+- Frontend: TypeScript, functional components, React Query cho data fetching
+- Commit messages bằng tiếng Anh, mô tả rõ ràng
+
+## Cập nhật docs:
+- Sau mỗi phiên làm việc, cập nhật `docs/PROGRESS.md`
+- Khi thay đổi schema, cập nhật `docs/DATABASE.md`
+- Khi thêm/sửa API, cập nhật `docs/API_SPEC.md`
+- Khi có quyết định kiến trúc mới, thêm ADR vào `docs/DECISIONS.md`
+- Khi gặp bug/blocker, ghi vào `docs/ISSUES.md`

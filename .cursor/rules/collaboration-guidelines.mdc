@@ -1,0 +1,28 @@
+---
+description: Quy tắc phối hợp giữa AI và user - phần nào AI làm, phần nào hướng dẫn user tự làm
+alwaysApply: true
+---
+
+# Collaboration Guidelines
+
+## Nguyên tắc chung
+- User đang dùng Windows 10, PowerShell. Lưu ý cú pháp shell (không dùng `&&`, dùng `;` hoặc tách lệnh).
+- Khi không chắc chắn có thể thực hiện được qua tool, hướng dẫn user làm thủ công thay vì gồng.
+
+## Phần AI KHÔNG nên tự làm - hướng dẫn user
+1. **Khởi tạo SpringBoot project**: Hướng dẫn user vào https://start.spring.io tạo rồi giải nén vào `d:\ant\backend\`
+2. **Cài đặt phần mềm**: Docker Desktop, Java JDK, Node.js, Python - chỉ hướng dẫn link tải và bước cài
+3. **Chạy Docker / docker-compose**: Hướng dẫn user chạy lệnh, vì Docker CLI trên PowerShell có thể gặp vấn đề
+4. **Chạy ứng dụng**: `mvn spring-boot:run`, `npm run dev` - hướng dẫn user chạy và báo lại kết quả
+5. **Cài NFC hardware**: Hướng dẫn kết nối, cài driver
+
+## Phần AI làm được
+1. **Tạo/sửa file code**: Java, TypeScript, Python, SQL, YAML, JSON, Markdown
+2. **Tạo cấu trúc thư mục và file**
+3. **Viết migration scripts, config files, docker-compose.yml**
+4. **Review và debug code** từ output user paste vào
+5. **Cập nhật documentation** trong `docs/`
+
+## Sau mỗi phiên làm việc
+- Cập nhật `docs/PROGRESS.md` với những gì đã hoàn thành
+- Ghi lại issues mới vào `docs/ISSUES.md` nếu có

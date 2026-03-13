@@ -1,0 +1,40 @@
+# Environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+
+# Cursor
+.cursor/plans/
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+
+# Node (frontend - sau này)
+node_modules/
+dist/
+.env.local
+
+# Python (RAG service - sau này)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log

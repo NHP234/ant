@@ -1,0 +1,10 @@
+CREATE INDEX idx_borrow_records_user_id ON borrow_records(user_id);
+CREATE INDEX idx_borrow_records_book_id ON borrow_records(book_id);
+CREATE INDEX idx_borrow_records_status ON borrow_records(status);
+CREATE INDEX idx_borrow_records_due_date ON borrow_records(due_date) WHERE status = 'BORROWING';
+CREATE INDEX idx_notifications_user_id ON notifications(user_id) WHERE is_read = false;
+CREATE INDEX idx_books_title ON books(title);
+CREATE INDEX idx_books_author ON books(author);
+CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
+CREATE INDEX idx_users_nfc_card_uid ON users(nfc_card_uid) WHERE nfc_card_uid IS NOT NULL;
+CREATE INDEX idx_books_nfc_tag_uid ON books(nfc_tag_uid) WHERE nfc_tag_uid IS NOT NULL;
