@@ -28,12 +28,13 @@
 
 ### Tuần 2: CRUD & Core Patterns
 - ✅ Entity classes (User, Book, Category, BorrowRecord, Notification, AuditLog)
-- ⬜ DTO classes + MapStruct mappers
-- ⬜ Book CRUD APIs (controller + service + repository)
-- ⬜ Category CRUD APIs
+- ✅ DTO classes (ApiResponse, PageResponse, BookCreateRequest, BookUpdateRequest, BookResponse, CategoryCreateRequest, CategoryResponse)
+- ✅ MapStruct mappers (BookMapper, CategoryMapper) + dependency setup
+- ✅ Book CRUD APIs (BookController + BookService + BookRepository) với search
+- ✅ Category CRUD APIs (CategoryController + CategoryService + CategoryRepository)
 - ✅ Global Exception Handler (@ControllerAdvice)
-- ⬜ Pagination & Sorting support
-- ⬜ Bean Validation (@Valid, custom validators)
+- ✅ Pagination & Sorting support (@PageableDefault)
+- ✅ Bean Validation (@Valid, @NotBlank, @Size, @Min)
 
 ### Tuần 3: Security
 - ⬜ Spring Security config
@@ -146,3 +147,4 @@
 |------|----------|
 | 2026-03-04 | Khởi tạo project, setup documentation structure |
 | 2026-03-04 | Setup SpringBoot project, docker-compose, application.yml, entities, repositories, exceptions, Flyway migrations V1-V7 |
+| 2026-03-14 | DTOs, MapStruct mappers, Book/Category CRUD (Controller + Service), pagination, validation, .gitignore, .env |
