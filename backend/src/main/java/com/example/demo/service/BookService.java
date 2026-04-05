@@ -66,13 +66,7 @@ public class BookService {
     public BookResponse updateBook(Long id, BookUpdateRequest request) {
         Book book = findBookOrThrow(id);
 
-        if (request.getTitle() != null) book.setTitle(request.getTitle());
-        if (request.getAuthor() != null) book.setAuthor(request.getAuthor());
-        if (request.getIsbn() != null) book.setIsbn(request.getIsbn());
-        if (request.getPublisher() != null) book.setPublisher(request.getPublisher());
-        if (request.getPublishYear() != null) book.setPublishYear(request.getPublishYear());
-        if (request.getDescription() != null) book.setDescription(request.getDescription());
-        if (request.getCoverImageUrl() != null) book.setCoverImageUrl(request.getCoverImageUrl());
+        bookMapper.updateEntity(request, book);
 
         if (request.getQuantity() != null) {
             int diff = request.getQuantity() - book.getQuantity();
