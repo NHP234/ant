@@ -37,13 +37,13 @@
 - ✅ Bean Validation (@Valid, @NotBlank, @Size, @Min)
 
 ### Tuần 3: Security
-- ⬜ Spring Security config
-- ⬜ JWT token generation & validation
-- ⬜ Refresh Token mechanism
-- ⬜ Login / Register endpoints
-- ⬜ Role-based authorization (@PreAuthorize)
-- ⬜ BCrypt password encoding
-- ⬜ CORS configuration
+- ✅ Spring Security config (SecurityFilterChain, DaoAuthenticationProvider, CORS)
+- ✅ JWT token generation & validation (JwtTokenProvider + jjwt 0.12.6)
+- ✅ Refresh Token mechanism (AuthService.refresh)
+- ✅ Login / Register endpoints (AuthController: /api/auth/login, /register, /refresh)
+- ✅ Role-based authorization (@PreAuthorize trên Book/Category controllers)
+- ✅ BCrypt password encoding (PasswordEncoder bean)
+- ✅ CORS configuration (localhost:5173, localhost:3000)
 
 ### Tuần 4: Business Logic - Mượn/Trả
 - ⬜ BorrowRecord service (mượn sách, trả sách)
@@ -148,3 +148,4 @@
 | 2026-03-04 | Khởi tạo project, setup documentation structure |
 | 2026-03-04 | Setup SpringBoot project, docker-compose, application.yml, entities, repositories, exceptions, Flyway migrations V1-V7 |
 | 2026-03-14 | DTOs, MapStruct mappers, Book/Category CRUD (Controller + Service), pagination, validation, .gitignore, .env |
+| 2026-04-05 | Security: JWT auth (jjwt), login/register/refresh, JwtFilter, @PreAuthorize (ADMIN/LIBRARIAN/STUDENT), CORS, BCrypt |
