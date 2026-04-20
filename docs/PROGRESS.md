@@ -7,7 +7,7 @@
 
 | Giai đoạn | Trạng thái | Thời gian |
 |-----------|-----------|-----------|
-| Tháng 1: Backend nền tảng | 🔄 In Progress | Tuần 1-4 |
+| Tháng 1: Backend nền tảng | ✅ Done | Tuần 1-4 |
 | Tháng 2: Backend nâng cao + FE | ⬜ TODO | Tuần 5-8 |
 | Tháng 3: Frontend + RAG | ⬜ TODO | Tuần 9-12 |
 | Tháng 4: NFC + Hoàn thiện | ⬜ TODO | Tuần 13-16 |
@@ -46,12 +46,17 @@
 - ✅ CORS configuration (localhost:5173, localhost:3000)
 
 ### Tuần 4: Business Logic - Mượn/Trả
-- ⬜ BorrowRecord service (mượn sách, trả sách)
-- ⬜ Business rules: giới hạn số sách mượn đồng thời
-- ⬜ Business rules: kiểm tra available_quantity
-- ⬜ Business rules: tính ngày quá hạn, phí phạt
-- ⬜ Validation: không mượn sách đang mượn
-- ⬜ API: lịch sử mượn trả của user
+- ✅ BorrowService (mượn sách, trả sách, lịch sử, overdue check)
+- ✅ Business rules: giới hạn tối đa 5 sách mượn đồng thời (configurable)
+- ✅ Business rules: kiểm tra available_quantity (atomic decrement/increment)
+- ✅ Business rules: tính ngày quá hạn + auto mark OVERDUE
+- ✅ Validation: không cho mượn sách đang mượn (existsByUserIdAndBookIdAndStatus)
+- ✅ API: lịch sử mượn trả của user (GET /api/borrows/my)
+- ✅ API: admin xem tất cả (GET /api/borrows), xem quá hạn (GET /api/borrows/overdue)
+- ✅ BorrowController + BorrowRecordMapper + BorrowRequest/BorrowRecordResponse DTOs
+- ✅ OverdueCheckScheduler (@Scheduled cron hàng ngày 00:00)
+- ✅ Notification tự động khi mượn/trả/quá hạn
+- ✅ @EnableScheduling trên DemoApplication
 
 ---
 
@@ -149,3 +154,4 @@
 | 2026-03-04 | Setup SpringBoot project, docker-compose, application.yml, entities, repositories, exceptions, Flyway migrations V1-V7 |
 | 2026-03-14 | DTOs, MapStruct mappers, Book/Category CRUD (Controller + Service), pagination, validation, .gitignore, .env |
 | 2026-04-05 | Security: JWT auth (jjwt), login/register/refresh, JwtFilter, @PreAuthorize (ADMIN/LIBRARIAN/STUDENT), CORS, BCrypt |
+| 2026-04-15 | Business Logic: BorrowService (mượn/trả/quá hạn), BorrowController, OverdueCheckScheduler, auto Notification |
