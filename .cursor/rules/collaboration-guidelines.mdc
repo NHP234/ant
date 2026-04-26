@@ -23,6 +23,11 @@ alwaysApply: true
 4. **Review và debug code** từ output user paste vào
 5. **Cập nhật documentation** trong `docs/`
 
+## Nguyên tắc viết code
+1. **API phải idempotent**: Không dùng toggle. Client phải gửi rõ trạng thái mong muốn (vd: `{ "active": false }` thay vì gọi toggle). Đảm bảo gọi nhiều lần cùng kết quả.
+2. **API phải explicit**: Mỗi endpoint thể hiện rõ intent, không để client phải đoán kết quả.
+3. **Prefer explicit state over toggle** trong mọi trường hợp: status, role, permission...
+
 ## Sau mỗi phiên làm việc
 - Cập nhật `docs/PROGRESS.md` với những gì đã hoàn thành
 - Ghi lại issues mới vào `docs/ISSUES.md` nếu có

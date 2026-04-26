@@ -57,6 +57,9 @@
 - ✅ OverdueCheckScheduler (@Scheduled cron hàng ngày 00:00)
 - ✅ Notification tự động khi mượn/trả/quá hạn
 - ✅ @EnableScheduling trên DemoApplication
+- ✅ User Management: UserController + UserService + UserMapper (ADMIN tạo user với role tùy chọn)
+- ✅ API: POST /api/users (tạo LIBRARIAN/ADMIN), GET /api/users (list), GET /api/users/me (profile)
+- ✅ API: PUT /api/users/{id}/role (đổi role), PUT /api/users/{id}/status (activate/deactivate)
 
 ---
 
@@ -155,3 +158,4 @@
 | 2026-03-14 | DTOs, MapStruct mappers, Book/Category CRUD (Controller + Service), pagination, validation, .gitignore, .env |
 | 2026-04-05 | Security: JWT auth (jjwt), login/register/refresh, JwtFilter, @PreAuthorize (ADMIN/LIBRARIAN/STUDENT), CORS, BCrypt |
 | 2026-04-15 | Business Logic: BorrowService (mượn/trả/quá hạn), BorrowController, OverdueCheckScheduler, auto Notification |
+| 2026-04-26 | User Management: UserController + UserService (ADMIN tạo user với role, list users, đổi role, update status) |

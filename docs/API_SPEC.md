@@ -98,10 +98,29 @@
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | /users/me | User | Thông tin user hiện tại |
-| PUT | /users/me | User | Cập nhật profile |
-| GET | /users | ADMIN | Danh sách users |
+| POST | /users | ADMIN | Tạo user mới (với role tùy chọn) |
+| GET | /users | ADMIN | Danh sách users (paginated) |
+| GET | /users/{id} | ADMIN | Chi tiết user |
 | PUT | /users/{id}/role | ADMIN | Thay đổi role user |
-| PUT | /users/{id}/status | ADMIN | Activate/deactivate user |
+| PUT | /users/{id}/status | ADMIN | Cập nhật trạng thái user (explicit active/inactive) |
+
+### POST /users (ADMIN only)
+```json
+// Request
+{ "username": "librarian01", "password": "Lib@1234", "email": "lib01@library.com", "fullName": "Tran Thi B", "role": "LIBRARIAN" }
+
+// Response 201
+{ "success": true, "data": { "id": 3, "username": "librarian01", "email": "lib01@library.com", "fullName": "Tran Thi B", "role": "LIBRARIAN", "isActive": true }, "message": "User created successfully" }
+```
+
+### PUT /users/{id}/role (ADMIN only)
+```json
+// Request
+{ "role": "LIBRARIAN" }
+
+// Response 200
+{ "success": true, "data": { "id": 2, "username": "student01", "role": "LIBRARIAN", "isActive": true }, "message": "Role updated successfully" }
+```
 
 ---
 
