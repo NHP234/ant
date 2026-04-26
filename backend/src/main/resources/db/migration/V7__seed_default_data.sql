@@ -1,7 +1,3 @@
--- Admin user (password: admin123, BCrypt encoded)
-INSERT INTO users (username, password_hash, email, full_name, role)
-VALUES ('admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin@library.com', 'System Admin', 'ADMIN');
-
 -- Default categories
 INSERT INTO categories (name, description) VALUES
     ('Công nghệ thông tin', 'Sách về lập trình, mạng, cơ sở dữ liệu, AI'),
