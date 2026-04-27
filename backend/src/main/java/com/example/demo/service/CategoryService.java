@@ -7,6 +7,8 @@ import com.example.demo.mapper.CategoryMapper;
 import com.example.demo.model.entity.Category;
 import com.example.demo.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
 
+    @Cacheable(value = "categories", key = "'all'")
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findAll().stream()
                 .map(categoryMapper::toResponse)
@@ -31,6 +34,7 @@ public class CategoryService {
     }
 
     @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse createCategory(CategoryCreateRequest request) {
         Category category = categoryMapper.toEntity(request);
         category = categoryRepository.save(category);
@@ -38,6 +42,7 @@ public class CategoryService {
     }
 
     @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse updateCategory(Long id, CategoryCreateRequest request) {
         Category category = findCategoryOrThrow(id);
         categoryMapper.updateEntity(request, category);
@@ -46,6 +51,7 @@ public class CategoryService {
     }
 
     @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
     public void deleteCategory(Long id) {
         Category category = findCategoryOrThrow(id);
         categoryRepository.delete(category);

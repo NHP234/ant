@@ -11,6 +11,8 @@ import com.example.demo.model.entity.Category;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,19 +39,27 @@ public class BookService {
     }
 
     public PageResponse<BookResponse> searchBooks(String query, Pageable pageable) {
-        Page<Book> page = bookRepository.findByTitleContainingIgnoreCase(query, pageable);
+        String tsQuery = query.trim().replaceAll("\\s+", " & ");
+        Page<Book> page = bookRepository.fullTextSearch(tsQuery, pageable);
+
+        if (page.isEmpty()) {
+            page = bookRepository.findByTitleContainingIgnoreCase(query, pageable);
+        }
+
         List<BookResponse> content = page.getContent().stream()
                 .map(bookMapper::toResponse)
                 .toList();
         return PageResponse.from(page, content);
     }
 
+    @Cacheable(value = "book", key = "#id")
     public BookResponse getBookById(Long id) {
         Book book = findBookOrThrow(id);
         return bookMapper.toResponse(book);
     }
 
     @Transactional
+    @CacheEvict(value = "book", allEntries = true)
     public BookResponse createBook(BookCreateRequest request) {
         Book book = bookMapper.toEntity(request);
 
@@ -63,6 +73,7 @@ public class BookService {
     }
 
     @Transactional
+    @CacheEvict(value = "book", key = "#id")
     public BookResponse updateBook(Long id, BookUpdateRequest request) {
         Book book = findBookOrThrow(id);
 
@@ -84,6 +95,7 @@ public class BookService {
     }
 
     @Transactional
+    @CacheEvict(value = "book", key = "#id")
     public void deleteBook(Long id) {
         Book book = findBookOrThrow(id);
         bookRepository.delete(book);

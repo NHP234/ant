@@ -66,18 +66,19 @@
 ## Tháng 2: Backend Nâng cao + Frontend Cơ bản
 
 ### Tuần 5: Caching & Search
-- ⬜ Redis config + Spring Cache setup
-- ⬜ Cache strategy: sách phổ biến, thống kê dashboard
-- ⬜ Cache invalidation khi data thay đổi
-- ⬜ Elasticsearch setup (Docker)
-- ⬜ Index sách vào Elasticsearch
-- ⬜ Full-text search API (tên, tác giả, mô tả)
+- ✅ Redis config + Spring Cache (spring-boot-starter-data-redis, CacheConfig)
+- ✅ Cache strategy: categories (24h), book detail (30m), dashboard stats (5m)
+- ✅ Cache invalidation: @CacheEvict trên create/update/delete
+- ✅ Dashboard API: GET /api/dashboard/stats (ADMIN/LIBRARIAN, cached)
+- ✅ PostgreSQL full-text search thay Elasticsearch (tsvector + unaccent + GIN index)
+- ✅ Flyway V8: search_vector column, trigger auto-update, Vietnamese text search config
+- ✅ Search API nâng cấp: full-text search title + author + description, weighted ranking, fallback LIKE
 
 ### Tuần 6: Logging, Scheduling, Notifications
 - ⬜ Spring AOP: audit logging (mượn/trả/thêm sách)
-- ⬜ @Scheduled: kiểm tra sách quá hạn hàng ngày
-- ⬜ Notification service (in-app notifications)
-- ⬜ Dashboard statistics API (tổng sách, đang mượn, quá hạn...)
+- ✅ @Scheduled: OverdueCheckScheduler (đã làm tuần 4)
+- ⬜ Notification service (in-app notifications API)
+- ✅ Dashboard statistics API (đã làm tuần 5)
 
 ### Tuần 7: Testing & Documentation
 - ⬜ Unit tests cho Service layer (JUnit 5 + Mockito)
@@ -159,3 +160,4 @@
 | 2026-04-05 | Security: JWT auth (jjwt), login/register/refresh, JwtFilter, @PreAuthorize (ADMIN/LIBRARIAN/STUDENT), CORS, BCrypt |
 | 2026-04-15 | Business Logic: BorrowService (mượn/trả/quá hạn), BorrowController, OverdueCheckScheduler, auto Notification |
 | 2026-04-26 | User Management: UserController + UserService (ADMIN tạo user với role, list users, đổi role, update status) |
+| 2026-04-26 | Redis Cache (categories/book/dashboard), PostgreSQL full-text search (tsvector+unaccent+GIN), Dashboard API |

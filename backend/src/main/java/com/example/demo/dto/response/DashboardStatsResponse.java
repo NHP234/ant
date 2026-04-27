@@ -9,9 +9,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CategoryResponse {
+public class DashboardStatsResponse {
 
-    private Long id;
-    private String name;
-    private String description;
+    private long totalBooks;
+    private long totalUsers;
+    private long activeBorrows;
+    private long overdueBooks;
+    private long totalCategories;
 }

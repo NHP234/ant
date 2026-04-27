@@ -30,6 +30,8 @@ cd d:\ant\backend
 | 4 | [04-authorization.md](04-authorization.md) | Phân quyền (role-based access) |
 | 5 | [05-borrow.md](05-borrow.md) | Borrow APIs (mượn/trả sách) |
 | 6 | [06-user-management.md](06-user-management.md) | User Management APIs (ADMIN) |
+| 7 | [07-dashboard.md](07-dashboard.md) | Dashboard Statistics API |
+| 8 | [08-search.md](08-search.md) | Full-text Search (nâng cao) |
 
 ---
 
@@ -39,6 +41,8 @@ cd d:\ant\backend
 3. Test lại Category/Book CRUD (file 01-02) với token ADMIN trong header
 4. Test Borrow (file 05): mượn/trả sách
 5. Test User Management (file 06): tạo LIBRARIAN, đổi role, update status
+6. Test Dashboard (file 07): thống kê + cache verification
+7. Test Search nâng cao (file 08): full-text search tiếng Việt
 
 ---
 
@@ -107,3 +111,13 @@ cd d:\ant\backend
 | 6.5 | Get user by id | |
 | 6.6 | Update role | |
 | 6.7 | Update status | |
+| 7.1 | Dashboard stats | |
+| 7.2 | Cache verification | |
+| 7.3 | Dashboard - STUDENT forbidden | |
+| 8.1 | Search by title | |
+| 8.2 | Search by author | |
+| 8.3 | Search by description | |
+| 8.4 | Search tiếng Việt không dấu | |
+| 8.5 | Search nhiều từ | |
+| 8.6 | Search no results | |
+| 8.7 | Search with pagination | |
