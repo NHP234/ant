@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.audit.Auditable;
 import com.example.demo.dto.request.BookCreateRequest;
 import com.example.demo.dto.request.BookUpdateRequest;
 import com.example.demo.dto.response.BookResponse;
@@ -60,6 +61,7 @@ public class BookService {
 
     @Transactional
     @CacheEvict(value = "book", allEntries = true)
+    @Auditable(action = "CREATE", entityType = "BOOK")
     public BookResponse createBook(BookCreateRequest request) {
         Book book = bookMapper.toEntity(request);
 
@@ -74,6 +76,7 @@ public class BookService {
 
     @Transactional
     @CacheEvict(value = "book", key = "#id")
+    @Auditable(action = "UPDATE", entityType = "BOOK")
     public BookResponse updateBook(Long id, BookUpdateRequest request) {
         Book book = findBookOrThrow(id);
 
@@ -96,6 +99,7 @@ public class BookService {
 
     @Transactional
     @CacheEvict(value = "book", key = "#id")
+    @Auditable(action = "DELETE", entityType = "BOOK")
     public void deleteBook(Long id) {
         Book book = findBookOrThrow(id);
         bookRepository.delete(book);

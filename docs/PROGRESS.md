@@ -75,9 +75,10 @@
 - ✅ Search API nâng cấp: full-text search title + author + description, weighted ranking, fallback LIKE
 
 ### Tuần 6: Logging, Scheduling, Notifications
-- ⬜ Spring AOP: audit logging (mượn/trả/thêm sách)
+- ✅ Spring AOP: @Auditable annotation + AuditAspect (auto log mượn/trả/thêm/sửa/xóa sách)
 - ✅ @Scheduled: OverdueCheckScheduler (đã làm tuần 4)
-- ⬜ Notification service (in-app notifications API)
+- ✅ Notification API: GET /notifications, GET /notifications/unread-count, PUT /{id}/read, PUT /read-all
+- ✅ NotificationService + NotificationMapper + NotificationResponse DTO
 - ✅ Dashboard statistics API (đã làm tuần 5)
 
 ### Tuần 7: Testing & Documentation
@@ -161,3 +162,4 @@
 | 2026-04-15 | Business Logic: BorrowService (mượn/trả/quá hạn), BorrowController, OverdueCheckScheduler, auto Notification |
 | 2026-04-26 | User Management: UserController + UserService (ADMIN tạo user với role, list users, đổi role, update status) |
 | 2026-04-26 | Redis Cache (categories/book/dashboard), PostgreSQL full-text search (tsvector+unaccent+GIN), Dashboard API |
+| 2026-04-27 | Spring AOP audit logging (@Auditable), Notification API (CRUD + unread count + mark read) |

@@ -32,6 +32,7 @@ cd d:\ant\backend
 | 6 | [06-user-management.md](06-user-management.md) | User Management APIs (ADMIN) |
 | 7 | [07-dashboard.md](07-dashboard.md) | Dashboard Statistics API |
 | 8 | [08-search.md](08-search.md) | Full-text Search (nâng cao) |
+| 9 | [09-notifications.md](09-notifications.md) | Notification APIs |
 
 ---
 
@@ -43,6 +44,7 @@ cd d:\ant\backend
 5. Test User Management (file 06): tạo LIBRARIAN, đổi role, update status
 6. Test Dashboard (file 07): thống kê + cache verification
 7. Test Search nâng cao (file 08): full-text search tiếng Việt
+8. Test Notifications (file 09): xem, đếm chưa đọc, mark read
 
 ---
 
@@ -121,3 +123,9 @@ cd d:\ant\backend
 | 8.5 | Search nhiều từ | |
 | 8.6 | Search no results | |
 | 8.7 | Search with pagination | |
+| 9.1 | Get notifications | |
+| 9.2 | Unread count | |
+| 9.3 | Mark one as read | |
+| 9.4 | Mark all as read | |
+| 9.5 | Mark other's notification | |
+| 9.6 | No token | |

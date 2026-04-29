@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.audit.Auditable;
 import com.example.demo.dto.request.BorrowRequest;
 import com.example.demo.dto.response.BorrowRecordResponse;
 import com.example.demo.dto.response.PageResponse;
@@ -44,6 +45,7 @@ public class BorrowService {
     private int defaultDueDays;
 
     @Transactional
+    @Auditable(action = "BORROW", entityType = "BORROW_RECORD")
     public BorrowRecordResponse borrowBook(String username, BorrowRequest request) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
@@ -84,6 +86,7 @@ public class BorrowService {
     }
 
     @Transactional
+    @Auditable(action = "RETURN", entityType = "BORROW_RECORD")
     public BorrowRecordResponse returnBook(Long borrowId, String note) {
         BorrowRecord record = borrowRecordRepository.findById(borrowId)
                 .orElseThrow(() -> new ResourceNotFoundException("BorrowRecord", "id", borrowId));
