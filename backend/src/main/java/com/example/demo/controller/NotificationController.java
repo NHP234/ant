@@ -4,6 +4,7 @@ import com.example.demo.dto.response.ApiResponse;
 import com.example.demo.dto.response.NotificationResponse;
 import com.example.demo.dto.response.PageResponse;
 import com.example.demo.service.NotificationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -17,6 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
+@Tag(name = "Notifications", description = "Thông báo của user")
 public class NotificationController {
 
     private final NotificationService notificationService;

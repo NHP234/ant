@@ -5,6 +5,7 @@ import com.example.demo.dto.response.ApiResponse;
 import com.example.demo.dto.response.BorrowRecordResponse;
 import com.example.demo.dto.response.PageResponse;
 import com.example.demo.service.BorrowService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/borrows")
 @RequiredArgsConstructor
+@Tag(name = "Borrows", description = "Mượn/trả sách, lịch sử mượn trả")
 public class BorrowController {
 
     private final BorrowService borrowService;

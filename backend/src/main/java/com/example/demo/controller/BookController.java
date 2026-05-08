@@ -6,6 +6,8 @@ import com.example.demo.dto.response.ApiResponse;
 import com.example.demo.dto.response.BookResponse;
 import com.example.demo.dto.response.PageResponse;
 import com.example.demo.service.BookService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/books")
 @RequiredArgsConstructor
+@Tag(name = "Books", description = "Quản lý sách - CRUD, tìm kiếm")
 public class BookController {
 
     private final BookService bookService;

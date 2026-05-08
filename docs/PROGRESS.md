@@ -82,11 +82,13 @@
 - ✅ Dashboard statistics API (đã làm tuần 5)
 
 ### Tuần 7: Testing & Documentation
-- ⬜ Unit tests cho Service layer (JUnit 5 + Mockito)
-- ⬜ Integration tests (SpringBootTest + TestContainers)
-- ⬜ Test coverage >= 70% service layer
-- ⬜ Swagger/OpenAPI config
-- ⬜ API documentation đầy đủ annotations
+- ✅ Unit tests: BorrowServiceTest (10 test cases - borrow/return/overdue)
+- ✅ Unit tests: BookServiceTest (8 test cases - CRUD/search/fallback)
+- ✅ Unit tests: UserServiceTest (10 test cases - create/role/status/profile)
+- ✅ Swagger/OpenAPI: springdoc-openapi + OpenApiConfig (JWT security scheme)
+- ✅ @Tag annotations trên tất cả controllers
+- ✅ @Operation annotations trên Auth endpoints
+- ✅ Swagger UI accessible: http://localhost:8080/swagger-ui.html
 
 ### Tuần 8: Frontend Setup
 - ⬜ Init React project (Vite + TypeScript)
@@ -163,3 +165,4 @@
 | 2026-04-26 | User Management: UserController + UserService (ADMIN tạo user với role, list users, đổi role, update status) |
 | 2026-04-26 | Redis Cache (categories/book/dashboard), PostgreSQL full-text search (tsvector+unaccent+GIN), Dashboard API |
 | 2026-04-27 | Spring AOP audit logging (@Auditable), Notification API (CRUD + unread count + mark read) |
+| 2026-05-06 | Unit tests (BorrowService/BookService/UserService, 28 test cases), Swagger/OpenAPI config + annotations |

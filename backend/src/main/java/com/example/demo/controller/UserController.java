@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.request.CreateUserRequest;
 import com.example.demo.dto.request.UpdateRoleRequest;
 import com.example.demo.dto.request.UpdateStatusRequest;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.example.demo.dto.response.ApiResponse;
 import com.example.demo.dto.response.PageResponse;
 import com.example.demo.dto.response.UserResponse;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@Tag(name = "Users", description = "Quản lý users - ADMIN tạo/sửa, user xem profile")
 public class UserController {
 
     private final UserService userService;
