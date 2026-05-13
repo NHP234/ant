@@ -4,12 +4,12 @@
 
 ## Tech Stack
 
-- Spring Boot 3.x
-- Java 17+
+- Spring Boot 4.0.3
+- Java 21
 - Spring Security + JWT
 - Spring Data JPA + PostgreSQL
 - Spring Cache + Redis
-- Elasticsearch
+- PostgreSQL full-text search (tsvector + unaccent + GIN index, thay Elasticsearch)
 - Spring AOP
 - MapStruct
 - Flyway
@@ -25,7 +25,6 @@ com.library/
 │   ├── SecurityConfig.java          # Spring Security config
 │   ├── JwtConfig.java               # JWT settings
 │   ├── RedisConfig.java             # Redis cache config
-│   ├── ElasticsearchConfig.java     # ES client config
 │   ├── SwaggerConfig.java           # OpenAPI config
 │   └── CorsConfig.java              # CORS settings
 ├── controller/
@@ -34,7 +33,7 @@ com.library/
 │   ├── CategoryController.java      # Category CRUD
 │   ├── BorrowController.java        # Borrow/Return operations
 │   ├── UserController.java          # User management
-│   ├── SearchController.java        # Elasticsearch search
+│   ├── SearchController.java        # PostgreSQL full-text search
 │   ├── ChatController.java          # RAG proxy
 │   ├── NotificationController.java  # User notifications
 │   └── DashboardController.java     # Statistics

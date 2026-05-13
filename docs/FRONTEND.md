@@ -4,13 +4,13 @@
 
 ## Tech Stack
 
-- React 18 + TypeScript
+- React 19 + TypeScript
 - Vite (build tool)
-- Ant Design hoặc MUI (UI components)
+- Shadcn/ui (Radix + Nova preset) + TailwindCSS v4 (UI components)
 - TanStack Query / React Query (data fetching, caching, mutations)
-- React Router v6 (routing)
+- React Router v7 (routing)
 - Axios (HTTP client, interceptors cho JWT)
-- Zustand hoặc Context API (global state - auth)
+- AuthProvider Context (global auth state)
 
 ## Project Structure
 
@@ -117,4 +117,6 @@ frontend/src/
 - Gửi message -> gọi RAG API -> hiện response
 - Hiện suggestions: "Gợi ý sách về...", "Tìm sách của tác giả..."
 
-## Status: chưa bắt đầu
+## Status: ✅ Done (cơ bản)
+
+Đã implement đầy đủ admin panel + student view (xem PROGRESS.md tuần 8).

@@ -23,16 +23,17 @@ _(Chưa có issue nào)_
 
 ## Resolved Issues
 
-_(Chưa có)_
+### [Q-001] Chọn UI Component Library: Ant Design hay MUI?
+- **Ngày**: 2026-03-04
+- **Resolved**: 2026-05-08
+- **Context**: Cả hai đều phù hợp. Ant Design có nhiều component cho admin panel (Table, Form). MUI có design đẹp hơn.
+- **Kết luận**: Chọn **Shadcn/ui** (Radix + Nova preset) + TailwindCSS v4 — headless components, dễ customize, hiện đại hơn cả hai lựa chọn ban đầu.
 
 ---
 
 ## Pending Questions
 
-### [Q-001] Chọn UI Component Library: Ant Design hay MUI?
-- **Ngày**: 2026-03-04
-- **Context**: Cả hai đều phù hợp. Ant Design có nhiều component cho admin panel (Table, Form). MUI có design đẹp hơn.
-- **Kết luận**: Chưa quyết định. Sẽ quyết khi bắt đầu frontend (tháng 2-3).
+
 
 ### [Q-002] LLM cho RAG: OpenAI API hay Ollama local?
 - **Ngày**: 2026-03-04

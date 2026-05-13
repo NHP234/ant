@@ -17,11 +17,11 @@ Web application quản lý mượn trả sách thư viện, tích hợp:
 ## Tech Stack
 
 ### Backend (Trọng tâm)
-- Spring Boot 3.x + Java 17+
+- Spring Boot 4.0.3 + Java 21
 - Spring Security (JWT + Refresh Token, RBAC)
 - Spring Data JPA + PostgreSQL
 - Spring Cache + Redis
-- Elasticsearch (full-text search)
+- PostgreSQL full-text search (tsvector + unaccent + GIN index, thay Elasticsearch)
 - Spring AOP (audit logging)
 - MapStruct (DTO mapping)
 - Swagger/OpenAPI 3
@@ -30,10 +30,10 @@ Web application quản lý mượn trả sách thư viện, tích hợp:
 - Docker + Docker Compose
 
 ### Frontend (Phụ trợ)
-- React 18 + Vite
-- Ant Design hoặc MUI
+- React 19 + Vite
+- Shadcn/ui (Radix + Nova preset) + TailwindCSS v4
 - TanStack Query (React Query)
-- React Router v6
+- React Router v7
 - Axios
 
 ### AI Service (Điểm nhấn)
@@ -52,7 +52,6 @@ Web application quản lý mượn trả sách thư viện, tích hợp:
                                     |                              |
                               [PostgreSQL]                    [ChromaDB]
                               [Redis Cache]
-                              [Elasticsearch]
                               [NFC Reader]
 ```
 
