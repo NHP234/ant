@@ -1,6 +1,27 @@
 # 4. Authorization (Phân quyền)
 
-> Dùng accessToken của student01 (STUDENT role) từ test 3.4
+> Hệ thống có sẵn ADMIN account từ DataInitializer (username/password cấu hình trong application.yml, mặc định: `admin` / `Admin@123`).
+> Không cần update DB thủ công.
+
+## Tóm tắt quyền
+
+| Endpoint | STUDENT | LIBRARIAN | ADMIN |
+|----------|---------|-----------|-------|
+| GET /api/books/**, GET /api/categories/** | ✅ Public | ✅ Public | ✅ Public |
+| POST /api/books, PUT /api/books/{id} | ❌ 403 | ✅ | ✅ |
+| DELETE /api/books/{id} | ❌ 403 | ❌ 403 | ✅ |
+| POST/PUT/DELETE /api/categories/** | ❌ 403 | ❌ 403 | ✅ |
+| POST /api/borrows | ✅ | ✅ | ✅ |
+| PUT /api/borrows/{id}/return | ❌ 403 | ✅ | ✅ |
+| GET /api/borrows (all) | ❌ 403 | ✅ | ✅ |
+| GET /api/borrows/my | ✅ | ✅ | ✅ |
+| GET /api/borrows/overdue | ❌ 403 | ✅ | ✅ |
+| POST/GET/PUT/DELETE /api/users/** | ❌ 403 | ❌ 403 | ✅ |
+| GET /api/users/me | ✅ | ✅ | ✅ |
+| GET /api/dashboard/stats | ❌ 403 | ✅ | ✅ |
+| GET/PUT /api/notifications/** | ✅ (own) | ✅ (own) | ✅ (own) |
+
+---
 
 ### 4.1 GET /api/books - Public, không cần token
 - **Method**: GET
@@ -19,7 +40,8 @@
 ```json
 {
   "title": "Test Book",
-  "author": "Test Author"
+  "author": "Test Author",
+  "quantity": 1
 }
 ```
 - **Expected**: 403 Forbidden (STUDENT không có ROLE_ADMIN hoặc ROLE_LIBRARIAN)
@@ -48,27 +70,26 @@
 ```json
 {
   "title": "Test Book",
-  "author": "Test Author"
+  "author": "Test Author",
+  "quantity": 1
 }
 ```
 - **Expected**: 401 Unauthorized
 - [ ] PASS
 
-### 4.5 Đăng ký ADMIN/LIBRARIAN để test quyền ghi
+### 4.5 Login ADMIN (có sẵn từ DataInitializer)
 
-> Hiện tại register luôn tạo STUDENT. Để test quyền ADMIN/LIBRARIAN, cần update role trực tiếp trong DB.
+> ADMIN account được tạo tự động khi backend khởi động. Mặc định: `admin` / `Admin@123` (cấu hình trong application.yml).
 
-Chạy trong terminal (khi PostgreSQL đang chạy):
-```
-docker exec -it library-postgres psql -U library_user -d library_db -c "UPDATE users SET role = 'ADMIN' WHERE username = 'student01';"
-```
-
-Sau đó login lại student01 để lấy token mới (token cũ vẫn chứa role STUDENT):
 ```json
 POST /api/auth/login
-{ "username": "student01", "password": "Pass@123" }
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
 ```
-> Copy accessToken mới (giờ có role ADMIN).
+> Copy accessToken → dùng cho các test cần quyền ADMIN.
+- [ ] PASS
 
 ### 4.6 POST /api/books - ADMIN tạo sách thành công
 - **Method**: POST
@@ -94,4 +115,38 @@ POST /api/auth/login
 - **URL**: `http://localhost:8080/api/books/6` (sách vừa tạo ở 4.6)
 - **Headers**: `Authorization: Bearer <accessToken ADMIN>`
 - **Expected**: 204 No Content
+- [ ] PASS
+
+### 4.8 DELETE /api/books/{id} - LIBRARIAN không có quyền xóa sách
+- **Method**: DELETE
+- **URL**: `http://localhost:8080/api/books/1`
+- **Headers**: `Authorization: Bearer <accessToken LIBRARIAN>`
+- **Expected**: 403 Forbidden
+> LIBRARIAN chỉ được POST/PUT sách, không được DELETE.
+- [ ] PASS
+
+### 4.9 POST /api/users - LIBRARIAN không có quyền tạo user
+- **Method**: POST
+- **URL**: `http://localhost:8080/api/users`
+- **Headers**:
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <accessToken LIBRARIAN>`
+- **Body**:
+```json
+{
+  "username": "hacker",
+  "password": "Test1234",
+  "email": "hack@test.com",
+  "fullName": "Hacker",
+  "role": "ADMIN"
+}
+```
+- **Expected**: 403 Forbidden
+- [ ] PASS
+
+### 4.10 GET /api/dashboard/stats - STUDENT không có quyền
+- **Method**: GET
+- **URL**: `http://localhost:8080/api/dashboard/stats`
+- **Headers**: `Authorization: Bearer <accessToken STUDENT>`
+- **Expected**: 403 Forbidden
 - [ ] PASS

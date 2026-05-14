@@ -1,8 +1,12 @@
 # 2. Book APIs
 
+> **Auth**: GET endpoints public (không cần token). POST/PUT cần ADMIN hoặc LIBRARIAN. DELETE cần ADMIN.
+> Xem SecurityConfig: `GET /api/books/**` → permitAll. POST/PUT → `@PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")`. DELETE → `@PreAuthorize("hasRole('ADMIN')")`.
+
 ### 2.1 GET /api/books - Lấy danh sách sách (default pagination)
 - **Method**: GET
 - **URL**: `http://localhost:8080/api/books`
+- **Auth**: Không cần token (public)
 - **Expected**: 200 OK, trả về page đầu tiên (5 sách từ seed data)
 
 ```json
@@ -23,37 +27,44 @@
 ### 2.2 GET /api/books - Custom pagination & sorting
 - **Method**: GET
 - **URL**: `http://localhost:8080/api/books?page=0&size=2&sort=title,desc`
+- **Auth**: Không cần token (public)
 - **Expected**: 200 OK, chỉ trả 2 sách, sort theo title giảm dần, totalPages = 3
 - [ ] PASS
 
 ### 2.3 GET /api/books/{id} - Lấy chi tiết 1 sách
 - **Method**: GET
 - **URL**: `http://localhost:8080/api/books/1`
+- **Auth**: Không cần token (public)
 - **Expected**: 200 OK, trả về "Clean Code" với đầy đủ thông tin + categories
 - [ ] PASS
 
 ### 2.4 GET /api/books/{id} - ID không tồn tại
 - **Method**: GET
 - **URL**: `http://localhost:8080/api/books/999`
+- **Auth**: Không cần token (public)
 - **Expected**: 404 Not Found
 - [ ] PASS
 
 ### 2.5 GET /api/books/search?q= - Tìm kiếm sách
 - **Method**: GET
 - **URL**: `http://localhost:8080/api/books/search?q=clean`
+- **Auth**: Không cần token (public)
 - **Expected**: 200 OK, trả về "Clean Code"
 - [ ] PASS
 
 ### 2.6 GET /api/books/search?q= - Tìm không thấy
 - **Method**: GET
 - **URL**: `http://localhost:8080/api/books/search?q=xyznotexist`
+- **Auth**: Không cần token (public)
 - **Expected**: 200 OK, content rỗng, totalElements = 0
 - [ ] PASS
 
 ### 2.7 POST /api/books - Tạo sách mới (không có category)
 - **Method**: POST
 - **URL**: `http://localhost:8080/api/books`
-- **Headers**: `Content-Type: application/json`
+- **Headers**:
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <accessToken ADMIN hoặc LIBRARIAN>`
 - **Body**:
 ```json
 {
@@ -72,7 +83,9 @@
 ### 2.8 POST /api/books - Tạo sách mới (có category)
 - **Method**: POST
 - **URL**: `http://localhost:8080/api/books`
-- **Headers**: `Content-Type: application/json`
+- **Headers**:
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <accessToken ADMIN hoặc LIBRARIAN>`
 - **Body**:
 ```json
 {
@@ -92,7 +105,9 @@
 ### 2.9 POST /api/books - Validation: thiếu title
 - **Method**: POST
 - **URL**: `http://localhost:8080/api/books`
-- **Headers**: `Content-Type: application/json`
+- **Headers**:
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <accessToken ADMIN hoặc LIBRARIAN>`
 - **Body**:
 ```json
 {
@@ -106,7 +121,9 @@
 ### 2.10 POST /api/books - Validation: quantity = 0
 - **Method**: POST
 - **URL**: `http://localhost:8080/api/books`
-- **Headers**: `Content-Type: application/json`
+- **Headers**:
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <accessToken ADMIN hoặc LIBRARIAN>`
 - **Body**:
 ```json
 {
@@ -121,7 +138,9 @@
 ### 2.11 PUT /api/books/{id} - Cập nhật sách (partial update)
 - **Method**: PUT
 - **URL**: `http://localhost:8080/api/books/1`
-- **Headers**: `Content-Type: application/json`
+- **Headers**:
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <accessToken ADMIN hoặc LIBRARIAN>`
 - **Body**:
 ```json
 {
@@ -135,7 +154,9 @@
 ### 2.12 PUT /api/books/{id} - Gán categories cho sách
 - **Method**: PUT
 - **URL**: `http://localhost:8080/api/books/1`
-- **Headers**: `Content-Type: application/json`
+- **Headers**:
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <accessToken ADMIN hoặc LIBRARIAN>`
 - **Body**:
 ```json
 {
@@ -145,14 +166,41 @@
 - **Expected**: 200 OK, categories chứa "Công nghệ thông tin" và "Toán học"
 - [ ] PASS
 
-### 2.13 DELETE /api/books/{id} - Xóa sách
+### 2.13 DELETE /api/books/{id} - Xóa sách (chỉ ADMIN)
 - **Method**: DELETE
 - **URL**: `http://localhost:8080/api/books/6` (sách "Head First Java" vừa tạo ở 2.7)
+- **Headers**: `Authorization: Bearer <accessToken ADMIN>`
 - **Expected**: 204 No Content
+> **Lưu ý**: LIBRARIAN KHÔNG có quyền xóa sách, chỉ ADMIN (`@PreAuthorize("hasRole('ADMIN')")`).
 - [ ] PASS
 
 ### 2.14 DELETE /api/books/{id} - Xóa sách không tồn tại
 - **Method**: DELETE
 - **URL**: `http://localhost:8080/api/books/999`
+- **Headers**: `Authorization: Bearer <accessToken ADMIN>`
 - **Expected**: 404 Not Found
+- [ ] PASS
+
+### 2.15 POST /api/books - STUDENT không có quyền tạo sách
+- **Method**: POST
+- **URL**: `http://localhost:8080/api/books`
+- **Headers**:
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <accessToken STUDENT>`
+- **Body**:
+```json
+{
+  "title": "Test Book",
+  "author": "Test Author",
+  "quantity": 1
+}
+```
+- **Expected**: 403 Forbidden
+- [ ] PASS
+
+### 2.16 DELETE /api/books/{id} - LIBRARIAN không có quyền xóa sách
+- **Method**: DELETE
+- **URL**: `http://localhost:8080/api/books/1`
+- **Headers**: `Authorization: Bearer <accessToken LIBRARIAN>`
+- **Expected**: 403 Forbidden
 - [ ] PASS

@@ -10,10 +10,10 @@ cd d:\ant
 docker-compose up -d
 ```
 
-2. Chạy SpringBoot:
+2. Chạy SpringBoot (trên PowerShell):
 ```
 cd d:\ant\backend
-./mvnw spring-boot:run
+.\mvnw spring-boot:run
 ```
 
 3. Verify: Mở browser vào `http://localhost:8080` - nếu thấy response (kể cả lỗi 401/403) là app đang chạy.
@@ -37,8 +37,8 @@ cd d:\ant\backend
 ---
 
 ## Thứ tự test khuyến nghị
-1. Test Auth trước (file 03): register -> login -> refresh
-2. Test Authorization (file 04): kiểm tra phân quyền STUDENT vs ADMIN
+1. Test Auth trước (file 03): register → login → refresh
+2. Test Authorization (file 04): kiểm tra phân quyền STUDENT vs LIBRARIAN vs ADMIN
 3. Test lại Category/Book CRUD (file 01-02) với token ADMIN trong header
 4. Test Borrow (file 05): mượn/trả sách
 5. Test User Management (file 06): tạo LIBRARIAN, đổi role, update status
@@ -67,24 +67,28 @@ cd d:\ant\backend
 | 1.1 | GET categories - all | |
 | 1.2 | GET categories - by id | |
 | 1.3 | GET categories - not found | |
-| 1.4 | POST categories - create | |
+| 1.4 | POST categories - create (ADMIN) | |
 | 1.5 | POST categories - validation | |
-| 1.6 | PUT categories - update | |
-| 1.7 | DELETE categories | |
+| 1.6 | PUT categories - update (ADMIN) | |
+| 1.7 | DELETE categories (ADMIN) | |
+| 1.8 | POST categories - LIBRARIAN forbidden | |
+| 1.9 | POST categories - no token 401 | |
 | 2.1 | GET books - default | |
 | 2.2 | GET books - pagination & sort | |
 | 2.3 | GET books - by id | |
 | 2.4 | GET books - not found | |
 | 2.5 | GET books/search - found | |
 | 2.6 | GET books/search - not found | |
-| 2.7 | POST books - no category | |
-| 2.8 | POST books - with category | |
+| 2.7 | POST books - no category (ADMIN/LIBRARIAN) | |
+| 2.8 | POST books - with category (ADMIN/LIBRARIAN) | |
 | 2.9 | POST books - missing title | |
 | 2.10 | POST books - invalid quantity | |
-| 2.11 | PUT books - partial update | |
-| 2.12 | PUT books - assign categories | |
-| 2.13 | DELETE books - success | |
+| 2.11 | PUT books - partial update (ADMIN/LIBRARIAN) | |
+| 2.12 | PUT books - assign categories (ADMIN/LIBRARIAN) | |
+| 2.13 | DELETE books - success (ADMIN only) | |
 | 2.14 | DELETE books - not found | |
+| 2.15 | POST books - STUDENT forbidden | |
+| 2.16 | DELETE books - LIBRARIAN forbidden | |
 | 3.1 | Register - success | |
 | 3.2 | Register - duplicate username | |
 | 3.3 | Register - validation errors | |
@@ -97,9 +101,12 @@ cd d:\ant\backend
 | 4.2 | POST books - STUDENT forbidden | |
 | 4.3 | POST categories - STUDENT forbidden | |
 | 4.4 | POST books - no token 401 | |
-| 4.5 | Update role to ADMIN in DB | |
+| 4.5 | Login ADMIN (DataInitializer) | |
 | 4.6 | POST books - ADMIN success | |
 | 4.7 | DELETE books - ADMIN success | |
+| 4.8 | DELETE books - LIBRARIAN forbidden | |
+| 4.9 | POST users - LIBRARIAN forbidden | |
+| 4.10 | Dashboard stats - STUDENT forbidden | |
 | 5.1 | Borrow book - success | |
 | 5.2 | Borrow - validation cases | |
 | 5.3 | Return book - success | |

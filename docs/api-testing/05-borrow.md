@@ -2,14 +2,16 @@
 
 > **Pre-requisite**: Đã có ít nhất 1 STUDENT account và 1 ADMIN/LIBRARIAN account. Đã có books trong DB.
 
-### 5.1 Mượn sách (STUDENT)
+### 5.1 Mượn sách (bất kỳ user đã login)
+
+> POST /api/borrows yêu cầu authenticated (bất kỳ role nào). Không có `@PreAuthorize` cụ thể, chỉ cần token hợp lệ.
 
 **Login STUDENT trước:**
 ```
 POST {{base_url}}/auth/login
 {
-  "username": "teststudent",
-  "password": "Test1234"
+  "username": "student01",
+  "password": "Pass@123"
 }
 ```
 Copy accessToken -> variable `token`
@@ -95,7 +97,7 @@ POST {{base_url}}/borrows
 POST {{base_url}}/auth/login
 {
   "username": "admin",
-  "password": "Admin1234"
+  "password": "Admin@123"
 }
 ```
 Copy accessToken -> variable `token`
