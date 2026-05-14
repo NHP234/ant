@@ -31,6 +31,7 @@ public class BookService {
     private final CategoryRepository categoryRepository;
     private final BookMapper bookMapper;
 
+    @Transactional(readOnly = true)
     public PageResponse<BookResponse> getAllBooks(Pageable pageable) {
         Page<Book> page = bookRepository.findAll(pageable);
         List<BookResponse> content = page.getContent().stream()
@@ -39,6 +40,7 @@ public class BookService {
         return PageResponse.from(page, content);
     }
 
+    @Transactional(readOnly = true)
     public PageResponse<BookResponse> searchBooks(String query, Pageable pageable) {
         String tsQuery = query.trim().replaceAll("\\s+", " & ");
         Page<Book> page = bookRepository.fullTextSearch(tsQuery, pageable);
@@ -53,6 +55,7 @@ public class BookService {
         return PageResponse.from(page, content);
     }
 
+    @Transactional(readOnly = true)
     @Cacheable(value = "book", key = "#id")
     public BookResponse getBookById(Long id) {
         Book book = findBookOrThrow(id);

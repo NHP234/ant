@@ -1,5 +1,9 @@
 package com.example.demo.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,13 +19,26 @@ import java.util.Map;
 
 @Configuration
 @EnableCaching
+@SuppressWarnings("removal")
 public class CacheConfig {
 
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.activateDefaultTyping(
+                BasicPolymorphicTypeValidator.builder()
+                        .allowIfBaseType(Object.class)
+                        .build(),
+                ObjectMapper.DefaultTyping.NON_FINAL
+        );
+
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(mapper);
+
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer))
                 .disableCachingNullValues();
 
         Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
