@@ -8,7 +8,7 @@
 | Giai đoạn | Trạng thái | Thời gian |
 |-----------|-----------|-----------|
 | Tháng 1: Backend nền tảng | ✅ Done | Tuần 1-4 |
-| Tháng 2: Backend nâng cao + FE | ⬜ TODO | Tuần 5-8 |
+| Tháng 2: Backend nâng cao + FE | ✅ Done | Tuần 5-8 |
 | Tháng 3: Frontend + RAG | ⬜ TODO | Tuần 9-12 |
 | Tháng 4: NFC + Hoàn thiện | ⬜ TODO | Tuần 13-16 |
 | Tháng 5: Polish + Báo cáo | ⬜ TODO | Tuần 17-20 |
@@ -90,27 +90,37 @@
 - ✅ @Operation annotations trên Auth endpoints
 - ✅ Swagger UI accessible: http://localhost:8080/swagger-ui.html
 
-### Tuần 8: Frontend Setup
-- ⬜ Init React project (Vite + TypeScript)
-- ⬜ Setup Ant Design / MUI
-- ⬜ Setup React Router, Axios, React Query
-- ⬜ Trang Login / Register
-- ⬜ Trang Dashboard
-- ⬜ Trang danh sách sách (search, filter, pagination)
+### Tuần 8: Frontend Implementation
+- ✅ Init Vite + React 19 + TypeScript project
+- ✅ Setup Shadcn/ui (Radix + Nova preset) + TailwindCSS v4
+- ✅ Setup React Router v7, Axios, TanStack Query
+- ✅ API layer: Axios instance + JWT interceptor (auto attach token, refresh on 401)
+- ✅ Auth: AuthProvider context, Login/Register pages, role-based route guard
+- ✅ Admin Layout: Sidebar + Header + User menu + ThemeToggle + NotificationBell
+- ✅ Student Layout: Sidebar lite (Browse, My Borrows, Notifications)
+- ✅ Dashboard page: Stats cards (totalBooks, users, activeBorrows, overdue, categories)
+- ✅ Book Management: DataTable + Search + Create/Edit Dialog + Delete confirm + Pagination
+- ✅ Borrow Management: Table + Status filter tabs (All/Borrowing/Overdue/Returned) + Return action
+- ✅ User Management: Table + Create user dialog (role select) + Activate/Deactivate
+- ✅ Book Catalog (Student): Grid layout + Full-text search + Pagination
+- ✅ Book Detail page: Info + Categories + Availability + Borrow button
+- ✅ My Borrows page: Borrow history + Overdue highlight
+- ✅ Notifications page: List + Mark as read + Mark all read
+- ✅ Dark/Light mode toggle (localStorage persist)
+- ✅ Responsive: Mobile sidebar collapse (Sheet component)
+- ✅ Loading/empty states trên tất cả pages
+- ✅ Backend Dockerize: multi-stage Dockerfile + docker-compose (backend + postgres + redis)
 
 ---
 
-## Tháng 3: Frontend + RAG
+## Tháng 3: RAG + NFC
 
-### Tuần 9-10: Frontend hoàn thiện
-- ⬜ Trang chi tiết sách
-- ⬜ Trang mượn/trả sách
-- ⬜ Trang lịch sử mượn trả
-- ⬜ Trang profile user
-- ⬜ Admin panel: quản lý sách
-- ⬜ Admin panel: quản lý users
-- ⬜ Admin panel: thống kê
-- ⬜ Responsive design
+### Tuần 9-10: Frontend Polish + Tích hợp
+- ⬜ Category management UI (CRUD)
+- ⬜ Profile page (xem/sửa thông tin cá nhân)
+- ⬜ Audit log viewer (admin)
+- ⬜ Frontend Dockerfile + docker-compose service
+- ⬜ Fix bugs, UX improvements
 
 ### Tuần 11: RAG Service Setup
 - ⬜ Init FastAPI project
@@ -166,3 +176,5 @@
 | 2026-04-26 | Redis Cache (categories/book/dashboard), PostgreSQL full-text search (tsvector+unaccent+GIN), Dashboard API |
 | 2026-04-27 | Spring AOP audit logging (@Auditable), Notification API (CRUD + unread count + mark read) |
 | 2026-05-06 | Unit tests (BorrowService/BookService/UserService, 28 test cases), Swagger/OpenAPI config + annotations |
+| 2026-05-06 | Backend Dockerize: multi-stage Dockerfile, docker-compose healthcheck, pom.xml fix (remove spring-boot-starter-aop) |
+| 2026-05-08 | Frontend: Vite+React+TS+Shadcn/ui, full admin panel (Dashboard/Books/Borrows/Users), student view (Catalog/Detail/MyBorrows/Notifications), Auth+JWT, dark mode, responsive |

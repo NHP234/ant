@@ -12,7 +12,7 @@ alwaysApply: true
 - **Dự án**: Web app quản lý mượn trả sách thư viện + RAG chatbot + NFC
 - **Trọng tâm**: Backend SpringBoot (đào sâu kiến trúc, patterns, testing)
 - **Solo project**, timeline 4-5 tháng
-- **Tech**: SpringBoot 3 + React 18 + FastAPI (RAG) + PostgreSQL + Redis + Elasticsearch + Docker
+- **Tech**: SpringBoot 4.0.3 + Java 21 + React 19 + Vite + Shadcn/ui + TailwindCSS v4 + FastAPI (RAG) + PostgreSQL (full-text search) + Redis + Docker
 
 ## Khi hỗ trợ code, lưu ý:
 1. Đọc `docs/PROJECT_OVERVIEW.md` để nắm kiến trúc tổng thể
@@ -23,12 +23,12 @@ alwaysApply: true
 6. Đọc `docs/ISSUES.md` cho known issues
 
 ## Coding conventions:
-- Backend: Java 17+, follow Spring Boot best practices
+- Backend: Java 21, Spring Boot 4.0.3, follow Spring Boot best practices
 - DTO pattern bắt buộc (không expose Entity ra Controller)
 - MapStruct cho entity-DTO mapping
 - Global exception handling qua @ControllerAdvice
 - API response format thống nhất (xem BACKEND.md)
-- Frontend: TypeScript, functional components, React Query cho data fetching
+- Frontend: React 19, TypeScript, Shadcn/ui + TailwindCSS v4, React Router v7, TanStack Query cho data fetching
 - Commit messages bằng tiếng Anh, mô tả rõ ràng
 
 ## Cập nhật docs:
