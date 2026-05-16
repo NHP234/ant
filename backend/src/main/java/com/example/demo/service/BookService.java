@@ -8,7 +8,10 @@ import com.example.demo.dto.response.PageResponse;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.BookMapper;
 import com.example.demo.model.entity.Book;
+import com.example.demo.model.entity.BookCopy;
 import com.example.demo.model.entity.Category;
+import com.example.demo.model.enums.CopyStatus;
+import com.example.demo.repository.BookCopyRepository;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,19 +31,18 @@ import java.util.Set;
 public class BookService {
 
     private final BookRepository bookRepository;
+    private final BookCopyRepository bookCopyRepository;
     private final CategoryRepository categoryRepository;
     private final BookMapper bookMapper;
 
-    @Transactional(readOnly = true)
     public PageResponse<BookResponse> getAllBooks(Pageable pageable) {
         Page<Book> page = bookRepository.findAll(pageable);
         List<BookResponse> content = page.getContent().stream()
-                .map(bookMapper::toResponse)
+                .map(this::toResponseWithCopyCounts)
                 .toList();
         return PageResponse.from(page, content);
     }
 
-    @Transactional(readOnly = true)
     public PageResponse<BookResponse> searchBooks(String query, Pageable pageable) {
         String tsQuery = query.trim().replaceAll("\\s+", " & ");
         Page<Book> page = bookRepository.fullTextSearch(tsQuery, pageable);
@@ -50,7 +52,7 @@ public class BookService {
         }
 
         List<BookResponse> content = page.getContent().stream()
-                .map(bookMapper::toResponse)
+                .map(this::toResponseWithCopyCounts)
                 .toList();
         return PageResponse.from(page, content);
     }
@@ -59,7 +61,7 @@ public class BookService {
     @Cacheable(value = "book", key = "#id")
     public BookResponse getBookById(Long id) {
         Book book = findBookOrThrow(id);
-        return bookMapper.toResponse(book);
+        return toResponseWithCopyCounts(book);
     }
 
     @Transactional
@@ -74,7 +76,19 @@ public class BookService {
         }
 
         book = bookRepository.save(book);
-        return bookMapper.toResponse(book);
+
+        // Auto-create copies based on quantity
+        int quantity = request.getQuantity() != null ? request.getQuantity() : 1;
+        for (int i = 1; i <= quantity; i++) {
+            BookCopy copy = BookCopy.builder()
+                    .book(book)
+                    .copyNumber(i)
+                    .status(CopyStatus.AVAILABLE)
+                    .build();
+            bookCopyRepository.save(copy);
+        }
+
+        return toResponseWithCopyCounts(book);
     }
 
     @Transactional
@@ -85,19 +99,13 @@ public class BookService {
 
         bookMapper.updateEntity(request, book);
 
-        if (request.getQuantity() != null) {
-            int diff = request.getQuantity() - book.getQuantity();
-            book.setQuantity(request.getQuantity());
-            book.setAvailableQuantity(Math.max(0, book.getAvailableQuantity() + diff));
-        }
-
         if (request.getCategoryIds() != null) {
             Set<Category> categories = new HashSet<>(categoryRepository.findAllById(request.getCategoryIds()));
             book.setCategories(categories);
         }
 
         book = bookRepository.save(book);
-        return bookMapper.toResponse(book);
+        return toResponseWithCopyCounts(book);
     }
 
     @Transactional
@@ -111,5 +119,15 @@ public class BookService {
     private Book findBookOrThrow(Long id) {
         return bookRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Book", "id", id));
+    }
+
+    /**
+     * Map Book entity to BookResponse with computed copy counts.
+     */
+    private BookResponse toResponseWithCopyCounts(Book book) {
+        BookResponse response = bookMapper.toResponse(book);
+        response.setTotalCopies(bookCopyRepository.countByBookId(book.getId()));
+        response.setAvailableCopies(bookCopyRepository.countByBookIdAndStatus(book.getId(), CopyStatus.AVAILABLE));
+        return response;
     }
 }

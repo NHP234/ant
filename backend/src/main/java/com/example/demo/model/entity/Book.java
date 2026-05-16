@@ -6,7 +6,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -39,17 +41,6 @@ public class Book {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private Integer quantity = 1;
-
-    @Column(name = "available_quantity", nullable = false)
-    @Builder.Default
-    private Integer availableQuantity = 1;
-
-    @Column(name = "nfc_tag_uid", unique = true, length = 50)
-    private String nfcTagUid;
-
     @Column(name = "cover_image_url", length = 500)
     private String coverImageUrl;
 
@@ -61,6 +52,10 @@ public class Book {
     )
     @Builder.Default
     private Set<Category> categories = new HashSet<>();
+
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<BookCopy> copies = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

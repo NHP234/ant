@@ -8,10 +8,14 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface BorrowRecordMapper {
 
-    @Mapping(source = "user.id", target = "userId")
-    @Mapping(source = "user.fullName", target = "userFullName")
-    @Mapping(source = "book.id", target = "bookId")
-    @Mapping(source = "book.title", target = "bookTitle")
-    @Mapping(source = "book.author", target = "bookAuthor")
+    @Mapping(source = "slip.user.id", target = "userId")
+    @Mapping(source = "slip.user.fullName", target = "userFullName")
+    @Mapping(source = "copy.book.id", target = "bookId")
+    @Mapping(source = "copy.book.title", target = "bookTitle")
+    @Mapping(source = "copy.book.author", target = "bookAuthor")
+    @Mapping(source = "copy.id", target = "copyId")
+    @Mapping(source = "copy.copyNumber", target = "copyNumber")
+    @Mapping(source = "slip.borrowDate", target = "borrowDate")
+    @Mapping(source = "slip.dueDate", target = "dueDate")
     BorrowRecordResponse toResponse(BorrowRecord borrowRecord);
 }

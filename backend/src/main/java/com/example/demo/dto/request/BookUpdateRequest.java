@@ -1,6 +1,5 @@
 package com.example.demo.dto.request;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,9 +25,6 @@ public class BookUpdateRequest {
     private Integer publishYear;
 
     private String description;
-
-    @Min(value = 1, message = "Quantity must be at least 1")
-    private Integer quantity;
 
     @Size(max = 500)
     private String coverImageUrl;

@@ -8,16 +8,12 @@ import com.example.demo.exception.BookNotAvailableException;
 import com.example.demo.exception.BorrowLimitExceededException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.BorrowRecordMapper;
-import com.example.demo.model.entity.Book;
-import com.example.demo.model.entity.BorrowRecord;
-import com.example.demo.model.entity.Notification;
-import com.example.demo.model.entity.User;
+import com.example.demo.model.entity.*;
+import com.example.demo.model.enums.BorrowSource;
 import com.example.demo.model.enums.BorrowStatus;
+import com.example.demo.model.enums.CopyStatus;
 import com.example.demo.model.enums.NotificationType;
-import com.example.demo.repository.BookRepository;
-import com.example.demo.repository.BorrowRecordRepository;
-import com.example.demo.repository.NotificationRepository;
-import com.example.demo.repository.UserRepository;
+import com.example.demo.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -33,7 +29,9 @@ import java.util.List;
 public class BorrowService {
 
     private final BorrowRecordRepository borrowRecordRepository;
+    private final BorrowSlipRepository borrowSlipRepository;
     private final BookRepository bookRepository;
+    private final BookCopyRepository bookCopyRepository;
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final BorrowRecordMapper borrowRecordMapper;
@@ -53,33 +51,48 @@ public class BorrowService {
         Book book = bookRepository.findById(request.getBookId())
                 .orElseThrow(() -> new ResourceNotFoundException("Book", "id", request.getBookId()));
 
-        int activeBorrows = borrowRecordRepository.countByUserIdAndStatus(user.getId(), BorrowStatus.BORROWING);
+        // Check borrow limit
+        int activeBorrows = borrowRecordRepository.countBySlipUserIdAndStatus(user.getId(), BorrowStatus.BORROWING);
         if (activeBorrows >= maxBooksPerUser) {
             throw new BorrowLimitExceededException(maxBooksPerUser);
         }
 
-        if (borrowRecordRepository.existsByUserIdAndBookIdAndStatus(user.getId(), book.getId(), BorrowStatus.BORROWING)) {
+        // Check if already borrowing this book
+                if (borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatus(user.getId(), book.getId(), BorrowStatus.BORROWING)) {
             throw new IllegalArgumentException("You are already borrowing this book");
         }
 
-        int updated = bookRepository.decrementAvailableQuantity(book.getId());
-        if (updated == 0) {
+        // Find an available copy (with pessimistic lock to prevent race conditions)
+        List<BookCopy> availableCopies = bookCopyRepository.findAvailableCopiesForUpdate(book.getId());
+        if (availableCopies.isEmpty()) {
             throw new BookNotAvailableException(book.getId());
         }
 
+        BookCopy copy = availableCopies.get(0);
+        copy.setStatus(CopyStatus.BORROWED);
+        bookCopyRepository.save(copy);
+
+        // Create borrow slip
         LocalDateTime now = LocalDateTime.now();
-        BorrowRecord record = BorrowRecord.builder()
+        BorrowSlip slip = BorrowSlip.builder()
                 .user(user)
-                .book(book)
                 .borrowDate(now)
                 .dueDate(now.plusDays(defaultDueDays))
+                .source(BorrowSource.ONLINE)
+                .build();
+        slip = borrowSlipRepository.save(slip);
+
+        // Create borrow record
+        BorrowRecord record = BorrowRecord.builder()
+                .copy(copy)
+                .slip(slip)
                 .status(BorrowStatus.BORROWING)
                 .build();
-
         record = borrowRecordRepository.save(record);
 
         sendNotification(user, "Mượn sách thành công",
-                String.format("Bạn đã mượn \"%s\". Hạn trả: %s", book.getTitle(), record.getDueDate().toLocalDate()),
+                String.format("Bạn đã mượn \"%s\" (bản #%d). Hạn trả: %s",
+                        book.getTitle(), copy.getCopyNumber(), slip.getDueDate().toLocalDate()),
                 NotificationType.BORROW_CONFIRM);
 
         return borrowRecordMapper.toResponse(record);
@@ -101,11 +114,15 @@ public class BorrowService {
             record.setNote(note);
         }
 
-        bookRepository.incrementAvailableQuantity(record.getBook().getId());
+        // Set copy back to AVAILABLE
+        BookCopy copy = record.getCopy();
+        copy.setStatus(CopyStatus.AVAILABLE);
+        bookCopyRepository.save(copy);
+
         record = borrowRecordRepository.save(record);
 
-        sendNotification(record.getUser(), "Trả sách thành công",
-                String.format("Bạn đã trả \"%s\".", record.getBook().getTitle()),
+        sendNotification(record.getSlip().getUser(), "Trả sách thành công",
+                String.format("Bạn đã trả \"%s\".", record.getCopy().getBook().getTitle()),
                 NotificationType.RETURN_CONFIRM);
 
         return borrowRecordMapper.toResponse(record);
@@ -115,7 +132,7 @@ public class BorrowService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
 
-        Page<BorrowRecord> page = borrowRecordRepository.findByUserId(user.getId(), pageable);
+        Page<BorrowRecord> page = borrowRecordRepository.findBySlipUserId(user.getId(), pageable);
         List<BorrowRecordResponse> content = page.getContent().stream()
                 .map(borrowRecordMapper::toResponse)
                 .toList();
@@ -132,7 +149,7 @@ public class BorrowService {
 
     public List<BorrowRecordResponse> getOverdueBorrows() {
         List<BorrowRecord> records = borrowRecordRepository
-                .findByStatusAndDueDateBefore(BorrowStatus.BORROWING, LocalDateTime.now());
+                .findByStatusAndSlipDueDateBefore(BorrowStatus.BORROWING, LocalDateTime.now());
         return records.stream()
                 .map(borrowRecordMapper::toResponse)
                 .toList();
@@ -141,14 +158,15 @@ public class BorrowService {
     @Transactional
     public void checkAndMarkOverdue() {
         List<BorrowRecord> overdueRecords = borrowRecordRepository
-                .findByStatusAndDueDateBefore(BorrowStatus.BORROWING, LocalDateTime.now());
+                .findByStatusAndSlipDueDateBefore(BorrowStatus.BORROWING, LocalDateTime.now());
 
         for (BorrowRecord record : overdueRecords) {
             record.setStatus(BorrowStatus.OVERDUE);
             borrowRecordRepository.save(record);
 
-            sendNotification(record.getUser(), "Sách quá hạn",
-                    String.format("Sách \"%s\" đã quá hạn trả. Vui lòng trả sớm.", record.getBook().getTitle()),
+            sendNotification(record.getSlip().getUser(), "Sách quá hạn",
+                    String.format("Sách \"%s\" đã quá hạn trả. Vui lòng trả sớm.",
+                            record.getCopy().getBook().getTitle()),
                     NotificationType.OVERDUE_WARNING);
         }
     }

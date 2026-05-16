@@ -6,7 +6,10 @@ import com.example.demo.dto.response.BookResponse;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.BookMapper;
 import com.example.demo.model.entity.Book;
+import com.example.demo.model.entity.BookCopy;
 import com.example.demo.model.entity.Category;
+import com.example.demo.model.enums.CopyStatus;
+import com.example.demo.repository.BookCopyRepository;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.CategoryRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +39,7 @@ import static org.mockito.Mockito.*;
 class BookServiceTest {
 
     @Mock private BookRepository bookRepository;
+    @Mock private BookCopyRepository bookCopyRepository;
     @Mock private CategoryRepository categoryRepository;
     @Mock private BookMapper bookMapper;
 
@@ -48,11 +52,11 @@ class BookServiceTest {
     void setUp() {
         testBook = Book.builder()
                 .id(1L).title("Clean Code").author("Robert Martin")
-                .isbn("978-0132350884").quantity(3).availableQuantity(3).build();
+            .isbn("978-0132350884").build();
 
         testBookResponse = BookResponse.builder()
                 .id(1L).title("Clean Code").author("Robert Martin")
-                .quantity(3).availableQuantity(3).build();
+            .totalCopies(3).availableCopies(3).build();
     }
 
     @Nested
@@ -64,10 +68,14 @@ class BookServiceTest {
         void getBookById_success() {
             when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
             when(bookMapper.toResponse(testBook)).thenReturn(testBookResponse);
+            when(bookCopyRepository.countByBookId(1L)).thenReturn(3);
+            when(bookCopyRepository.countByBookIdAndStatus(1L, CopyStatus.AVAILABLE)).thenReturn(2);
 
             BookResponse result = bookService.getBookById(1L);
 
             assertThat(result.getTitle()).isEqualTo("Clean Code");
+            assertThat(result.getTotalCopies()).isEqualTo(3);
+            assertThat(result.getAvailableCopies()).isEqualTo(2);
         }
 
         @Test
@@ -95,11 +103,15 @@ class BookServiceTest {
             when(bookMapper.toEntity(request)).thenReturn(testBook);
             when(bookRepository.save(any(Book.class))).thenReturn(testBook);
             when(bookMapper.toResponse(testBook)).thenReturn(testBookResponse);
+            when(bookCopyRepository.save(any(BookCopy.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(bookCopyRepository.countByBookId(1L)).thenReturn(2);
+            when(bookCopyRepository.countByBookIdAndStatus(1L, CopyStatus.AVAILABLE)).thenReturn(2);
 
             BookResponse result = bookService.createBook(request);
 
             assertThat(result.getId()).isEqualTo(1L);
             verify(bookRepository).save(any(Book.class));
+            verify(bookCopyRepository, times(2)).save(any(BookCopy.class));
         }
 
         @Test
@@ -118,11 +130,15 @@ class BookServiceTest {
             when(categoryRepository.findAllById(any())).thenReturn(List.of(cat1, cat2));
             when(bookRepository.save(any(Book.class))).thenReturn(testBook);
             when(bookMapper.toResponse(testBook)).thenReturn(testBookResponse);
+            when(bookCopyRepository.save(any(BookCopy.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(bookCopyRepository.countByBookId(1L)).thenReturn(2);
+            when(bookCopyRepository.countByBookIdAndStatus(1L, CopyStatus.AVAILABLE)).thenReturn(2);
 
             BookResponse result = bookService.createBook(request);
 
             assertThat(result).isNotNull();
             verify(categoryRepository).findAllById(any());
+            verify(bookCopyRepository, times(2)).save(any(BookCopy.class));
         }
     }
 
@@ -162,6 +178,8 @@ class BookServiceTest {
 
             when(bookRepository.fullTextSearch("clean", pageable)).thenReturn(page);
             when(bookMapper.toResponse(testBook)).thenReturn(testBookResponse);
+            when(bookCopyRepository.countByBookId(1L)).thenReturn(3);
+            when(bookCopyRepository.countByBookIdAndStatus(1L, CopyStatus.AVAILABLE)).thenReturn(2);
 
             var result = bookService.searchBooks("clean", pageable);
 
@@ -179,6 +197,8 @@ class BookServiceTest {
             when(bookRepository.fullTextSearch("test", pageable)).thenReturn(emptyPage);
             when(bookRepository.findByTitleContainingIgnoreCase("test", pageable)).thenReturn(likePage);
             when(bookMapper.toResponse(testBook)).thenReturn(testBookResponse);
+            when(bookCopyRepository.countByBookId(1L)).thenReturn(3);
+            when(bookCopyRepository.countByBookIdAndStatus(1L, CopyStatus.AVAILABLE)).thenReturn(2);
 
             var result = bookService.searchBooks("test", pageable);
 

@@ -178,3 +178,7 @@
 | 2026-05-06 | Unit tests (BorrowService/BookService/UserService, 28 test cases), Swagger/OpenAPI config + annotations |
 | 2026-05-06 | Backend Dockerize: multi-stage Dockerfile, docker-compose healthcheck, pom.xml fix (remove spring-boot-starter-aop) |
 | 2026-05-08 | Frontend: Vite+React+TS+Shadcn/ui, full admin panel (Dashboard/Books/Borrows/Users), student view (Catalog/Detail/MyBorrows/Notifications), Auth+JWT, dark mode, responsive |
+| 2026-05-14 | Bug fixes: Redis serialization (Jackson + LocalDateTime), LazyInitializationException (@Transactional), GlobalExceptionHandler logging. API testing docs update (authorization, roles). Frontend auth fix (destructuring user from login response) |
+| 2026-05-15 | Schema refactor V9: book_copies (physical copies with NFC per copy), borrow_slips (borrow sessions), computed quantities (COUNT instead of denormalized), pessimistic locking. Updated entities, repos, services, DTOs, mappers |
+| 2026-05-16 | Documentation update: DATABASE.md + BACKEND.md rewrite to reflect V9 schema changes |
+| 2026-05-16 | Normalize borrow_records (drop denormalized user_id) + add Flyway V10 + update code/tests/docs |

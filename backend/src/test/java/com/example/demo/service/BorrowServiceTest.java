@@ -7,12 +7,17 @@ import com.example.demo.exception.BorrowLimitExceededException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.BorrowRecordMapper;
 import com.example.demo.model.entity.Book;
+import com.example.demo.model.entity.BookCopy;
 import com.example.demo.model.entity.BorrowRecord;
+import com.example.demo.model.entity.BorrowSlip;
 import com.example.demo.model.entity.User;
 import com.example.demo.model.enums.BorrowStatus;
+import com.example.demo.model.enums.CopyStatus;
 import com.example.demo.model.enums.Role;
+import com.example.demo.repository.BookCopyRepository;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.BorrowRecordRepository;
+import com.example.demo.repository.BorrowSlipRepository;
 import com.example.demo.repository.NotificationRepository;
 import com.example.demo.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +44,9 @@ import static org.mockito.Mockito.*;
 class BorrowServiceTest {
 
     @Mock private BorrowRecordRepository borrowRecordRepository;
+    @Mock private BorrowSlipRepository borrowSlipRepository;
     @Mock private BookRepository bookRepository;
+    @Mock private BookCopyRepository bookCopyRepository;
     @Mock private UserRepository userRepository;
     @Mock private NotificationRepository notificationRepository;
     @Mock private BorrowRecordMapper borrowRecordMapper;
@@ -48,6 +55,7 @@ class BorrowServiceTest {
 
     private User testUser;
     private Book testBook;
+    private BookCopy testCopy;
     private BorrowRequest borrowRequest;
 
     @BeforeEach
@@ -56,7 +64,8 @@ class BorrowServiceTest {
         ReflectionTestUtils.setField(borrowService, "defaultDueDays", 14);
 
         testUser = User.builder().id(1L).username("student01").fullName("Test Student").role(Role.STUDENT).build();
-        testBook = Book.builder().id(1L).title("Clean Code").author("Robert Martin").quantity(3).availableQuantity(2).build();
+        testBook = Book.builder().id(1L).title("Clean Code").author("Robert Martin").build();
+        testCopy = BookCopy.builder().id(10L).book(testBook).copyNumber(1).status(CopyStatus.AVAILABLE).build();
 
         borrowRequest = new BorrowRequest();
         borrowRequest.setBookId(1L);
@@ -71,9 +80,15 @@ class BorrowServiceTest {
         void borrowBook_success() {
             when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
             when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
-            when(borrowRecordRepository.countByUserIdAndStatus(1L, BorrowStatus.BORROWING)).thenReturn(0);
-            when(borrowRecordRepository.existsByUserIdAndBookIdAndStatus(1L, 1L, BorrowStatus.BORROWING)).thenReturn(false);
-            when(bookRepository.decrementAvailableQuantity(1L)).thenReturn(1);
+            when(borrowRecordRepository.countBySlipUserIdAndStatus(1L, BorrowStatus.BORROWING)).thenReturn(0);
+            when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatus(1L, 1L, BorrowStatus.BORROWING)).thenReturn(false);
+            when(bookCopyRepository.findAvailableCopiesForUpdate(1L)).thenReturn(List.of(testCopy));
+            when(bookCopyRepository.save(any(BookCopy.class))).thenReturn(testCopy);
+            when(borrowSlipRepository.save(any(BorrowSlip.class))).thenAnswer(inv -> {
+                BorrowSlip slip = inv.getArgument(0);
+                slip.setId(1L);
+                return slip;
+            });
             when(borrowRecordRepository.save(any(BorrowRecord.class))).thenAnswer(inv -> {
                 BorrowRecord r = inv.getArgument(0);
                 r.setId(1L);
@@ -86,7 +101,7 @@ class BorrowServiceTest {
 
             assertThat(result.getId()).isEqualTo(1L);
             assertThat(result.getStatus()).isEqualTo("BORROWING");
-            verify(bookRepository).decrementAvailableQuantity(1L);
+            verify(bookCopyRepository).save(any(BookCopy.class));
             verify(notificationRepository).save(any());
         }
 
@@ -114,7 +129,7 @@ class BorrowServiceTest {
         void borrowBook_limitExceeded() {
             when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
             when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
-            when(borrowRecordRepository.countByUserIdAndStatus(1L, BorrowStatus.BORROWING)).thenReturn(5);
+            when(borrowRecordRepository.countBySlipUserIdAndStatus(1L, BorrowStatus.BORROWING)).thenReturn(5);
 
             assertThatThrownBy(() -> borrowService.borrowBook("student01", borrowRequest))
                     .isInstanceOf(BorrowLimitExceededException.class);
@@ -125,8 +140,8 @@ class BorrowServiceTest {
         void borrowBook_alreadyBorrowing() {
             when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
             when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
-            when(borrowRecordRepository.countByUserIdAndStatus(1L, BorrowStatus.BORROWING)).thenReturn(1);
-            when(borrowRecordRepository.existsByUserIdAndBookIdAndStatus(1L, 1L, BorrowStatus.BORROWING)).thenReturn(true);
+            when(borrowRecordRepository.countBySlipUserIdAndStatus(1L, BorrowStatus.BORROWING)).thenReturn(1);
+            when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatus(1L, 1L, BorrowStatus.BORROWING)).thenReturn(true);
 
             assertThatThrownBy(() -> borrowService.borrowBook("student01", borrowRequest))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -138,9 +153,9 @@ class BorrowServiceTest {
         void borrowBook_notAvailable() {
             when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
             when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
-            when(borrowRecordRepository.countByUserIdAndStatus(1L, BorrowStatus.BORROWING)).thenReturn(0);
-            when(borrowRecordRepository.existsByUserIdAndBookIdAndStatus(1L, 1L, BorrowStatus.BORROWING)).thenReturn(false);
-            when(bookRepository.decrementAvailableQuantity(1L)).thenReturn(0);
+            when(borrowRecordRepository.countBySlipUserIdAndStatus(1L, BorrowStatus.BORROWING)).thenReturn(0);
+            when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatus(1L, 1L, BorrowStatus.BORROWING)).thenReturn(false);
+            when(bookCopyRepository.findAvailableCopiesForUpdate(1L)).thenReturn(List.of());
 
             assertThatThrownBy(() -> borrowService.borrowBook("student01", borrowRequest))
                     .isInstanceOf(BookNotAvailableException.class);
@@ -154,10 +169,24 @@ class BorrowServiceTest {
         @Test
         @DisplayName("should return book successfully")
         void returnBook_success() {
+            BorrowSlip slip = BorrowSlip.builder()
+                .id(1L)
+                .user(testUser)
+                .borrowDate(LocalDateTime.now().minusDays(7))
+                .dueDate(LocalDateTime.now().plusDays(7))
+                .build();
+            BookCopy copy = BookCopy.builder()
+                .id(10L)
+                .book(testBook)
+                .copyNumber(1)
+                .status(CopyStatus.BORROWED)
+                .build();
             BorrowRecord record = BorrowRecord.builder()
-                    .id(1L).user(testUser).book(testBook).status(BorrowStatus.BORROWING)
-                    .borrowDate(LocalDateTime.now().minusDays(7)).dueDate(LocalDateTime.now().plusDays(7))
-                    .build();
+                .id(1L)
+                .slip(slip)
+                .copy(copy)
+                .status(BorrowStatus.BORROWING)
+                .build();
 
             when(borrowRecordRepository.findById(1L)).thenReturn(Optional.of(record));
             when(borrowRecordRepository.save(any())).thenReturn(record);
@@ -167,7 +196,7 @@ class BorrowServiceTest {
             BorrowRecordResponse result = borrowService.returnBook(1L, "Good condition");
 
             assertThat(result.getStatus()).isEqualTo("RETURNED");
-            verify(bookRepository).incrementAvailableQuantity(testBook.getId());
+            verify(bookCopyRepository).save(copy);
             verify(notificationRepository).save(any());
         }
 
@@ -183,8 +212,14 @@ class BorrowServiceTest {
         @Test
         @DisplayName("should throw when already returned")
         void returnBook_alreadyReturned() {
+            BorrowSlip slip = BorrowSlip.builder().id(1L).user(testUser).build();
+            BookCopy copy = BookCopy.builder().id(10L).book(testBook).copyNumber(1).build();
             BorrowRecord record = BorrowRecord.builder()
-                    .id(1L).user(testUser).book(testBook).status(BorrowStatus.RETURNED).build();
+                .id(1L)
+                .slip(slip)
+                .copy(copy)
+                .status(BorrowStatus.RETURNED)
+                .build();
 
             when(borrowRecordRepository.findById(1L)).thenReturn(Optional.of(record));
 
@@ -201,11 +236,26 @@ class BorrowServiceTest {
         @Test
         @DisplayName("should mark overdue records and send notifications")
         void checkAndMarkOverdue_success() {
+            BorrowSlip slip = BorrowSlip.builder()
+                .id(1L)
+                .user(testUser)
+                .borrowDate(LocalDateTime.now().minusDays(10))
+                .dueDate(LocalDateTime.now().minusDays(1))
+                .build();
+            BookCopy copy = BookCopy.builder()
+                .id(10L)
+                .book(testBook)
+                .copyNumber(1)
+                .status(CopyStatus.BORROWED)
+                .build();
             BorrowRecord record = BorrowRecord.builder()
-                    .id(1L).user(testUser).book(testBook).status(BorrowStatus.BORROWING)
-                    .dueDate(LocalDateTime.now().minusDays(1)).build();
+                .id(1L)
+                .slip(slip)
+                .copy(copy)
+                .status(BorrowStatus.BORROWING)
+                .build();
 
-            when(borrowRecordRepository.findByStatusAndDueDateBefore(eq(BorrowStatus.BORROWING), any()))
+            when(borrowRecordRepository.findByStatusAndSlipDueDateBefore(eq(BorrowStatus.BORROWING), any()))
                     .thenReturn(List.of(record));
 
             borrowService.checkAndMarkOverdue();
@@ -218,7 +268,7 @@ class BorrowServiceTest {
         @Test
         @DisplayName("should do nothing when no overdue records")
         void checkAndMarkOverdue_noRecords() {
-            when(borrowRecordRepository.findByStatusAndDueDateBefore(eq(BorrowStatus.BORROWING), any()))
+            when(borrowRecordRepository.findByStatusAndSlipDueDateBefore(eq(BorrowStatus.BORROWING), any()))
                     .thenReturn(List.of());
 
             borrowService.checkAndMarkOverdue();

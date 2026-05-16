@@ -20,8 +20,8 @@ public class BookResponse implements Serializable {
     private String publisher;
     private Integer publishYear;
     private String description;
-    private Integer quantity;
-    private Integer availableQuantity;
+    private Integer totalCopies;
+    private Integer availableCopies;
     private String coverImageUrl;
     private Set<CategoryResponse> categories;
     private LocalDateTime createdAt;

@@ -3,26 +3,23 @@ package com.example.demo.dto.response;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BorrowRecordResponse {
+public class BorrowSlipResponse {
 
     private Long id;
     private Long userId;
     private String userFullName;
-    private Long bookId;
-    private String bookTitle;
-    private String bookAuthor;
-    private Long copyId;
-    private Integer copyNumber;
+    private String librarianName;
     private LocalDateTime borrowDate;
     private LocalDateTime dueDate;
-    private LocalDateTime returnDate;
-    private String status;
     private String note;
+    private String source;
+    private List<BorrowRecordResponse> records;
     private LocalDateTime createdAt;
 }

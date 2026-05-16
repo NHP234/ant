@@ -47,7 +47,7 @@ public class BorrowController {
 
     @GetMapping("/my")
     public ResponseEntity<ApiResponse<PageResponse<BorrowRecordResponse>>> getMyBorrows(
-            @PageableDefault(size = 20, sort = "borrowDate", direction = Sort.Direction.DESC) Pageable pageable,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             Authentication authentication) {
         PageResponse<BorrowRecordResponse> borrows = borrowService.getMyBorrows(authentication.getName(), pageable);
         return ResponseEntity.ok(ApiResponse.ok(borrows));
@@ -56,7 +56,7 @@ public class BorrowController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<ApiResponse<PageResponse<BorrowRecordResponse>>> getAllBorrows(
-            @PageableDefault(size = 20, sort = "borrowDate", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         PageResponse<BorrowRecordResponse> borrows = borrowService.getAllBorrows(pageable);
         return ResponseEntity.ok(ApiResponse.ok(borrows));
     }
