@@ -28,6 +28,7 @@ alwaysApply: true
 2. **API phải explicit**: Mỗi endpoint thể hiện rõ intent, không để client phải đoán kết quả.
 3. **Prefer explicit state over toggle** trong mọi trường hợp: status, role, permission...
 4. **Database ưu tiên chuẩn hóa (3NF)**: Tránh denormalization trừ khi có lý do rõ ràng và đã cân nhắc trade-off.
+5. **Chống race condition**: Các thao tác tạo/sửa dễ va chạm (ví dụ tăng số copy) phải dùng transaction + lock hoặc cơ chế retry theo unique constraint.
 
 ## Sau mỗi phiên làm việc
 - Cập nhật `docs/PROGRESS.md` với những gì đã hoàn thành

@@ -31,7 +31,7 @@ public class BorrowService {
 
     private final BorrowRecordRepository borrowRecordRepository;
     private final BorrowSlipRepository borrowSlipRepository;
-        private final BookHoldRepository bookHoldRepository;
+    private final BookHoldRepository bookHoldRepository;
     private final BookRepository bookRepository;
     private final BookCopyRepository bookCopyRepository;
     private final UserRepository userRepository;
