@@ -78,7 +78,7 @@ POST {{base_url}}/holds
 ```
 **Expected**: 401/403
 
-### 5.3 Xác nhận mượn (ADMIN/LIBRARIAN)
+### 5.3 Xác nhận mượn từ hold (ADMIN/LIBRARIAN)
 
 **Login ADMIN/LIBRARIAN:**
 ```
@@ -105,7 +105,21 @@ Authorization: Bearer {{admin_token}}
 ```
 **Expected**: 200 OK, copyId cập nhật sang 123
 
-### 5.4 Trả sách (ADMIN/LIBRARIAN)
+### 5.4 Mượn trực tiếp tại quầy (không cần hold)
+
+```
+POST {{base_url}}/borrows
+Authorization: Bearer {{admin_token}}
+{
+  "bookId": 1,
+  "username": "student01"
+}
+```
+**Expected**: 201 Created, tạo borrow record ngay.
+
+> Có thể dùng `studentId` thay cho `username`. Nếu quẹt NFC, truyền thêm `copyId`.
+
+### 5.5 Trả sách (ADMIN/LIBRARIAN)
 
 ```
 PUT {{base_url}}/borrows/1/return?note=Sách còn tốt
@@ -113,7 +127,7 @@ Authorization: Bearer {{admin_token}}
 ```
 **Expected**: 200 OK, status = RETURNED
 
-### 5.5 Xem lịch sử mượn (STUDENT)
+### 5.6 Xem lịch sử mượn (STUDENT)
 
 ```
 GET {{base_url}}/borrows/my
@@ -121,7 +135,7 @@ Authorization: Bearer {{student_token}}
 ```
 **Expected**: 200 OK, paginated borrow records
 
-### 5.6 Xem tất cả borrows (ADMIN/LIBRARIAN)
+### 5.7 Xem tất cả borrows (ADMIN/LIBRARIAN)
 
 ```
 GET {{base_url}}/borrows
@@ -129,7 +143,7 @@ Authorization: Bearer {{admin_token}}
 ```
 **Expected**: 200 OK
 
-### 5.7 Xem sách quá hạn (ADMIN/LIBRARIAN)
+### 5.8 Xem sách quá hạn (ADMIN/LIBRARIAN)
 
 ```
 GET {{base_url}}/borrows/overdue
@@ -137,7 +151,7 @@ Authorization: Bearer {{admin_token}}
 ```
 **Expected**: 200 OK
 
-### 5.8 Hủy hold (STUDENT)
+### 5.9 Hủy hold (STUDENT)
 
 ```
 PUT {{base_url}}/holds/1/cancel

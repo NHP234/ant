@@ -26,5 +26,7 @@ public interface BookHoldRepository extends JpaRepository<BookHold, Long> {
                                                @Param("bookId") Long bookId,
                                                @Param("statuses") Collection<HoldStatus> statuses);
 
+    Optional<BookHold> findFirstByUserIdAndCopyBookIdAndStatusOrderByCreatedAtDesc(Long userId, Long bookId, HoldStatus status);
+
     List<BookHold> findByStatusAndExpiresAtBefore(HoldStatus status, LocalDateTime time);
 }

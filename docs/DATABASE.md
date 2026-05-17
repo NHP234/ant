@@ -88,11 +88,11 @@ erDiagram
 |--------|------|-------------|------|
 | id | BIGSERIAL | PK | |
 | user_id | BIGINT | FK → users.id, NOT NULL | Người mượn |
-| librarian_id | BIGINT | FK → users.id, NULLABLE | Thủ thư xử lý (NULL = mượn online) |
+| librarian_id | BIGINT | FK → users.id, NULLABLE | Thủ thư xử lý (NULL = dữ liệu cũ) |
 | borrow_date | TIMESTAMP | NOT NULL, DEFAULT NOW() | Ngày mượn |
 | due_date | TIMESTAMP | NOT NULL | Hạn trả (borrow_date + 14 days, configurable) |
 | note | TEXT | NULLABLE | Ghi chú phiếu mượn |
-| source | VARCHAR(20) | NOT NULL, DEFAULT 'ONLINE' | ONLINE, NFC |
+| source | VARCHAR(20) | NOT NULL, DEFAULT 'COUNTER' | COUNTER, NFC |
 | created_at | TIMESTAMP | DEFAULT NOW() | |
 
 ### borrow_records
@@ -220,7 +220,7 @@ borrow_slips (phiên mượn)              borrow_records (từng cuốn)
 user_id: 1 (student01)                 copy_id: 2 (Clean Code #2), RETURNED, trả 20/05
 borrow_date: 15/05                     copy_id: 5 (Design Patterns #1), BORROWING
 due_date: 29/05                        copy_id: 7 (Spring in Action #1), OVERDUE
-source: ONLINE
+source: COUNTER
 ```
 - `borrow_date` + `due_date` chung cho cả phiên → trên slip
 - `return_date` + `status` riêng từng cuốn → trên record

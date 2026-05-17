@@ -42,7 +42,7 @@ public class BorrowSlip {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private BorrowSource source = BorrowSource.ONLINE;
+    private BorrowSource source = BorrowSource.COUNTER;
 
     @OneToMany(mappedBy = "slip", cascade = CascadeType.ALL)
     @Builder.Default

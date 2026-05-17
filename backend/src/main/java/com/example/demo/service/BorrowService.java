@@ -44,66 +44,33 @@ public class BorrowService {
     @Value("${app.borrow.default-due-days}")
     private int defaultDueDays;
 
+    @Value("${app.hold.ban-days:7}")
+    private int holdBanDays;
+
     @Transactional
     @Auditable(action = "BORROW", entityType = "BORROW_RECORD")
-    public BorrowRecordResponse borrowBook(String username, BorrowRequest request) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
+    public BorrowRecordResponse borrowBook(String librarianUsername, BorrowRequest request) {
+        User librarian = userRepository.findByUsername(librarianUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", librarianUsername));
+        User borrower = resolveBorrower(request);
 
         Book book = bookRepository.findById(request.getBookId())
                 .orElseThrow(() -> new ResourceNotFoundException("Book", "id", request.getBookId()));
 
-        // Check borrow limit
-        int activeBorrows = borrowRecordRepository.countBySlipUserIdAndStatusIn(
-                user.getId(), List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE));
-        long activeHolds = bookHoldRepository.countByUserIdAndStatusIn(
-                user.getId(), List.of(HoldStatus.ACTIVE));
-        if (activeBorrows + activeHolds >= maxBooksPerUser) {
-            throw new BorrowLimitExceededException(maxBooksPerUser);
-        }
+        ensureBorrowAllowed(borrower.getId(), book.getId());
 
-        // Check if already borrowing this book
-                if (borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(
-                                user.getId(), book.getId(), List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE))) {
-            throw new IllegalArgumentException("You are already borrowing this book");
-        }
-
-                if (bookHoldRepository.existsByUserIdAndBookIdAndStatusIn(
-                                user.getId(), book.getId(), List.of(HoldStatus.ACTIVE))) {
-                        throw new IllegalArgumentException("You already have an active hold for this book");
-                }
-
-        // Find an available copy (with pessimistic lock to prevent race conditions)
-        List<BookCopy> availableCopies = bookCopyRepository.findAvailableCopiesForUpdate(book.getId());
-        if (availableCopies.isEmpty()) {
-            throw new BookNotAvailableException(book.getId());
-        }
-
-        BookCopy copy = availableCopies.get(0);
-        copy.setStatus(CopyStatus.BORROWED);
-        bookCopyRepository.save(copy);
-
-        // Create borrow slip
         LocalDateTime now = LocalDateTime.now();
-        BorrowSlip slip = BorrowSlip.builder()
-                .user(user)
-                .borrowDate(now)
-                .dueDate(now.plusDays(defaultDueDays))
-                .source(BorrowSource.ONLINE)
-                .build();
-        slip = borrowSlipRepository.save(slip);
+        BookHold activeHold = findValidActiveHold(borrower.getId(), book.getId(), now);
+        if (activeHold != null) {
+            return fulfillHold(activeHold, librarian, request.getCopyId(), now);
+        }
 
-        // Create borrow record
-        BorrowRecord record = BorrowRecord.builder()
-                .copy(copy)
-                .slip(slip)
-                .status(BorrowStatus.BORROWING)
-                .build();
-        record = borrowRecordRepository.save(record);
+        BookCopy copy = resolveCopyForBorrow(book, request.getCopyId());
+        BorrowRecord record = createBorrowRecord(borrower, librarian, copy, now, request.getCopyId() != null);
 
-        sendNotification(user, "Mượn sách thành công",
+        sendNotification(borrower, "Mượn sách thành công",
                 String.format("Bạn đã mượn \"%s\" (bản #%d). Hạn trả: %s",
-                        book.getTitle(), copy.getCopyNumber(), slip.getDueDate().toLocalDate()),
+                        book.getTitle(), copy.getCopyNumber(), record.getSlip().getDueDate().toLocalDate()),
                 NotificationType.BORROW_CONFIRM);
 
         return borrowRecordMapper.toResponse(record);
@@ -180,6 +147,176 @@ public class BorrowService {
                             record.getCopy().getBook().getTitle()),
                     NotificationType.OVERDUE_WARNING);
         }
+    }
+
+    private BorrowRecordResponse fulfillHold(BookHold hold, User librarian, Long copyId, LocalDateTime now) {
+        if (hold.getStatus() != HoldStatus.ACTIVE) {
+            throw new IllegalArgumentException("Hold is not active");
+        }
+
+        BookCopy borrowCopy = resolveCopyForHold(hold, copyId);
+        BorrowRecord record = createBorrowRecord(hold.getUser(), librarian, borrowCopy, now, copyId != null);
+
+        hold.setStatus(HoldStatus.FULFILLED);
+        hold.setFulfilledAt(now);
+        hold.setLibrarian(librarian);
+        bookHoldRepository.save(hold);
+
+        sendNotification(hold.getUser(),
+                "Mượn sách thành công",
+                String.format("Bạn đã mượn \"%s\" từ đặt mượn.", borrowCopy.getBook().getTitle()),
+                NotificationType.HOLD_FULFILLED);
+
+        return borrowRecordMapper.toResponse(record);
+    }
+
+    private void expireHold(BookHold hold, LocalDateTime now) {
+        hold.setStatus(HoldStatus.EXPIRED);
+        hold.setCanceledAt(now);
+        hold.setCancelReason("EXPIRED_NO_PICKUP");
+        bookHoldRepository.save(hold);
+
+        BookCopy copy = hold.getCopy();
+        if (copy.getStatus() == CopyStatus.RESERVED) {
+            copy.setStatus(CopyStatus.AVAILABLE);
+            bookCopyRepository.save(copy);
+        }
+
+        User user = hold.getUser();
+        LocalDateTime banUntil = now.plusDays(holdBanDays);
+        if (user.getHoldBanUntil() == null || user.getHoldBanUntil().isBefore(banUntil)) {
+            user.setHoldBanUntil(banUntil);
+            userRepository.save(user);
+        }
+
+        sendNotification(user,
+                "Đặt mượn đã hết hạn",
+                String.format("Đặt mượn \"%s\" đã hết hạn. Bạn bị tạm khóa đặt mượn đến %s.",
+                        copy.getBook().getTitle(), banUntil),
+                NotificationType.HOLD_EXPIRED);
+        sendNotification(user,
+                "Tạm khóa đặt mượn",
+                String.format("Bạn không thể đặt mượn trong %d ngày.", holdBanDays),
+                NotificationType.HOLD_BAN);
+    }
+
+    private void ensureBorrowAllowed(Long userId, Long bookId) {
+        int activeBorrows = borrowRecordRepository.countBySlipUserIdAndStatusIn(
+                userId, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE));
+        long activeHolds = bookHoldRepository.countByUserIdAndStatusIn(
+                userId, List.of(HoldStatus.ACTIVE));
+        if (activeBorrows + activeHolds >= maxBooksPerUser) {
+            throw new BorrowLimitExceededException(maxBooksPerUser);
+        }
+
+        if (borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(
+                userId, bookId, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE))) {
+            throw new IllegalArgumentException("You are already borrowing this book");
+        }
+    }
+
+    private BookHold findValidActiveHold(Long userId, Long bookId, LocalDateTime now) {
+        BookHold activeHold = bookHoldRepository
+                .findFirstByUserIdAndCopyBookIdAndStatusOrderByCreatedAtDesc(userId, bookId, HoldStatus.ACTIVE)
+                .orElse(null);
+        if (activeHold == null) {
+            return null;
+        }
+        if (activeHold.getExpiresAt().isBefore(now)) {
+            expireHold(activeHold, now);
+            return null;
+        }
+        return activeHold;
+    }
+
+    private BorrowRecord createBorrowRecord(User borrower, User librarian, BookCopy copy, LocalDateTime now, boolean isNfc) {
+        copy.setStatus(CopyStatus.BORROWED);
+        bookCopyRepository.save(copy);
+
+        BorrowSlip slip = BorrowSlip.builder()
+                .user(borrower)
+                .librarian(librarian)
+                .borrowDate(now)
+                .dueDate(now.plusDays(defaultDueDays))
+            .source(isNfc ? BorrowSource.NFC : BorrowSource.COUNTER)
+                .build();
+        slip = borrowSlipRepository.save(slip);
+
+        BorrowRecord record = BorrowRecord.builder()
+                .copy(copy)
+                .slip(slip)
+                .status(BorrowStatus.BORROWING)
+                .build();
+        return borrowRecordRepository.save(record);
+    }
+
+    private BookCopy resolveCopyForHold(BookHold hold, Long copyId) {
+        BookCopy reservedCopy = hold.getCopy();
+        if (reservedCopy.getStatus() != CopyStatus.RESERVED) {
+            throw new IllegalStateException("Reserved copy is not in RESERVED status");
+        }
+
+        if (copyId == null || copyId.equals(reservedCopy.getId())) {
+            return reservedCopy;
+        }
+
+        BookCopy requestedCopy = findAvailableCopyById(copyId, reservedCopy.getBook());
+        reservedCopy.setStatus(CopyStatus.AVAILABLE);
+        bookCopyRepository.save(reservedCopy);
+
+        hold.setCopy(requestedCopy);
+        return requestedCopy;
+    }
+
+    private BookCopy resolveCopyForBorrow(Book book, Long copyId) {
+        if (copyId != null) {
+            return findAvailableCopyById(copyId, book);
+        }
+
+        List<BookCopy> availableCopies = bookCopyRepository.findAvailableCopiesForUpdate(book.getId());
+        if (availableCopies.isEmpty()) {
+            throw new BookNotAvailableException(book.getId());
+        }
+        return availableCopies.get(0);
+    }
+
+    private BookCopy findAvailableCopyById(Long copyId, Book expectedBook) {
+        BookCopy requestedCopy = bookCopyRepository.findByIdForUpdate(copyId)
+                .orElseThrow(() -> new ResourceNotFoundException("BookCopy", "id", copyId));
+        if (!requestedCopy.getBook().getId().equals(expectedBook.getId())) {
+            throw new IllegalArgumentException("Requested copy is not the same book");
+        }
+        if (requestedCopy.getStatus() != CopyStatus.AVAILABLE) {
+            throw new IllegalArgumentException("Requested copy is not available");
+        }
+        return requestedCopy;
+    }
+
+    private User resolveBorrower(BorrowRequest request) {
+        String username = request.getUsername() != null ? request.getUsername().trim() : null;
+        String studentId = request.getStudentId() != null ? request.getStudentId().trim() : null;
+
+        if (username != null && username.isBlank()) {
+            username = null;
+        }
+        if (studentId != null && studentId.isBlank()) {
+            studentId = null;
+        }
+
+        if (username == null && studentId == null) {
+            throw new IllegalArgumentException("Borrower identifier is required (username or studentId)");
+        }
+        if (username != null && studentId != null) {
+            throw new IllegalArgumentException("Provide only one of username or studentId");
+        }
+
+        if (username != null) {
+            return userRepository.findByUsername(username)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
+        }
+
+        return userRepository.findByStudentId(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "studentId", studentId));
     }
 
     private void sendNotification(User user, String title, String message, NotificationType type) {

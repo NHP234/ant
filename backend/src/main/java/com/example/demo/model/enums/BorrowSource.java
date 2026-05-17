@@ -1,6 +1,6 @@
 package com.example.demo.model.enums;
 
-    public enum BorrowSource {
-        ONLINE,
-        NFC
-    }
+public enum BorrowSource {
+    COUNTER,
+    NFC
+}

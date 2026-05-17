@@ -96,6 +96,7 @@ Xây dựng **hệ thống web quản lý mượn trả sách thư viện** gi�
 | FR-04.10 | LIBRARIAN/ADMIN xem danh sách sách quá hạn | Trung bình |
 | FR-04.11 | Hold tự hủy sau 24h nếu không đến lấy | Trung bình |
 | FR-04.12 | No-show bị khóa đặt mượn 7 ngày | Trung bình |
+| FR-04.13 | LIBRARIAN/ADMIN mượn trực tiếp tại quầy (không cần hold), định danh SV bằng username/MSSV | Trung bình |
 
 ### FR-05: Thông báo
 | ID | Mô tả | Độ ưu tiên |
@@ -173,6 +174,7 @@ Xây dựng **hệ thống web quản lý mượn trả sách thư viện** gi�
 | BR-10 | Trả sách | Chỉ LIBRARIAN/ADMIN mới xác nhận trả sách (sinh viên không tự trả trên web) |
 | BR-11 | Hold hết hạn | Hold tự hủy sau 24h nếu SV không đến lấy |
 | BR-12 | No-show | SV bị khóa đặt mượn 7 ngày sau khi hold hết hạn |
+| BR-13 | Quyền mượn | Tạo borrow record chỉ bởi LIBRARIAN/ADMIN; SV chỉ đặt mượn |
 
 ---
 
@@ -215,6 +217,20 @@ Flow:
   6. Set copy.status = AVAILABLE
   7. Gửi notification xác nhận cho sinh viên
 Postcondition: Borrow record cập nhật, copy trở về AVAILABLE
+```
+
+### UC-04: Mượn trực tiếp tại quầy (không cần hold)
+
+```
+Actor: Thủ thư (LIBRARIAN)
+Precondition: Đã đăng nhập, xác định được sinh viên (username hoặc MSSV)
+Flow:
+  1. Thủ thư nhập thông tin SV (username/MSSV) hoặc quẹt thẻ NFC
+  2. Thủ thư chọn sách và mượn trực tiếp (có thể quẹt NFC copyId)
+  3. Hệ thống kiểm tra giới hạn mượn, trạng thái copy
+  4. Nếu SV có hold ACTIVE cùng đầu sách, hệ thống auto-fulfill hold
+  5. Hệ thống tạo borrow_slip + borrow_record, set copy.status=BORROWED
+Postcondition: Borrow record được tạo, SV nhận notification
 ```
 
 ### UC-03: Mượn/trả nhanh bằng NFC

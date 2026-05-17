@@ -82,7 +82,7 @@
 ### POST /borrows
 ```json
 // Request
-{ "bookId": 15 }
+{ "bookId": 15, "username": "student01", "copyId": 123 }
 
 // Response 201
 { "success": true, "data": { "id": 1, "bookTitle": "Clean Code", "borrowDate": "2026-03-04", "dueDate": "2026-03-18", "status": "BORROWING" } }
@@ -90,6 +90,8 @@
 // Error 400
 { "success": false, "error": { "code": "BORROW_LIMIT_EXCEEDED", "message": "Bạn đã mượn tối đa 5 cuốn sách" } }
 ```
+
+> **Lưu ý**: `username` hoặc `studentId` là bắt buộc (chỉ chọn 1). `copyId` optional khi quẹt NFC.
 
 ---
 

@@ -10,4 +10,10 @@ public class BorrowRequest {
 
     @NotNull(message = "Book ID is required")
     private Long bookId;
+
+    private String username;
+
+    private String studentId;
+
+    private Long copyId;
 }

@@ -65,7 +65,7 @@ com.example.demo/
 │       ├── Role.java                 # ADMIN, LIBRARIAN, STUDENT
 │       ├── BorrowStatus.java         # BORROWING, RETURNED, OVERDUE
 │       ├── CopyStatus.java           # AVAILABLE, RESERVED, BORROWED, DAMAGED, LOST
-│       ├── BorrowSource.java         # ONLINE, NFC
+│       ├── BorrowSource.java         # COUNTER, NFC
 │       └── NotificationType.java     # OVERDUE_WARNING, BORROW_CONFIRM, etc.
 ├── dto/
 │   ├── request/
@@ -165,7 +165,8 @@ public class GlobalExceptionHandler {
    - Public: GET /api/books/**, GET /api/categories/**
    - ADMIN/LIBRARIAN: POST/PUT /api/books/**
    - ADMIN only: DELETE /api/books/**, CRUD /api/categories/**, CRUD /api/users/**
-   - Authenticated: POST /api/borrows, GET /api/borrows/my
+   - ADMIN/LIBRARIAN: POST /api/borrows
+   - Authenticated: GET /api/borrows/my
    - ADMIN/LIBRARIAN: PUT /api/borrows/{id}/return, GET /api/borrows, GET /api/borrows/overdue
 ```
 
@@ -191,17 +192,23 @@ public class GlobalExceptionHandler {
    e. Create BorrowRecord { copy, slip, status=BORROWING }
    f. Mark hold FULFILLED + send notification
 
-4. Return: PUT /api/borrows/{id}/return
+4. Direct borrow at counter (no hold): POST /api/borrows
+   a. Librarian provides borrower identifier (username or studentId)
+   b. Optional NFC copyId to select a specific copy
+   c. If borrower has active hold for the same book, auto-fulfill it
+   d. Otherwise, pick any AVAILABLE copy and proceed with borrow
+
+5. Return: PUT /api/borrows/{id}/return
    a. Set record.status = RETURNED, record.returnDate = now
    b. Set copy.status = AVAILABLE
    c. Send notification
 
-5. Overdue check (@Scheduled daily 00:00):
+6. Overdue check (@Scheduled daily 00:00):
    a. Find records WHERE status=BORROWING AND slip.dueDate < NOW()
    b. Set record.status = OVERDUE
    c. Send notification
 
-6. Hold expiry (@Scheduled every 30 min):
+7. Hold expiry (@Scheduled every 30 min):
    a. Find holds WHERE status=ACTIVE AND expiresAt < NOW()
    b. Set hold.status = EXPIRED, release copy to AVAILABLE
    c. Set user.holdBanUntil = now + 7 days

@@ -57,6 +57,7 @@ class BorrowServiceTest {
     @InjectMocks private BorrowService borrowService;
 
     private User testUser;
+    private User librarianUser;
     private Book testBook;
     private BookCopy testCopy;
     private BorrowRequest borrowRequest;
@@ -67,11 +68,13 @@ class BorrowServiceTest {
         ReflectionTestUtils.setField(borrowService, "defaultDueDays", 14);
 
         testUser = User.builder().id(1L).username("student01").fullName("Test Student").role(Role.STUDENT).build();
+        librarianUser = User.builder().id(2L).username("librarian01").fullName("Lib User").role(Role.LIBRARIAN).build();
         testBook = Book.builder().id(1L).title("Clean Code").author("Robert Martin").build();
         testCopy = BookCopy.builder().id(10L).book(testBook).copyNumber(1).status(CopyStatus.AVAILABLE).build();
 
         borrowRequest = new BorrowRequest();
         borrowRequest.setBookId(1L);
+        borrowRequest.setUsername("student01");
     }
 
     @Nested
@@ -81,16 +84,17 @@ class BorrowServiceTest {
         @Test
         @DisplayName("should borrow book successfully")
         void borrowBook_success() {
+            when(userRepository.findByUsername("librarian01")).thenReturn(Optional.of(librarianUser));
             when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
             when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
-                when(borrowRecordRepository.countBySlipUserIdAndStatusIn(1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+            when(borrowRecordRepository.countBySlipUserIdAndStatusIn(1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
                     .thenReturn(0);
-                    when(bookHoldRepository.countByUserIdAndStatusIn(1L, List.of(HoldStatus.ACTIVE)))
+            when(bookHoldRepository.countByUserIdAndStatusIn(1L, List.of(HoldStatus.ACTIVE)))
                     .thenReturn(0L);
-                when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(1L, 1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+            when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(1L, 1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
                     .thenReturn(false);
-                    when(bookHoldRepository.existsByUserIdAndBookIdAndStatusIn(1L, 1L, List.of(HoldStatus.ACTIVE)))
-                    .thenReturn(false);
+            when(bookHoldRepository.findFirstByUserIdAndCopyBookIdAndStatusOrderByCreatedAtDesc(1L, 1L, HoldStatus.ACTIVE))
+                    .thenReturn(Optional.empty());
             when(bookCopyRepository.findAvailableCopiesForUpdate(1L)).thenReturn(List.of(testCopy));
             when(bookCopyRepository.save(any(BookCopy.class))).thenReturn(testCopy);
             when(borrowSlipRepository.save(any(BorrowSlip.class))).thenAnswer(inv -> {
@@ -106,7 +110,7 @@ class BorrowServiceTest {
             when(borrowRecordMapper.toResponse(any())).thenReturn(
                     BorrowRecordResponse.builder().id(1L).status("BORROWING").bookTitle("Clean Code").build());
 
-            BorrowRecordResponse result = borrowService.borrowBook("student01", borrowRequest);
+            BorrowRecordResponse result = borrowService.borrowBook("librarian01", borrowRequest);
 
             assertThat(result.getId()).isEqualTo(1L);
             assertThat(result.getStatus()).isEqualTo("BORROWING");
@@ -117,49 +121,60 @@ class BorrowServiceTest {
         @Test
         @DisplayName("should throw when user not found")
         void borrowBook_userNotFound() {
+            borrowRequest.setUsername("unknown");
+            when(userRepository.findByUsername("librarian01")).thenReturn(Optional.of(librarianUser));
             when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> borrowService.borrowBook("unknown", borrowRequest))
+            assertThatThrownBy(() -> borrowService.borrowBook("librarian01", borrowRequest))
                     .isInstanceOf(ResourceNotFoundException.class);
         }
 
         @Test
         @DisplayName("should throw when book not found")
         void borrowBook_bookNotFound() {
+            when(userRepository.findByUsername("librarian01")).thenReturn(Optional.of(librarianUser));
             when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
             when(bookRepository.findById(1L)).thenReturn(Optional.empty());
+            when(bookHoldRepository.findFirstByUserIdAndCopyBookIdAndStatusOrderByCreatedAtDesc(1L, 1L, HoldStatus.ACTIVE))
+                    .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> borrowService.borrowBook("student01", borrowRequest))
+            assertThatThrownBy(() -> borrowService.borrowBook("librarian01", borrowRequest))
                     .isInstanceOf(ResourceNotFoundException.class);
         }
 
         @Test
         @DisplayName("should throw when borrow limit exceeded")
         void borrowBook_limitExceeded() {
+            when(userRepository.findByUsername("librarian01")).thenReturn(Optional.of(librarianUser));
             when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
             when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
-                when(borrowRecordRepository.countBySlipUserIdAndStatusIn(1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+            when(borrowRecordRepository.countBySlipUserIdAndStatusIn(1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
                     .thenReturn(5);
-                    when(bookHoldRepository.countByUserIdAndStatusIn(1L, List.of(HoldStatus.ACTIVE)))
+            when(bookHoldRepository.countByUserIdAndStatusIn(1L, List.of(HoldStatus.ACTIVE)))
                     .thenReturn(0L);
+            when(bookHoldRepository.findFirstByUserIdAndCopyBookIdAndStatusOrderByCreatedAtDesc(1L, 1L, HoldStatus.ACTIVE))
+                    .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> borrowService.borrowBook("student01", borrowRequest))
+            assertThatThrownBy(() -> borrowService.borrowBook("librarian01", borrowRequest))
                     .isInstanceOf(BorrowLimitExceededException.class);
         }
 
         @Test
         @DisplayName("should throw when already borrowing same book")
         void borrowBook_alreadyBorrowing() {
+            when(userRepository.findByUsername("librarian01")).thenReturn(Optional.of(librarianUser));
             when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
             when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
-                when(borrowRecordRepository.countBySlipUserIdAndStatusIn(1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+            when(borrowRecordRepository.countBySlipUserIdAndStatusIn(1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
                     .thenReturn(1);
-                    when(bookHoldRepository.countByUserIdAndStatusIn(1L, List.of(HoldStatus.ACTIVE)))
+            when(bookHoldRepository.countByUserIdAndStatusIn(1L, List.of(HoldStatus.ACTIVE)))
                     .thenReturn(0L);
-                when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(1L, 1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+            when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(1L, 1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
                     .thenReturn(true);
+            when(bookHoldRepository.findFirstByUserIdAndCopyBookIdAndStatusOrderByCreatedAtDesc(1L, 1L, HoldStatus.ACTIVE))
+                    .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> borrowService.borrowBook("student01", borrowRequest))
+            assertThatThrownBy(() -> borrowService.borrowBook("librarian01", borrowRequest))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("already borrowing");
         }
@@ -167,19 +182,20 @@ class BorrowServiceTest {
         @Test
         @DisplayName("should throw when book not available")
         void borrowBook_notAvailable() {
+            when(userRepository.findByUsername("librarian01")).thenReturn(Optional.of(librarianUser));
             when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
             when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
-                when(borrowRecordRepository.countBySlipUserIdAndStatusIn(1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+            when(borrowRecordRepository.countBySlipUserIdAndStatusIn(1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
                     .thenReturn(0);
-                    when(bookHoldRepository.countByUserIdAndStatusIn(1L, List.of(HoldStatus.ACTIVE)))
+            when(bookHoldRepository.countByUserIdAndStatusIn(1L, List.of(HoldStatus.ACTIVE)))
                     .thenReturn(0L);
-                when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(1L, 1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+            when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(1L, 1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
                     .thenReturn(false);
-                    when(bookHoldRepository.existsByUserIdAndBookIdAndStatusIn(1L, 1L, List.of(HoldStatus.ACTIVE)))
-                    .thenReturn(false);
+            when(bookHoldRepository.findFirstByUserIdAndCopyBookIdAndStatusOrderByCreatedAtDesc(1L, 1L, HoldStatus.ACTIVE))
+                    .thenReturn(Optional.empty());
             when(bookCopyRepository.findAvailableCopiesForUpdate(1L)).thenReturn(List.of());
 
-            assertThatThrownBy(() -> borrowService.borrowBook("student01", borrowRequest))
+            assertThatThrownBy(() -> borrowService.borrowBook("librarian01", borrowRequest))
                     .isInstanceOf(BookNotAvailableException.class);
         }
     }

@@ -29,6 +29,11 @@ alwaysApply: true
 3. **Prefer explicit state over toggle** trong mọi trường hợp: status, role, permission...
 4. **Database ưu tiên chuẩn hóa (3NF)**: Tránh denormalization trừ khi có lý do rõ ràng và đã cân nhắc trade-off.
 5. **Chống race condition**: Các thao tác tạo/sửa dễ va chạm (ví dụ tăng số copy) phải dùng transaction + lock hoặc cơ chế retry theo unique constraint.
+6. **Giữ code sạch**:
+	- Hàm nên ngắn (khoảng <= 40 dòng logic). Nếu dài, tách theo trách nhiệm rõ ràng.
+	- Số tham số nên <= 4; nếu nhiều hơn, gom vào DTO/value object.
+	- Tránh nesting sâu (>2); ưu tiên guard clauses.
+	- Tránh copy-paste; trích xuất helper dùng chung.
 
 ## Sau mỗi phiên làm việc
 - Cập nhật `docs/PROGRESS.md` với những gì đã hoàn thành

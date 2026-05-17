@@ -154,7 +154,7 @@ public class BookHoldService {
         borrowCopy.setStatus(CopyStatus.BORROWED);
         bookCopyRepository.save(borrowCopy);
 
-        BorrowSource source = (request != null && request.getCopyId() != null) ? BorrowSource.NFC : BorrowSource.ONLINE;
+        BorrowSource source = (request != null && request.getCopyId() != null) ? BorrowSource.NFC : BorrowSource.COUNTER;
         BorrowSlip slip = BorrowSlip.builder()
                 .user(hold.getUser())
                 .librarian(librarian)
