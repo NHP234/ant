@@ -40,7 +40,7 @@ cd d:\ant\backend
 1. Test Auth trước (file 03): register → login → refresh
 2. Test Authorization (file 04): kiểm tra phân quyền STUDENT vs LIBRARIAN vs ADMIN
 3. Test lại Category/Book CRUD (file 01-02) với token ADMIN trong header
-4. Test Borrow (file 05): mượn/trả sách
+4. Test Borrow/Hold (file 05): đặt mượn → xác nhận → trả
 5. Test User Management (file 06): tạo LIBRARIAN, đổi role, update status
 6. Test Dashboard (file 07): thống kê + cache verification
 7. Test Search nâng cao (file 08): full-text search tiếng Việt
@@ -107,12 +107,13 @@ cd d:\ant\backend
 | 4.8 | DELETE books - LIBRARIAN forbidden | |
 | 4.9 | POST users - LIBRARIAN forbidden | |
 | 4.10 | Dashboard stats - STUDENT forbidden | |
-| 5.1 | Borrow book - success | |
-| 5.2 | Borrow - validation cases | |
-| 5.3 | Return book - success | |
-| 5.4 | My borrows - history | |
-| 5.5 | All borrows - admin | |
-| 5.6 | Overdue borrows | |
+| 5.1 | Create hold - success | |
+| 5.2 | Hold - validation cases | |
+| 5.3 | Confirm hold - success | |
+| 5.4 | Return book - success | |
+| 5.5 | My borrows - history | |
+| 5.6 | All borrows - admin | |
+| 5.7 | Overdue borrows | |
 | 6.1 | Create LIBRARIAN | |
 | 6.2 | Create user - validation | |
 | 6.3 | Get my profile | |

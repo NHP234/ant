@@ -1,10 +1,8 @@
-# 5. Borrow APIs
+# 5. Hold & Borrow APIs
 
-> **Pre-requisite**: Đã có ít nhất 1 STUDENT account và 1 ADMIN/LIBRARIAN account. Đã có books trong DB.
+> **Pre-requisite**: Có ít nhất 1 STUDENT account và 1 ADMIN/LIBRARIAN account. Có books trong DB.
 
-### 5.1 Mượn sách (bất kỳ user đã login)
-
-> POST /api/borrows yêu cầu authenticated (bất kỳ role nào). Không có `@PreAuthorize` cụ thể, chỉ cần token hợp lệ.
+### 5.1 Đặt mượn (STUDENT)
 
 **Login STUDENT trước:**
 ```
@@ -14,12 +12,12 @@ POST {{base_url}}/auth/login
   "password": "Pass@123"
 }
 ```
-Copy accessToken -> variable `token`
+Copy accessToken -> variable `student_token`
 
-**Mượn sách:**
+**Đặt mượn:**
 ```
-POST {{base_url}}/borrows
-Authorization: Bearer {{token}}
+POST {{base_url}}/holds
+Authorization: Bearer {{student_token}}
 {
   "bookId": 1
 }
@@ -30,69 +28,59 @@ Authorization: Bearer {{token}}
   "success": true,
   "data": {
     "id": 1,
-    "userId": 2,
-    "userFullName": "Test Student",
     "bookId": 1,
-    "bookTitle": "...",
-    "borrowDate": "2026-04-15T...",
-    "dueDate": "2026-04-29T...",
-    "returnDate": null,
-    "status": "BORROWING"
+    "bookTitle": "Clean Code",
+    "copyId": 101,
+    "status": "ACTIVE",
+    "reservedAt": "2026-05-17T10:00:00",
+    "expiresAt": "2026-05-18T10:00:00"
   },
-  "message": "Book borrowed successfully"
+  "message": "Hold created successfully"
 }
 ```
 
-### 5.2 Mượn sách - Validation Cases
+### 5.2 Đặt mượn - Validation Cases
 
-**TC1: Mượn sách không tồn tại**
+**TC1: Book không tồn tại**
 ```
-POST {{base_url}}/borrows
-Authorization: Bearer {{token}}
-{
-  "bookId": 9999
-}
+POST {{base_url}}/holds
+Authorization: Bearer {{student_token}}
+{ "bookId": 9999 }
 ```
 **Expected**: 404 - `RESOURCE_NOT_FOUND`
 
-**TC2: Mượn cùng sách đang mượn**
+**TC2: Đặt trùng cùng sách**
 ```
-POST {{base_url}}/borrows
-Authorization: Bearer {{token}}
-{
-  "bookId": 1
-}
+POST {{base_url}}/holds
+Authorization: Bearer {{student_token}}
+{ "bookId": 1 }
 ```
-**Expected**: 400 - `BAD_REQUEST` - "You are already borrowing this book"
+**Expected**: 400 - "You already have an active hold for this book"
 
-**TC3: Mượn quá giới hạn (5 sách)**
-Mượn sách bookId 2, 3, 4, 5 rồi thử mượn thêm bookId 6:
+**TC3: Vượt giới hạn (5 cuốn: hold + borrow)**
+Tạo đủ 5 hold/borrow, rồi thử thêm:
 ```
-POST {{base_url}}/borrows
-Authorization: Bearer {{token}}
-{
-  "bookId": 6
-}
+POST {{base_url}}/holds
+Authorization: Bearer {{student_token}}
+{ "bookId": 6 }
 ```
 **Expected**: 400 - `BORROW_LIMIT_EXCEEDED`
 
-**TC4: Mượn sách hết (available_quantity = 0)**
-Cần nhiều user mượn hết sách, hoặc seed dữ liệu sách có quantity=1, mượn 1 lần rồi mượn lại bằng user khác.
+**TC4: Hết copy AVAILABLE**
+Khi tất cả copies đã BORROWED/RESERVED:
 **Expected**: 400 - `BOOK_NOT_AVAILABLE`
 
 **TC5: Không có token**
 ```
-POST {{base_url}}/borrows
+POST {{base_url}}/holds
 (no Authorization header)
-{
-  "bookId": 1
-}
+{ "bookId": 1 }
 ```
 **Expected**: 401/403
 
-### 5.3 Trả sách (ADMIN/LIBRARIAN)
+### 5.3 Xác nhận mượn (ADMIN/LIBRARIAN)
 
-**Login ADMIN:**
+**Login ADMIN/LIBRARIAN:**
 ```
 POST {{base_url}}/auth/login
 {
@@ -100,98 +88,67 @@ POST {{base_url}}/auth/login
   "password": "Admin@123"
 }
 ```
-Copy accessToken -> variable `token`
+Copy accessToken -> variable `admin_token`
 
-**Trả sách:**
+**Xác nhận (không truyền copyId):**
+```
+PUT {{base_url}}/holds/1/confirm
+Authorization: Bearer {{admin_token}}
+```
+**Expected**: 200 OK, hold status = FULFILLED, tạo borrow record
+
+**Xác nhận (quẹt NFC, đổi copy cùng đầu sách):**
+```
+PUT {{base_url}}/holds/1/confirm
+Authorization: Bearer {{admin_token}}
+{ "copyId": 123 }
+```
+**Expected**: 200 OK, copyId cập nhật sang 123
+
+### 5.4 Trả sách (ADMIN/LIBRARIAN)
+
 ```
 PUT {{base_url}}/borrows/1/return?note=Sách còn tốt
-Authorization: Bearer {{token}}
+Authorization: Bearer {{admin_token}}
 ```
-**Expected**: 200 OK
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "status": "RETURNED",
-    "returnDate": "2026-04-15T...",
-    "note": "Sách còn tốt"
-  },
-  "message": "Book returned successfully"
-}
-```
+**Expected**: 200 OK, status = RETURNED
 
-**TC6: Trả sách đã trả rồi**
-```
-PUT {{base_url}}/borrows/1/return
-Authorization: Bearer {{token}}
-```
-**Expected**: 400 - `BAD_REQUEST` - "This book has already been returned"
-
-**TC7: STUDENT cố trả sách**
-Login lại với STUDENT token:
-```
-PUT {{base_url}}/borrows/1/return
-Authorization: Bearer {{student_token}}
-```
-**Expected**: 403 Forbidden
-
-### 5.4 Xem lịch sử mượn trả (STUDENT)
+### 5.5 Xem lịch sử mượn (STUDENT)
 
 ```
 GET {{base_url}}/borrows/my
 Authorization: Bearer {{student_token}}
 ```
-**Expected**: 200 OK, trả về danh sách borrow records của user đang login, có pagination.
+**Expected**: 200 OK, paginated borrow records
 
-**Với phân trang:**
-```
-GET {{base_url}}/borrows/my?page=0&size=5&sort=borrowDate,desc
-Authorization: Bearer {{student_token}}
-```
-
-### 5.5 Xem tất cả borrows (ADMIN/LIBRARIAN)
+### 5.6 Xem tất cả borrows (ADMIN/LIBRARIAN)
 
 ```
 GET {{base_url}}/borrows
 Authorization: Bearer {{admin_token}}
 ```
-**Expected**: 200 OK, trả về tất cả borrow records.
+**Expected**: 200 OK
 
-**TC8: STUDENT cố xem tất cả**
-```
-GET {{base_url}}/borrows
-Authorization: Bearer {{student_token}}
-```
-**Expected**: 403 Forbidden
-
-### 5.6 Xem sách quá hạn (ADMIN/LIBRARIAN)
+### 5.7 Xem sách quá hạn (ADMIN/LIBRARIAN)
 
 ```
 GET {{base_url}}/borrows/overdue
 Authorization: Bearer {{admin_token}}
 ```
-**Expected**: 200 OK, trả về danh sách sách đang quá hạn (status = OVERDUE hoặc BORROWING nhưng dueDate < now).
+**Expected**: 200 OK
 
-### 5.7 Test Flow Hoàn chỉnh
+### 5.8 Hủy hold (STUDENT)
 
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | STUDENT login | 200 + tokens |
-| 2 | Mượn sách id=1 | 201 + status=BORROWING |
-| 3 | Mượn cùng sách id=1 | 400 - already borrowing |
-| 4 | Xem lịch sử `/borrows/my` | 200 + 1 record |
-| 5 | ADMIN login | 200 + tokens |
-| 6 | Xem tất cả `/borrows` | 200 + records |
-| 7 | Trả sách PUT `/borrows/1/return` | 200 + status=RETURNED |
-| 8 | Trả lại lần nữa | 400 - already returned |
-| 9 | STUDENT mượn lại sách id=1 | 201 (vì đã trả) |
+```
+PUT {{base_url}}/holds/1/cancel
+Authorization: Bearer {{student_token}}
+{ "reason": "USER_CANCELED" }
+```
+**Expected**: 200 OK, status = CANCELED
 
 ---
 
 ### Lưu ý Testing
-- Cần seed data: ít nhất 5-6 books với quantity > 0 để test giới hạn mượn
-- Cần 2 accounts: 1 STUDENT + 1 ADMIN/LIBRARIAN
-- available_quantity tự động giảm/tăng khi mượn/trả (check trong DB)
-- Notification được tạo tự động khi mượn/trả/quá hạn (check table `notifications`)
-- OverdueCheckScheduler chạy 00:00 mỗi ngày, chuyển BORROWING -> OVERDUE nếu dueDate < now
+- Copy status chuyển: AVAILABLE → RESERVED → BORROWED → AVAILABLE
+- Hold hết hạn sau 24h (scheduler chạy mỗi 30 phút)
+- Notification được tạo tự động khi đặt/confirm/hủy/hết hạn hold

@@ -182,3 +182,4 @@
 | 2026-05-15 | Schema refactor V9: book_copies (physical copies with NFC per copy), borrow_slips (borrow sessions), computed quantities (COUNT instead of denormalized), pessimistic locking. Updated entities, repos, services, DTOs, mappers |
 | 2026-05-16 | Documentation update: DATABASE.md + BACKEND.md rewrite to reflect V9 schema changes |
 | 2026-05-16 | Normalize borrow_records (drop denormalized user_id) + add Flyway V10 + update code/tests/docs |
+| 2026-05-16 | Add hold/ reservation flow: book_holds, RESERVED status, hold expiry + ban, new APIs and schedulers |

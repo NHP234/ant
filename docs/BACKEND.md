@@ -64,7 +64,7 @@ com.example.demo/
 │   └── enums/
 │       ├── Role.java                 # ADMIN, LIBRARIAN, STUDENT
 │       ├── BorrowStatus.java         # BORROWING, RETURNED, OVERDUE
-│       ├── CopyStatus.java           # AVAILABLE, BORROWED, DAMAGED, LOST
+│       ├── CopyStatus.java           # AVAILABLE, RESERVED, BORROWED, DAMAGED, LOST
 │       ├── BorrowSource.java         # ONLINE, NFC
 │       └── NotificationType.java     # OVERDUE_WARNING, BORROW_CONFIRM, etc.
 ├── dto/
@@ -169,29 +169,43 @@ public class GlobalExceptionHandler {
    - ADMIN/LIBRARIAN: PUT /api/borrows/{id}/return, GET /api/borrows, GET /api/borrows/overdue
 ```
 
-## Borrow Flow (V9 Refactored)
+## Hold + Borrow Flow (V11)
 
 ```
-1. User request: POST /api/borrows { bookId: 1 }
+1. Student request: POST /api/holds { bookId: 1 }
 
-2. BorrowService.borrowBook():
-   a. Check borrow limit (max 5 active borrows)
-   b. Check not already borrowing this book
-   c. Find AVAILABLE copy (SELECT FOR UPDATE → pessimistic lock)
-   d. Set copy.status = BORROWED
-   e. Create BorrowSlip { user, borrowDate, dueDate, source=ONLINE }
-   f. Create BorrowRecord { copy, slip, status=BORROWING }
+2. BookHoldService.createHold():
+   a. Check hold ban window (no-show)
+   b. Check borrow limit (active borrows + holds <= 5)
+   c. Check not already borrowing/holding this book
+   d. Find AVAILABLE copy (SELECT FOR UPDATE → pessimistic lock)
+   e. Set copy.status = RESERVED
+   f. Create BookHold { user, copy, reservedAt, expiresAt=now+24h, status=ACTIVE }
    g. Send notification
 
-3. Return: PUT /api/borrows/{id}/return
+3. Confirm borrow: PUT /api/holds/{id}/confirm
+   a. Librarian can confirm manually or with NFC copyId
+   b. If copyId provided and same book, swap reserved copy → requested copy
+   c. Set copy.status = BORROWED
+   d. Create BorrowSlip { user, librarian, borrowDate, dueDate, source }
+   e. Create BorrowRecord { copy, slip, status=BORROWING }
+   f. Mark hold FULFILLED + send notification
+
+4. Return: PUT /api/borrows/{id}/return
    a. Set record.status = RETURNED, record.returnDate = now
    b. Set copy.status = AVAILABLE
    c. Send notification
 
-4. Overdue check (@Scheduled daily 00:00):
+5. Overdue check (@Scheduled daily 00:00):
    a. Find records WHERE status=BORROWING AND slip.dueDate < NOW()
    b. Set record.status = OVERDUE
    c. Send notification
+
+6. Hold expiry (@Scheduled every 30 min):
+   a. Find holds WHERE status=ACTIVE AND expiresAt < NOW()
+   b. Set hold.status = EXPIRED, release copy to AVAILABLE
+   c. Set user.holdBanUntil = now + 7 days
+   d. Send notification
 ```
 
 ## Caching Strategy

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 public interface BorrowRecordRepository extends JpaRepository<BorrowRecord, Long> {
@@ -17,9 +18,16 @@ public interface BorrowRecordRepository extends JpaRepository<BorrowRecord, Long
 
     int countBySlipUserIdAndStatus(Long userId, BorrowStatus status);
 
+    int countBySlipUserIdAndStatusIn(Long userId, Collection<BorrowStatus> statuses);
+
     // Check if user is already borrowing a specific book (through any copy of that book)
     @Query("SELECT COUNT(r) > 0 FROM BorrowRecord r WHERE r.slip.user.id = :userId AND r.copy.book.id = :bookId AND r.status = :status")
     boolean existsBySlipUserIdAndBookIdAndStatus(@Param("userId") Long userId, @Param("bookId") Long bookId, @Param("status") BorrowStatus status);
+
+    @Query("SELECT COUNT(r) > 0 FROM BorrowRecord r WHERE r.slip.user.id = :userId AND r.copy.book.id = :bookId AND r.status IN :statuses")
+    boolean existsBySlipUserIdAndBookIdAndStatusIn(@Param("userId") Long userId,
+                                                   @Param("bookId") Long bookId,
+                                                   @Param("statuses") Collection<BorrowStatus> statuses);
 
     // Overdue check: records where slip.dueDate < now and status = BORROWING
     @Query("SELECT r FROM BorrowRecord r JOIN r.slip s WHERE r.status = :status AND s.dueDate < :dateTime")

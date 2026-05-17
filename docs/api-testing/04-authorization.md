@@ -11,11 +11,16 @@
 | POST /api/books, PUT /api/books/{id} | ❌ 403 | ✅ | ✅ |
 | DELETE /api/books/{id} | ❌ 403 | ❌ 403 | ✅ |
 | POST/PUT/DELETE /api/categories/** | ❌ 403 | ❌ 403 | ✅ |
-| POST /api/borrows | ✅ | ✅ | ✅ |
+| POST /api/borrows | ❌ 403 | ✅ | ✅ |
 | PUT /api/borrows/{id}/return | ❌ 403 | ✅ | ✅ |
 | GET /api/borrows (all) | ❌ 403 | ✅ | ✅ |
 | GET /api/borrows/my | ✅ | ✅ | ✅ |
 | GET /api/borrows/overdue | ❌ 403 | ✅ | ✅ |
+| POST /api/holds | ✅ | ✅ | ✅ |
+| GET /api/holds/my | ✅ | ✅ | ✅ |
+| GET /api/holds | ❌ 403 | ✅ | ✅ |
+| PUT /api/holds/{id}/confirm | ❌ 403 | ✅ | ✅ |
+| PUT /api/holds/{id}/cancel | ✅ (own) | ✅ | ✅ |
 | POST/GET/PUT/DELETE /api/users/** | ❌ 403 | ❌ 403 | ✅ |
 | GET /api/users/me | ✅ | ✅ | ✅ |
 | GET /api/dashboard/stats | ❌ 403 | ✅ | ✅ |

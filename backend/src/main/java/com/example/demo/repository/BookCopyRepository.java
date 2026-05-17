@@ -23,6 +23,10 @@ public interface BookCopyRepository extends JpaRepository<BookCopy, Long> {
     @Query("SELECT c FROM BookCopy c WHERE c.book.id = :bookId AND c.status = 'AVAILABLE' ORDER BY c.copyNumber")
     List<BookCopy> findAvailableCopiesForUpdate(@Param("bookId") Long bookId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM BookCopy c WHERE c.id = :copyId")
+    Optional<BookCopy> findByIdForUpdate(@Param("copyId") Long copyId);
+
     Optional<BookCopy> findByNfcTagUid(String nfcTagUid);
 
     @Query("SELECT MAX(c.copyNumber) FROM BookCopy c WHERE c.book.id = :bookId")

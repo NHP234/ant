@@ -77,7 +77,7 @@
   "quantity": 3
 }
 ```
-- **Expected**: 201 Created, availableQuantity = 3 (bằng quantity)
+- **Expected**: 201 Created, totalCopies = 3, availableCopies = 3
 - [ ] PASS
 
 ### 2.8 POST /api/books - Tạo sách mới (có category)
@@ -99,7 +99,7 @@
   "categoryIds": [1]
 }
 ```
-- **Expected**: 201 Created, categories chứa "Công nghệ thông tin"
+- **Expected**: 201 Created, totalCopies = 2, availableCopies = 2
 - [ ] PASS
 
 ### 2.9 POST /api/books - Validation: thiếu title
@@ -144,11 +144,10 @@
 - **Body**:
 ```json
 {
-  "description": "Cuốn sách kinh điển về clean code, phiên bản cập nhật.",
-  "quantity": 5
+  "description": "Cuốn sách kinh điển về clean code, phiên bản cập nhật."
 }
 ```
-- **Expected**: 200 OK, description đã đổi, quantity = 5, availableQuantity tăng tương ứng
+- **Expected**: 200 OK, description đã đổi
 - [ ] PASS
 
 ### 2.12 PUT /api/books/{id} - Gán categories cho sách

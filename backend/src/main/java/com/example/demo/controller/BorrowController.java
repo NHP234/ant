@@ -28,6 +28,7 @@ public class BorrowController {
     private final BorrowService borrowService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<ApiResponse<BorrowRecordResponse>> borrowBook(
             @Valid @RequestBody BorrowRequest request,
             Authentication authentication) {

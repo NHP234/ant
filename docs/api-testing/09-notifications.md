@@ -1,6 +1,6 @@
 # 9. Notification APIs
 
-> **Pre-requisite**: Login với bất kỳ account nào. Notifications được tạo tự động khi mượn/trả/quá hạn sách.
+> **Pre-requisite**: Login với bất kỳ account nào. Notifications được tạo tự động khi đặt mượn/xác nhận/hủy/hết hạn, mượn/trả/quá hạn sách.
 
 ### 9.1 Xem danh sách notifications
 
@@ -78,10 +78,11 @@ GET {{base_url}}/notifications
 
 | Step | Action | Expected |
 |------|--------|----------|
-| 1 | STUDENT mượn sách | 201 + notification tạo tự động |
-| 2 | GET /notifications | 200 + có notification "Mượn sách thành công" |
-| 3 | GET /notifications/unread-count | unreadCount >= 1 |
-| 4 | PUT /notifications/{id}/read | 200 + isRead = true |
-| 5 | GET /notifications/unread-count | unreadCount giảm 1 |
-| 6 | PUT /notifications/read-all | 200 + markedCount |
-| 7 | GET /notifications/unread-count | unreadCount = 0 |
+| 1 | STUDENT đặt mượn | 201 + notification "Đặt mượn thành công" |
+| 2 | LIBRARIAN xác nhận | 200 + notification "Mượn sách thành công" |
+| 3 | GET /notifications | 200 + có notification "Mượn sách thành công" |
+| 4 | GET /notifications/unread-count | unreadCount >= 1 |
+| 5 | PUT /notifications/{id}/read | 200 + isRead = true |
+| 6 | GET /notifications/unread-count | unreadCount giảm 1 |
+| 7 | PUT /notifications/read-all | 200 + markedCount |
+| 8 | GET /notifications/unread-count | unreadCount = 0 |

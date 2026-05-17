@@ -46,6 +46,9 @@ public class User {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "hold_ban_until")
+    private LocalDateTime holdBanUntil;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

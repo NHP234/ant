@@ -9,8 +9,10 @@ erDiagram
     users ||--o{ borrow_slips : "has many"
     users ||--o{ borrow_slips : "processed by (librarian)"
     borrow_slips ||--o{ borrow_records : "contains"
+    users ||--o{ book_holds : "has many"
     books ||--o{ book_copies : "has many"
     book_copies ||--o{ borrow_records : "has many"
+    book_copies ||--o{ book_holds : "has many"
     books }o--o{ categories : "many-to-many (book_categories)"
     users ||--o{ notifications : "has many"
     users ||--o{ audit_logs : "has many"
@@ -30,6 +32,7 @@ erDiagram
 | student_id | VARCHAR(20) | UNIQUE, NULLABLE | Mã sinh viên |
 | nfc_card_uid | VARCHAR(50) | UNIQUE, NULLABLE | UID thẻ NFC sinh viên |
 | is_active | BOOLEAN | DEFAULT true | |
+| hold_ban_until | TIMESTAMP | NULLABLE | Tạm khóa đặt mượn đến thời điểm này |
 | created_at | TIMESTAMP | DEFAULT NOW() | |
 
 ### books
@@ -59,7 +62,7 @@ erDiagram
 | book_id | BIGINT | FK → books.id, NOT NULL | Đầu sách mà cuốn này thuộc về |
 | copy_number | INTEGER | NOT NULL | Bản thứ mấy (1, 2, 3...) |
 | nfc_tag_uid | VARCHAR(50) | UNIQUE, NULLABLE | UID NFC tag dán trên cuốn sách |
-| status | VARCHAR(20) | NOT NULL, DEFAULT 'AVAILABLE' | AVAILABLE, BORROWED, DAMAGED, LOST |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'AVAILABLE' | AVAILABLE, RESERVED, BORROWED, DAMAGED, LOST |
 | condition_note | TEXT | NULLABLE | Ghi chú tình trạng cuốn sách |
 | created_at | TIMESTAMP | DEFAULT NOW() | |
 
@@ -108,6 +111,23 @@ erDiagram
 > **Lưu ý V9**: `book_id`, `borrow_date`, `due_date` đã di chuyển — `book_id` → `copy_id` (qua book_copies), `borrow_date`/`due_date` → borrow_slips.
 > User được truy xuất qua `borrow_slips.user_id` để đảm bảo chuẩn hóa dữ liệu.
 
+### book_holds *(V11 - New)*
+> Đặt mượn (giữ chỗ 24h) cho một cuốn sách vật lý. Hết hạn sẽ tự hủy và mở lại copy.
+
+| Column | Type | Constraints | Note |
+|--------|------|-------------|------|
+| id | BIGSERIAL | PK | |
+| user_id | BIGINT | FK → users.id, NOT NULL | Người đặt mượn |
+| copy_id | BIGINT | FK → book_copies.id, NOT NULL | Copy được giữ chỗ |
+| status | VARCHAR(20) | NOT NULL | ACTIVE, FULFILLED, CANCELED, EXPIRED |
+| reserved_at | TIMESTAMP | NOT NULL | Thời điểm giữ chỗ |
+| expires_at | TIMESTAMP | NOT NULL | Hết hạn sau 24h (configurable) |
+| fulfilled_at | TIMESTAMP | NULLABLE | Thời điểm xác nhận mượn |
+| canceled_at | TIMESTAMP | NULLABLE | Thời điểm hủy / hết hạn |
+| cancel_reason | TEXT | NULLABLE | Lý do hủy |
+| librarian_id | BIGINT | FK → users.id, NULLABLE | Thủ thư xác nhận/hủy |
+| created_at | TIMESTAMP | DEFAULT NOW() | |
+
 ### notifications
 | Column | Type | Constraints | Note |
 |--------|------|-------------|------|
@@ -148,6 +168,11 @@ CREATE INDEX idx_book_copies_nfc ON book_copies(nfc_tag_uid) WHERE nfc_tag_uid I
 CREATE INDEX idx_borrow_slips_user_id ON borrow_slips(user_id);
 CREATE INDEX idx_borrow_records_copy_id ON borrow_records(copy_id);
 CREATE INDEX idx_borrow_records_slip_id ON borrow_records(slip_id);
+
+-- V11 indexes
+CREATE INDEX idx_book_holds_user_status ON book_holds(user_id, status);
+CREATE INDEX idx_book_holds_copy_id ON book_holds(copy_id);
+CREATE INDEX idx_book_holds_expires_active ON book_holds(expires_at) WHERE status = 'ACTIVE';
 ```
 
 ## Flyway Migrations
@@ -163,7 +188,8 @@ db/migration/
 ├── V7__seed_default_data.sql                     # Admin user, sample categories, 5 books
 ├── V8__add_fulltext_search.sql                   # tsvector + unaccent + GIN index
 ├── V9__add_book_copies_and_borrow_slips.sql      # book_copies, borrow_slips, refactor borrow_records
-└── V10__drop_borrow_records_user_id.sql          # remove denormalized user_id from borrow_records
+├── V10__drop_borrow_records_user_id.sql          # remove denormalized user_id from borrow_records
+└── V11__add_book_holds_and_hold_ban.sql          # book_holds + hold_ban_until
 ```
 
 ## Seed Data (V7)

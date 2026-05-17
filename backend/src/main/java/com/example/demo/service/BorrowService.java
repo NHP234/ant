@@ -12,6 +12,7 @@ import com.example.demo.model.entity.*;
 import com.example.demo.model.enums.BorrowSource;
 import com.example.demo.model.enums.BorrowStatus;
 import com.example.demo.model.enums.CopyStatus;
+import com.example.demo.model.enums.HoldStatus;
 import com.example.demo.model.enums.NotificationType;
 import com.example.demo.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class BorrowService {
 
     private final BorrowRecordRepository borrowRecordRepository;
     private final BorrowSlipRepository borrowSlipRepository;
+        private final BookHoldRepository bookHoldRepository;
     private final BookRepository bookRepository;
     private final BookCopyRepository bookCopyRepository;
     private final UserRepository userRepository;
@@ -52,15 +54,24 @@ public class BorrowService {
                 .orElseThrow(() -> new ResourceNotFoundException("Book", "id", request.getBookId()));
 
         // Check borrow limit
-        int activeBorrows = borrowRecordRepository.countBySlipUserIdAndStatus(user.getId(), BorrowStatus.BORROWING);
-        if (activeBorrows >= maxBooksPerUser) {
+        int activeBorrows = borrowRecordRepository.countBySlipUserIdAndStatusIn(
+                user.getId(), List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE));
+        long activeHolds = bookHoldRepository.countByUserIdAndStatusIn(
+                user.getId(), List.of(HoldStatus.ACTIVE));
+        if (activeBorrows + activeHolds >= maxBooksPerUser) {
             throw new BorrowLimitExceededException(maxBooksPerUser);
         }
 
         // Check if already borrowing this book
-                if (borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatus(user.getId(), book.getId(), BorrowStatus.BORROWING)) {
+                if (borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(
+                                user.getId(), book.getId(), List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE))) {
             throw new IllegalArgumentException("You are already borrowing this book");
         }
+
+                if (bookHoldRepository.existsByUserIdAndBookIdAndStatusIn(
+                                user.getId(), book.getId(), List.of(HoldStatus.ACTIVE))) {
+                        throw new IllegalArgumentException("You already have an active hold for this book");
+                }
 
         // Find an available copy (with pessimistic lock to prevent race conditions)
         List<BookCopy> availableCopies = bookCopyRepository.findAvailableCopiesForUpdate(book.getId());

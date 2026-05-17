@@ -84,16 +84,18 @@ Xây dựng **hệ thống web quản lý mượn trả sách thư viện** gi�
 ### FR-04: Mượn / Trả sách
 | ID | Mô tả | Độ ưu tiên |
 |----|-------|-----------|
-| FR-04.1 | Sinh viên đặt mượn sách trên web (nếu sách còn available) | Cao |
-| FR-04.2 | LIBRARIAN xác nhận mượn / trả sách | Cao |
-| FR-04.3 | Hệ thống tự giảm available_quantity khi mượn, tăng khi trả | Cao |
-| FR-04.4 | Giới hạn số sách mượn đồng thời (mặc định 5 cuốn) | Cao |
-| FR-04.5 | Không cho mượn sách đã hết (available_quantity = 0) | Cao |
-| FR-04.6 | Không cho mượn cuốn sách đang mượn (chưa trả) | Cao |
+| FR-04.1 | Sinh viên đặt mượn sách trên web (giữ chỗ 24h nếu còn copy AVAILABLE) | Cao |
+| FR-04.2 | LIBRARIAN xác nhận mượn / trả sách (tại quầy hoặc NFC) | Cao |
+| FR-04.3 | Hệ thống đổi trạng thái copy: AVAILABLE → RESERVED → BORROWED → AVAILABLE | Cao |
+| FR-04.4 | Giới hạn số sách mượn đồng thời (mặc định 5 cuốn, tính cả hold) | Cao |
+| FR-04.5 | Không cho đặt mượn khi không còn copy AVAILABLE | Cao |
+| FR-04.6 | Không cho mượn/đặt trùng cùng đầu sách khi đang mượn hoặc đang giữ chỗ | Cao |
 | FR-04.7 | Hạn trả mặc định 14 ngày, configurable | Cao |
 | FR-04.8 | Sinh viên xem lịch sử mượn trả của mình | Trung bình |
 | FR-04.9 | LIBRARIAN/ADMIN xem tất cả borrow records, lọc theo trạng thái | Trung bình |
 | FR-04.10 | LIBRARIAN/ADMIN xem danh sách sách quá hạn | Trung bình |
+| FR-04.11 | Hold tự hủy sau 24h nếu không đến lấy | Trung bình |
+| FR-04.12 | No-show bị khóa đặt mượn 7 ngày | Trung bình |
 
 ### FR-05: Thông báo
 | ID | Mô tả | Độ ưu tiên |
@@ -151,7 +153,7 @@ Xây dựng **hệ thống web quản lý mượn trả sách thư viện** gi�
 | NFR-05 | Dễ triển khai | Toàn bộ stack chạy bằng 1 lệnh docker-compose up |
 | NFR-06 | Dễ bảo trì | Clean architecture, DTO pattern, migration-based schema changes |
 | NFR-07 | Tương thích | Frontend responsive, hoạt động trên Chrome, Firefox, Edge |
-| NFR-08 | Dữ liệu | Atomic operations khi cập nhật available_quantity, đảm bảo consistency |
+| NFR-08 | Dữ liệu | Atomic operations khi đổi trạng thái copy (AVAILABLE/RESERVED/BORROWED) |
 
 ---
 
@@ -159,16 +161,18 @@ Xây dựng **hệ thống web quản lý mượn trả sách thư viện** gi�
 
 | ID | Quy tắc | Mô tả |
 |----|---------|-------|
-| BR-01 | Giới hạn mượn | Mỗi sinh viên mượn tối đa 5 cuốn cùng lúc (configurable) |
+| BR-01 | Giới hạn mượn | Mỗi sinh viên mượn + hold tối đa 5 cuốn cùng lúc (configurable) |
 | BR-02 | Hạn trả | Mặc định 14 ngày kể từ ngày mượn (configurable) |
 | BR-03 | Không mượn trùng | Sinh viên không thể mượn cuốn sách mình đang mượn (chưa trả) |
-| BR-04 | Kiểm tra tồn kho | Chỉ cho mượn khi available_quantity > 0 |
+| BR-04 | Kiểm tra tồn kho | Chỉ cho đặt mượn khi còn copy AVAILABLE |
 | BR-05 | Quá hạn | Sách quá hạn được hệ thống tự chuyển trạng thái BORROWING -> OVERDUE hàng ngày |
 | BR-06 | Cảnh báo sớm | Thông báo cảnh báo trước 2 ngày khi sách sắp đến hạn |
 | BR-07 | Quyền xóa | Chỉ ADMIN được xóa sách và user |
 | BR-08 | Đăng ký mặc định | User mới đăng ký có role STUDENT, chỉ ADMIN thay đổi role |
 | BR-09 | NFC duy nhất | Mỗi thẻ NFC chỉ gán cho 1 user, mỗi tag NFC chỉ gán cho 1 sách |
 | BR-10 | Trả sách | Chỉ LIBRARIAN/ADMIN mới xác nhận trả sách (sinh viên không tự trả trên web) |
+| BR-11 | Hold hết hạn | Hold tự hủy sau 24h nếu SV không đến lấy |
+| BR-12 | No-show | SV bị khóa đặt mượn 7 ngày sau khi hold hết hạn |
 
 ---
 
@@ -183,16 +187,18 @@ Flow:
   1. Sinh viên vào trang danh sách sách
   2. Tìm kiếm theo tên/tác giả hoặc dùng chatbot RAG
   3. Xem chi tiết sách, kiểm tra trạng thái "Còn sách"
-  4. Bấm "Mượn sách"
-  5. Hệ thống kiểm tra: chưa mượn trùng, chưa đạt giới hạn, còn available
-  6. Tạo borrow_record (status=BORROWING, due_date=now+14 ngày)
-  7. Giảm available_quantity
-  8. Gửi notification xác nhận cho sinh viên
-Postcondition: Borrow record được tạo, available_quantity giảm 1
+  4. Bấm "Đặt mượn"
+  5. Hệ thống kiểm tra: chưa mượn/hold trùng, chưa đạt giới hạn, còn copy AVAILABLE
+  6. Tạo hold (status=ACTIVE, expires_at=now+24h), set copy.status=RESERVED
+  7. Sinh viên đến thư viện trong 24h, thủ thư xác nhận mượn
+  8. Hệ thống tạo borrow_slip + borrow_record (status=BORROWING), set copy.status=BORROWED
+  9. Gửi notification xác nhận cho sinh viên
+Postcondition: Hold được tạo và sau đó được xác nhận mượn, copy chuyển RESERVED → BORROWED
 Exception:
-  - 5a. Đã mượn cuốn này -> thông báo lỗi
+  - 5a. Đã mượn/đặt cuốn này -> thông báo lỗi
   - 5b. Đạt giới hạn 5 cuốn -> thông báo lỗi
-  - 5c. Hết sách -> thông báo lỗi
+  - 5c. Hết copy AVAILABLE -> thông báo lỗi
+  - 7a. Quá 24h chưa lấy -> hold auto-cancel, copy AVAILABLE, khóa đặt mượn 7 ngày
 ```
 
 ### UC-02: Thủ thư xử lý trả sách
@@ -206,9 +212,9 @@ Flow:
   3. Thủ thư chọn sách được trả (hoặc quẹt tag NFC trên sách)
   4. Bấm "Xác nhận trả"
   5. Hệ thống cập nhật: return_date=now, status=RETURNED
-  6. Tăng available_quantity
+  6. Set copy.status = AVAILABLE
   7. Gửi notification xác nhận cho sinh viên
-Postcondition: Borrow record cập nhật, available_quantity tăng 1
+Postcondition: Borrow record cập nhật, copy trở về AVAILABLE
 ```
 
 ### UC-03: Mượn/trả nhanh bằng NFC
@@ -268,7 +274,7 @@ Flow:
 
 ### Trong phạm vi (In scope):
 - Quản lý sách, thể loại, người dùng (CRUD)
-- Mượn/trả sách với business rules đầy đủ
+- Mượn/trả sách với business rules đầy đủ (hold 24h + auto-cancel)
 - Xác thực JWT + phân quyền 3 roles
 - Chatbot RAG tìm kiếm sách bằng ngôn ngữ tự nhiên
 - NFC mượn/trả nhanh tại quầy
@@ -278,7 +284,6 @@ Flow:
 
 ### Ngoài phạm vi (Out of scope):
 - Thanh toán phí phạt online
-- Đặt trước sách (reservation/hold)
 - Quản lý nhiều chi nhánh thư viện
 - Mobile app (chỉ có responsive web)
 - Email notification (chỉ in-app notification)

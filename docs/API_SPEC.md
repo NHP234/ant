@@ -49,7 +49,7 @@
   "success": true,
   "data": {
     "content": [
-      { "id": 1, "title": "Clean Code", "author": "Robert C. Martin", "isbn": "978-0132350884", "availableQuantity": 2, "categories": ["CNTT"] }
+      { "id": 1, "title": "Clean Code", "author": "Robert C. Martin", "isbn": "978-0132350884", "totalCopies": 3, "availableCopies": 2, "categories": ["CNTT"] }
     ],
     "page": 0, "size": 20, "totalElements": 150, "totalPages": 8
   }
@@ -73,7 +73,7 @@
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | /borrows | User | Mượn sách |
+| POST | /borrows | ADMIN/LIBRARIAN | Xác nhận mượn sách tại quầy |
 | PUT | /borrows/{id}/return | LIBRARIAN/ADMIN | Trả sách |
 | GET | /borrows/my | User | Lịch sử mượn của user hiện tại |
 | GET | /borrows | LIBRARIAN/ADMIN | Tất cả borrow records |
@@ -89,6 +89,46 @@
 
 // Error 400
 { "success": false, "error": { "code": "BORROW_LIMIT_EXCEEDED", "message": "Bạn đã mượn tối đa 5 cuốn sách" } }
+```
+
+---
+
+## Holds (Đặt mượn)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | /holds | User | Đặt mượn (giữ chỗ 24h nếu còn copy AVAILABLE) |
+| GET | /holds/my | User | Danh sách hold của user hiện tại |
+| GET | /holds | LIBRARIAN/ADMIN | Danh sách tất cả hold |
+| GET | /holds/{id} | LIBRARIAN/ADMIN | Chi tiết hold |
+| PUT | /holds/{id}/confirm | LIBRARIAN/ADMIN | Xác nhận mượn (có thể đổi copy cùng đầu sách) |
+| PUT | /holds/{id}/cancel | User/LIBRARIAN/ADMIN | Hủy hold |
+
+### POST /holds
+```json
+// Request
+{ "bookId": 15 }
+
+// Response 201
+{ "success": true, "data": { "id": 10, "bookId": 15, "bookTitle": "Clean Code", "status": "ACTIVE", "reservedAt": "2026-05-16T10:00:00", "expiresAt": "2026-05-17T10:00:00" } }
+```
+
+### PUT /holds/{id}/confirm
+```json
+// Request (optional copyId if scanning NFC)
+{ "copyId": 123 }
+
+// Response 200
+{ "success": true, "data": { "id": 10, "status": "FULFILLED", "copyId": 123 } }
+```
+
+### PUT /holds/{id}/cancel
+```json
+// Request (optional reason)
+{ "reason": "USER_CANCELED" }
+
+// Response 200
+{ "success": true, "data": { "id": 10, "status": "CANCELED" } }
 ```
 
 ---
