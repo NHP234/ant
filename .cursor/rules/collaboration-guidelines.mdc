@@ -34,6 +34,7 @@ alwaysApply: true
 	- Số tham số nên <= 4; nếu nhiều hơn, gom vào DTO/value object.
 	- Tránh nesting sâu (>2); ưu tiên guard clauses.
 	- Tránh copy-paste; trích xuất helper dùng chung.
+7. **Không để lỗi syntax/lint/compile**: Trước khi bàn giao, kiểm tra lại để tránh lỗi cú pháp, lint, hoặc compile/run-time cơ bản.
 
 ## Sau mỗi phiên làm việc
 - Cập nhật `docs/PROGRESS.md` với những gì đã hoàn thành

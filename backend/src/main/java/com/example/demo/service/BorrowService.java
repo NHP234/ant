@@ -293,15 +293,8 @@ public class BorrowService {
     }
 
     private User resolveBorrower(BorrowRequest request) {
-        String username = request.getUsername() != null ? request.getUsername().trim() : null;
-        String studentId = request.getStudentId() != null ? request.getStudentId().trim() : null;
-
-        if (username != null && username.isBlank()) {
-            username = null;
-        }
-        if (studentId != null && studentId.isBlank()) {
-            studentId = null;
-        }
+        String username = normalizeIdentifier(request.getUsername());
+        String studentId = normalizeIdentifier(request.getStudentId());
 
         if (username == null && studentId == null) {
             throw new IllegalArgumentException("Borrower identifier is required (username or studentId)");
@@ -317,6 +310,14 @@ public class BorrowService {
 
         return userRepository.findByStudentId(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "studentId", studentId));
+    }
+
+    private String normalizeIdentifier(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isBlank() ? null : trimmed;
     }
 
     private void sendNotification(User user, String title, String message, NotificationType type) {
