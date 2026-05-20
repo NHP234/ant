@@ -9,7 +9,7 @@
 |-----------|-----------|-----------|
 | Tháng 1: Backend nền tảng | ✅ Done | Tuần 1-4 |
 | Tháng 2: Backend nâng cao + FE | ✅ Done | Tuần 5-8 |
-| Tháng 3: Frontend + RAG | ⬜ TODO | Tuần 9-12 |
+| Tháng 3: Frontend + RAG | 🔄 In Progress | Tuần 9-12 |
 | Tháng 4: NFC + Hoàn thiện | ⬜ TODO | Tuần 13-16 |
 | Tháng 5: Polish + Báo cáo | ⬜ TODO | Tuần 17-20 |
 
@@ -90,7 +90,7 @@
 - ✅ @Operation annotations trên Auth endpoints
 - ✅ Swagger UI accessible: http://localhost:8080/swagger-ui.html
 
-### Tuần 8: Frontend Implementation
+### Tuần 8: Frontend Implementation (v1 — cần cập nhật cho backend V9-V12)
 - ✅ Init Vite + React 19 + TypeScript project
 - ✅ Setup Shadcn/ui (Radix + Nova preset) + TailwindCSS v4
 - ✅ Setup React Router v7, Axios, TanStack Query
@@ -100,11 +100,11 @@
 - ✅ Student Layout: Sidebar lite (Browse, My Borrows, Notifications)
 - ✅ Dashboard page: Stats cards (totalBooks, users, activeBorrows, overdue, categories)
 - ✅ Book Management: DataTable + Search + Create/Edit Dialog + Delete confirm + Pagination
-- ✅ Borrow Management: Table + Status filter tabs (All/Borrowing/Overdue/Returned) + Return action
+- 🔄 Borrow Management: Cần chuyển từ borrows → borrow-slips API + expandable rows
 - ✅ User Management: Table + Create user dialog (role select) + Activate/Deactivate
-- ✅ Book Catalog (Student): Grid layout + Full-text search + Pagination
-- ✅ Book Detail page: Info + Categories + Availability + Borrow button
-- ✅ My Borrows page: Borrow history + Overdue highlight
+- 🔄 Book Catalog (Student): Cần sửa field names (quantity → totalCopies, availableQuantity → availableCopies)
+- 🔄 Book Detail page: Cần đổi "Mượn sách" → "Đặt mượn (Hold 24h)" + gọi Hold API
+- 🔄 My Borrows page: Cần thêm tabs (Holds / Đang mượn / Lịch sử) + gọi Hold API
 - ✅ Notifications page: List + Mark as read + Mark all read
 - ✅ Dark/Light mode toggle (localStorage persist)
 - ✅ Responsive: Mobile sidebar collapse (Sheet component)
@@ -115,7 +115,42 @@
 
 ## Tháng 3: RAG + NFC
 
-### Tuần 9-10: Frontend Polish + Tích hợp
+### Tuần 9-10: Frontend Cập nhật V9-V12 + Polish
+
+#### Phase 1: Sửa API Layer & Types (đồng bộ với backend DTOs)
+- ✅ Sửa `api/auth.ts`: AuthResponse interface (nested `user` object + `tokenType`, `expiresIn`)
+- ✅ Sửa `api/books.ts`: Book interface (`totalCopies`/`availableCopies`), PageResponse (`page` + `last`)
+- ✅ Sửa `api/borrows.ts`: BorrowRecord interface (thêm `copyId`, `copyNumber`) + `BorrowRequest`
+- ✅ Sửa `api/notifications.ts`: response key (`count` → `unreadCount`)
+- ✅ Tạo `api/holds.ts`: Hold CRUD API (create, getMyHolds, getAll, getById, confirm, cancel)
+- ✅ Tạo `api/borrowSlips.ts`: BorrowSlip API (getMySlips, getAll, getById)
+- ✅ `hooks/useAuth.tsx`: đã destructure đúng `user` từ trước, giữ nguyên
+
+#### Phase 2: Layout & Routing
+- ⬜ Sửa `AdminLayout.tsx`: Branding "Awaken Ant Library" + thêm nav "Quản lý đặt trước" + Lucide icons
+- ⬜ Sửa `StudentLayout.tsx`: Branding "Awaken Ant Library" + thêm nav "Trợ lý AI" + Lucide icons
+- ⬜ Sửa `router.tsx`: Thêm route `/admin/holds`, `/chat`
+
+#### Phase 3: Admin Pages
+- ⬜ Sửa `DashboardPage.tsx`: Thêm "Holds đang chờ" section + "Hoạt động gần đây" table
+- ⬜ Sửa `BookManagementPage.tsx`: field names + nút "Quản lý bản sao" (BookCopy dialog)
+- ⬜ Sửa `BorrowManagementPage.tsx`: Chuyển sang borrow-slips API + expandable row xem chi tiết phiếu
+- ⬜ Tạo `HoldManagementPage.tsx`: Bảng holds + filter tabs + nút Xác nhận/Hủy
+
+#### Phase 4: Student Pages
+- ⬜ Sửa `BookDetailPage.tsx`: Nút "Đặt mượn (Hold 24h)" + gọi holdApi
+- ⬜ Sửa `BookCatalogPage.tsx`: Sửa field names
+- ⬜ Sửa `MyBorrowsPage.tsx`: 3 Tabs (Đang đặt trước / Đang mượn / Lịch sử trả)
+- ⬜ Tạo `ChatPage.tsx`: Placeholder UI cho RAG chatbot
+
+#### Phase 5: Shared Components & Polish
+- ⬜ Tạo `components/shared/Pagination.tsx`: Reusable pagination
+- ⬜ Tạo `components/shared/StatusBadge.tsx`: Reusable status badge
+- ⬜ Tách large pages thành sub-components (max 200 dòng/file)
+- ⬜ Responsive check + Dark mode check
+- ⬜ Kiểm tra full flow: Login → Browse → Hold → Admin Confirm → Borrow
+
+#### Polish & Infrastructure
 - ⬜ Category management UI (CRUD)
 - ⬜ Profile page (xem/sửa thông tin cá nhân)
 - ⬜ Audit log viewer (admin)
@@ -183,3 +218,6 @@
 | 2026-05-16 | Documentation update: DATABASE.md + BACKEND.md rewrite to reflect V9 schema changes |
 | 2026-05-16 | Normalize borrow_records (drop denormalized user_id) + add Flyway V10 + update code/tests/docs |
 | 2026-05-16 | Add hold/ reservation flow: book_holds, RESERVED status, hold expiry + ban, new APIs and schedulers |
+| 2026-05-18 | Librarian direct borrow + borrower lookup, BorrowService refactor/auto-fulfill; BorrowSource COUNTER + Flyway V12; docs + api-testing updates; guidelines clean-code checks |
+| 2026-05-20 | Frontend review: API_SPEC vs backend controllers audit (found 7 missing endpoints, 4 DTO mismatches). Created IMPLEMENTATION_PLAN.md. Updated FRONTEND.md + PROGRESS.md. UI wireframe fixes (Hold Mgmt, Notifications screens) |
+| 2026-05-20 | Phase 1 FE: Updated API_SPEC.md khớp backend controllers, sửa 4 API layer files (auth/books/borrows/notifications), tạo 2 files mới (holds/borrowSlips), giữ nguyên useAuth.tsx |
