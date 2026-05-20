@@ -8,6 +8,8 @@ export interface BorrowRecord {
   bookId: number
   bookTitle: string
   bookAuthor: string
+  copyId: number
+  copyNumber: number
   borrowDate: string
   dueDate: string
   returnDate: string | null
@@ -16,9 +18,16 @@ export interface BorrowRecord {
   createdAt: string
 }
 
+export interface BorrowRequest {
+  bookId: number
+  username?: string
+  studentId?: string
+  copyId?: number
+}
+
 export const borrowApi = {
-  borrow: (bookId: number) =>
-    api.post<{ data: BorrowRecord }>('/borrows', { bookId }),
+  borrow: (data: BorrowRequest) =>
+    api.post<{ data: BorrowRecord }>('/borrows', data),
 
   return: (borrowId: number, note?: string) =>
     api.put<{ data: BorrowRecord }>(`/borrows/${borrowId}/return`, null, {

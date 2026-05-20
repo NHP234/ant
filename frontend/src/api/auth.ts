@@ -16,8 +16,15 @@ export interface RegisterRequest {
 export interface AuthResponse {
   accessToken: string
   refreshToken: string
-  username: string
-  role: string
+  tokenType: string
+  expiresIn: number
+  user: {
+    id: number
+    username: string
+    email: string
+    fullName: string
+    role: string
+  }
 }
 
 export const authApi = {

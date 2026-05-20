@@ -15,7 +15,7 @@ export const notificationApi = {
     api.get<{ data: PageResponse<Notification> }>('/notifications', { params: { page, size } }),
 
   getUnreadCount: () =>
-    api.get<{ data: { count: number } }>('/notifications/unread-count'),
+    api.get<{ data: { unreadCount: number } }>('/notifications/unread-count'),
 
   markAsRead: (id: number) =>
     api.put(`/notifications/${id}/read`),

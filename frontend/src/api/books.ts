@@ -8,8 +8,8 @@ export interface Book {
   publisher: string
   publishYear: number
   description: string
-  quantity: number
-  availableQuantity: number
+  totalCopies: number
+  availableCopies: number
   coverImageUrl: string
   categories: Category[]
   createdAt: string
@@ -27,7 +27,8 @@ export interface PageResponse<T> {
   totalElements: number
   totalPages: number
   size: number
-  number: number
+  page: number
+  last: boolean
 }
 
 export interface BookCreateRequest {
@@ -40,9 +41,19 @@ export interface BookCreateRequest {
   quantity: number
   coverImageUrl?: string
   categoryIds?: number[]
+  categoryIds?: number[]
 }
 
-export type BookUpdateRequest = Partial<BookCreateRequest>
+export interface BookUpdateRequest {
+  title?: string
+  author?: string
+  isbn?: string
+  publisher?: string
+  publishYear?: number
+  description?: string
+  coverImageUrl?: string
+  categoryIds?: number[]
+}
 
 export const bookApi = {
   getAll: (page = 0, size = 10) =>
@@ -51,8 +62,8 @@ export const bookApi = {
   getById: (id: number) =>
     api.get<{ data: Book }>(`/books/${id}`),
 
-  search: (query: string, page = 0, size = 10) =>
-    api.get<{ data: PageResponse<Book> }>('/books/search', { params: { query, page, size } }),
+  search: (q: string, page = 0, size = 10) =>
+    api.get<{ data: PageResponse<Book> }>('/books/search', { params: { q, page, size } }),
 
   create: (data: BookCreateRequest) =>
     api.post<{ data: Book }>('/books', data),
