@@ -1,14 +1,62 @@
 import { useQuery } from '@tanstack/react-query'
 import { dashboardApi } from '@/api/dashboard'
+import { holdApi } from '@/api/holds'
+import { borrowSlipApi } from '@/api/borrowSlips'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+
+const statusLabels: Record<string, string> = {
+  BORROWING: 'Đang mượn',
+  RETURNED: 'Đã trả',
+  OVERDUE: 'Quá hạn',
+}
+
+const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
+  BORROWING: 'default',
+  RETURNED: 'secondary',
+  OVERDUE: 'destructive',
+}
+
+const holdStatusLabels: Record<string, string> = {
+  ACTIVE: 'Đang chờ',
+  FULFILLED: 'Đã xác nhận',
+  EXPIRED: 'Hết hạn',
+  CANCELED: 'Đã hủy',
+}
+
+const holdStatusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  ACTIVE: 'default',
+  FULFILLED: 'secondary',
+  EXPIRED: 'destructive',
+  CANCELED: 'outline',
+}
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString('vi-VN')
+}
 
 export default function DashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ['dashboard', 'stats'],
     queryFn: () => dashboardApi.getStats(),
   })
 
-  const stats = data?.data?.data
+  const { data: holdsData } = useQuery({
+    queryKey: ['admin', 'holds', 'active'],
+    queryFn: () => holdApi.getAll(0, 5),
+  })
+
+  const { data: slipsData } = useQuery({
+    queryKey: ['admin', 'borrow-slips', 'recent'],
+    queryFn: () => borrowSlipApi.getAll(0, 10),
+  })
+
+  const stats = statsData?.data?.data
+  const pendingHolds = holdsData?.data?.data?.content?.filter(h => h.status === 'ACTIVE') ?? []
+  const recentSlips = slipsData?.data?.data?.content ?? []
 
   const cards = [
     { title: 'Tổng số sách', value: stats?.totalBooks ?? '-', icon: '📚' },
@@ -25,7 +73,7 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">Tổng quan hệ thống thư viện</p>
       </div>
 
-      {isLoading ? (
+      {statsLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <Card key={i} className="animate-pulse">
@@ -49,6 +97,77 @@ export default function DashboardPage() {
           ))}
         </div>
       )}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg">Holds đang chờ</CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/admin/holds">Xem tất cả</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {pendingHolds.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">Không có holds đang chờ</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Người dùng</TableHead>
+                    <TableHead>Sách</TableHead>
+                    <TableHead>Hết hạn</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingHolds.map((hold) => (
+                    <TableRow key={hold.id}>
+                      <TableCell className="font-medium">{hold.userFullName}</TableCell>
+                      <TableCell className="max-w-[180px] truncate">{hold.bookTitle}</TableCell>
+                      <TableCell className="text-sm">{formatDate(hold.expiresAt)}</TableCell>
+                      <TableCell>
+                        <Badge variant={holdStatusColors[hold.status]}>
+                          {holdStatusLabels[hold.status]}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Hoạt động gần đây</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentSlips.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">Chưa có hoạt động</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Người mượn</TableHead>
+                    <TableHead>Ngày mượn</TableHead>
+                    <TableHead>SL</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentSlips.slice(0, 5).map((slip) => (
+                    <TableRow key={slip.id}>
+                      <TableCell className="font-medium">{slip.userFullName}</TableCell>
+                      <TableCell className="text-sm">{formatDate(slip.borrowDate)}</TableCell>
+                      <TableCell>{slip.records?.length ?? 0}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { bookApi, type Book, type BookCreateRequest } from '@/api/books'
+import { bookApi, bookCopyApi, type Book, type BookCreateRequest, type BookCopy } from '@/api/books'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
+import { Copy, Plus, Trash2 } from 'lucide-react'
 
 export default function BookManagementPage() {
   const queryClient = useQueryClient()
@@ -15,6 +16,8 @@ export default function BookManagementPage() {
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingBook, setEditingBook] = useState<Book | null>(null)
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false)
+  const [copyBookId, setCopyBookId] = useState<number | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'books', page, search],
@@ -23,6 +26,11 @@ export default function BookManagementPage() {
       : bookApi.getAll(page, 10),
   })
 
+  const { data: copiesData } = useQuery({
+    queryKey: ['admin', 'copies', copyBookId],
+    queryFn: () => bookCopyApi.getCopies(copyBookId!),
+    enabled: !!copyBookId,
+  })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => bookApi.delete(id),
@@ -55,6 +63,27 @@ export default function BookManagementPage() {
     onError: () => toast.error('Cập nhật thất bại'),
   })
 
+  const addCopyMutation = useMutation({
+    mutationFn: (bookId: number) => bookCopyApi.addCopy(bookId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'copies', copyBookId] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'books'] })
+      toast.success('Thêm bản sao thành công')
+    },
+    onError: () => toast.error('Thêm bản sao thất bại'),
+  })
+
+  const deleteCopyMutation = useMutation({
+    mutationFn: ({ bookId, copyId }: { bookId: number; copyId: number }) =>
+      bookCopyApi.deleteCopy(bookId, copyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'copies', copyBookId] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'books'] })
+      toast.success('Đã xóa bản sao')
+    },
+    onError: () => toast.error('Xóa bản sao thất bại'),
+  })
+
   const books = data?.data?.data
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -71,7 +100,8 @@ export default function BookManagementPage() {
     }
 
     if (editingBook) {
-      updateMutation.mutate({ id: editingBook.id, data: payload })
+      const { quantity, ...updatePayload } = payload
+      updateMutation.mutate({ id: editingBook.id, data: updatePayload })
     } else {
       createMutation.mutate(payload)
     }
@@ -86,6 +116,13 @@ export default function BookManagementPage() {
     setEditingBook(null)
     setDialogOpen(true)
   }
+
+  const openCopies = (bookId: number) => {
+    setCopyBookId(bookId)
+    setCopyDialogOpen(true)
+  }
+
+  const copies = copiesData?.data?.data ?? []
 
   return (
     <div className="space-y-6">
@@ -116,10 +153,12 @@ export default function BookManagementPage() {
                   <Label htmlFor="isbn">ISBN</Label>
                   <Input id="isbn" name="isbn" defaultValue={editingBook?.isbn ?? ''} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Số lượng</Label>
-                  <Input id="quantity" name="quantity" type="number" min={1} defaultValue={editingBook?.quantity ?? 1} />
-                </div>
+                {!editingBook && (
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Số lượng bản sao</Label>
+                    <Input id="quantity" name="quantity" type="number" min={1} defaultValue={1} />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -149,7 +188,6 @@ export default function BookManagementPage() {
         </Dialog>
       </div>
 
-      {/* Search */}
       <div className="flex gap-2">
         <Input
           placeholder="Tìm kiếm sách..."
@@ -159,7 +197,6 @@ export default function BookManagementPage() {
         />
       </div>
 
-      {/* Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -167,7 +204,7 @@ export default function BookManagementPage() {
               <TableHead>Tên sách</TableHead>
               <TableHead>Tác giả</TableHead>
               <TableHead className="hidden md:table-cell">ISBN</TableHead>
-              <TableHead className="text-center">SL</TableHead>
+              <TableHead className="text-center">Tổng</TableHead>
               <TableHead className="text-center">Còn</TableHead>
               <TableHead className="hidden md:table-cell">Danh mục</TableHead>
               <TableHead className="text-right">Thao tác</TableHead>
@@ -184,16 +221,19 @@ export default function BookManagementPage() {
                   <TableCell className="font-medium max-w-[200px] truncate">{book.title}</TableCell>
                   <TableCell>{book.author}</TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground">{book.isbn || '-'}</TableCell>
-                  <TableCell className="text-center">{book.quantity}</TableCell>
+                  <TableCell className="text-center">{book.totalCopies}</TableCell>
                   <TableCell className="text-center">
-                    <Badge variant={book.availableQuantity > 0 ? 'default' : 'destructive'}>
-                      {book.availableQuantity}
+                    <Badge variant={book.availableCopies > 0 ? 'default' : 'destructive'}>
+                      {book.availableCopies}
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     {book.categories?.map(c => c.name).join(', ') || '-'}
                   </TableCell>
                   <TableCell className="text-right space-x-1">
+                    <Button variant="outline" size="sm" onClick={() => openCopies(book.id)}>
+                      Bản sao
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => openEdit(book)}>Sửa</Button>
                     <Button
                       variant="ghost"
@@ -211,7 +251,6 @@ export default function BookManagementPage() {
         </Table>
       </div>
 
-      {/* Pagination */}
       {books && books.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
@@ -225,6 +264,55 @@ export default function BookManagementPage() {
           </Button>
         </div>
       )}
+
+      <Dialog open={copyDialogOpen} onOpenChange={(open) => { setCopyDialogOpen(open); if (!open) setCopyBookId(null) }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Quản lý bản sao</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">{copies.length} bản sao</p>
+              <Button size="sm" onClick={() => copyBookId && addCopyMutation.mutate(copyBookId)} disabled={addCopyMutation.isPending}>
+                <Plus className="h-4 w-4 mr-1" /> Thêm bản sao
+              </Button>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead>NFC Tag</TableHead>
+                  <TableHead className="text-right"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {copies.length === 0 ? (
+                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">Chưa có bản sao nào</TableCell></TableRow>
+                ) : (
+                  copies.map((copy) => (
+                    <TableRow key={copy.id}>
+                      <TableCell className="font-medium">{copy.copyNumber}</TableCell>
+                      <TableCell>
+                        <Badge variant={copy.status === 'AVAILABLE' ? 'default' : copy.status === 'BORROWED' ? 'secondary' : 'destructive'}>
+                          {copy.status === 'AVAILABLE' ? 'Có sẵn' : copy.status === 'BORROWED' ? 'Đang mượn' : copy.status === 'RESERVED' ? 'Giữ chỗ' : copy.status === 'DAMAGED' ? 'Hư hỏng' : 'Mất'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{copy.nfcTagUid || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" className="text-destructive"
+                          onClick={() => { if (confirm('Xóa bản sao này?')) deleteCopyMutation.mutate({ bookId: copy.bookId, copyId: copy.id }) }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

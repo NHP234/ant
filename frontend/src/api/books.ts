@@ -75,6 +75,32 @@ export const bookApi = {
     api.delete(`/books/${id}`),
 }
 
+export interface BookCopy {
+  id: number
+  bookId: number
+  copyNumber: number
+  nfcTagUid: string | null
+  status: 'AVAILABLE' | 'RESERVED' | 'BORROWED' | 'DAMAGED' | 'LOST'
+  conditionNote: string | null
+  createdAt: string
+}
+
+export const bookCopyApi = {
+  getCopies: (bookId: number) =>
+    api.get<{ data: BookCopy[] }>(`/books/${bookId}/copies`),
+
+  addCopy: (bookId: number, nfcTagUid?: string) =>
+    api.post<{ data: BookCopy }>(`/books/${bookId}/copies`, null, {
+      params: nfcTagUid ? { nfcTagUid } : undefined,
+    }),
+
+  updateCopy: (bookId: number, copyId: number, params?: { nfcTagUid?: string; status?: string; conditionNote?: string }) =>
+    api.put<{ data: BookCopy }>(`/books/${bookId}/copies/${copyId}`, null, { params }),
+
+  deleteCopy: (bookId: number, copyId: number) =>
+    api.delete(`/books/${bookId}/copies/${copyId}`),
+}
+
 export const categoryApi = {
   getAll: () =>
     api.get<{ data: Category[] }>('/categories'),

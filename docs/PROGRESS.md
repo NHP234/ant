@@ -100,11 +100,11 @@
 - ✅ Student Layout: Sidebar lite (Browse, My Borrows, Notifications)
 - ✅ Dashboard page: Stats cards (totalBooks, users, activeBorrows, overdue, categories)
 - ✅ Book Management: DataTable + Search + Create/Edit Dialog + Delete confirm + Pagination
-- 🔄 Borrow Management: Cần chuyển từ borrows → borrow-slips API + expandable rows
+- ✅ Borrow Management: Chuyển từ borrows → borrow-slips API + expandable rows
 - ✅ User Management: Table + Create user dialog (role select) + Activate/Deactivate
-- 🔄 Book Catalog (Student): Cần sửa field names (quantity → totalCopies, availableQuantity → availableCopies)
-- 🔄 Book Detail page: Cần đổi "Mượn sách" → "Đặt mượn (Hold 24h)" + gọi Hold API
-- 🔄 My Borrows page: Cần thêm tabs (Holds / Đang mượn / Lịch sử) + gọi Hold API
+- ✅ Book Catalog (Student): Sửa field names (totalCopies/availableCopies)
+- ✅ Book Detail page: Đổi "Mượn sách" → "Đặt mượn (Hold 24h)" + gọi holdApi
+- ✅ My Borrows page: Thêm 3 tabs (Holds / Đang mượn / Lịch sử) + hủy hold
 - ✅ Notifications page: List + Mark as read + Mark all read
 - ✅ Dark/Light mode toggle (localStorage persist)
 - ✅ Responsive: Mobile sidebar collapse (Sheet component)
@@ -127,21 +127,21 @@
 - ✅ `hooks/useAuth.tsx`: đã destructure đúng `user` từ trước, giữ nguyên
 
 #### Phase 2: Layout & Routing
-- ⬜ Sửa `AdminLayout.tsx`: Branding "Awaken Ant Library" + thêm nav "Quản lý đặt trước" + Lucide icons
-- ⬜ Sửa `StudentLayout.tsx`: Branding "Awaken Ant Library" + thêm nav "Trợ lý AI" + Lucide icons
-- ⬜ Sửa `router.tsx`: Thêm route `/admin/holds`, `/chat`
+- ✅ Sửa `AdminLayout.tsx`: Branding "Awaken Ant Library" + thêm nav "Quản lý đặt trước" + Lucide icons
+- ✅ Sửa `StudentLayout.tsx`: Branding "Awaken Ant Library" + thêm nav "Trợ lý AI" + Lucide icons
+- ✅ Sửa `router.tsx`: Thêm route `/admin/holds`, `/chat`
 
 #### Phase 3: Admin Pages
-- ⬜ Sửa `DashboardPage.tsx`: Thêm "Holds đang chờ" section + "Hoạt động gần đây" table
-- ⬜ Sửa `BookManagementPage.tsx`: field names + nút "Quản lý bản sao" (BookCopy dialog)
-- ⬜ Sửa `BorrowManagementPage.tsx`: Chuyển sang borrow-slips API + expandable row xem chi tiết phiếu
-- ⬜ Tạo `HoldManagementPage.tsx`: Bảng holds + filter tabs + nút Xác nhận/Hủy
+- ✅ Sửa `DashboardPage.tsx`: Thêm "Holds đang chờ" section + "Hoạt động gần đây" table
+- ✅ Sửa `BookManagementPage.tsx`: field names (`totalCopies`/`availableCopies`) + nút "Bản sao" + dialog quản lý copies
+- ✅ Sửa `BorrowManagementPage.tsx`: Chuyển sang borrow-slips API + expandable row xem chi tiết phiếu
+- ✅ Tạo `HoldManagementPage.tsx`: Bảng holds + filter tabs + nút Xác nhận/Hủy
 
 #### Phase 4: Student Pages
-- ⬜ Sửa `BookDetailPage.tsx`: Nút "Đặt mượn (Hold 24h)" + gọi holdApi
-- ⬜ Sửa `BookCatalogPage.tsx`: Sửa field names
-- ⬜ Sửa `MyBorrowsPage.tsx`: 3 Tabs (Đang đặt trước / Đang mượn / Lịch sử trả)
-- ⬜ Tạo `ChatPage.tsx`: Placeholder UI cho RAG chatbot
+- ✅ Sửa `BookDetailPage.tsx`: Nút "Đặt mượn (Hold 24h)" + gọi holdApi + field names
+- ✅ Sửa `BookCatalogPage.tsx`: Sửa field names + debounce search 300ms
+- ✅ Sửa `MyBorrowsPage.tsx`: 3 Tabs (Đang đặt trước / Đang mượn / Lịch sử trả) + hủy hold
+- ✅ Tạo `ChatPage.tsx`: Placeholder UI cho RAG chatbot
 
 #### Phase 5: Shared Components & Polish
 - ⬜ Tạo `components/shared/Pagination.tsx`: Reusable pagination
@@ -221,3 +221,4 @@
 | 2026-05-18 | Librarian direct borrow + borrower lookup, BorrowService refactor/auto-fulfill; BorrowSource COUNTER + Flyway V12; docs + api-testing updates; guidelines clean-code checks |
 | 2026-05-20 | Frontend review: API_SPEC vs backend controllers audit (found 7 missing endpoints, 4 DTO mismatches). Created IMPLEMENTATION_PLAN.md. Updated FRONTEND.md + PROGRESS.md. UI wireframe fixes (Hold Mgmt, Notifications screens) |
 | 2026-05-20 | Phase 1 FE: Updated API_SPEC.md khớp backend controllers, sửa 4 API layer files (auth/books/borrows/notifications), tạo 2 files mới (holds/borrowSlips), giữ nguyên useAuth.tsx |
+| 2026-05-20 | Phase 2-4 FE: Layout branding + Lucide icons, routes /admin/holds + /chat, Dashboard (holds pending + recent), Book copies dialog, BorrowSlip expandable table, HoldManagementPage, BookDetail (hold 24h), BookCatalog (debounce), MyBorrows (3 tabs), ChatPage placeholder |

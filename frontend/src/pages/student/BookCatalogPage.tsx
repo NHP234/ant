@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { bookApi } from '@/api/books'
@@ -11,6 +11,7 @@ export default function BookCatalogPage() {
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   const { data, isLoading } = useQuery({
     queryKey: ['books', 'catalog', page, search],
@@ -21,10 +22,13 @@ export default function BookCatalogPage() {
 
   const books = data?.data?.data
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSearch(searchInput)
-    setPage(0)
+  const handleSearchInput = (value: string) => {
+    setSearchInput(value)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setSearch(value)
+      setPage(0)
+    }, 300)
   }
 
   return (
@@ -34,23 +38,20 @@ export default function BookCatalogPage() {
         <p className="text-muted-foreground">Tìm và mượn sách từ thư viện</p>
       </div>
 
-      {/* Search & Filter */}
-      <form onSubmit={handleSearch} className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap">
         <Input
           placeholder="Tìm kiếm theo tên, tác giả..."
           value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
+          onChange={(e) => handleSearchInput(e.target.value)}
           className="max-w-sm"
         />
-        <Button type="submit">Tìm kiếm</Button>
         {search && (
           <Button variant="ghost" onClick={() => { setSearch(''); setSearchInput(''); setPage(0) }}>
             Xóa bộ lọc
           </Button>
         )}
-      </form>
+      </div>
 
-      {/* Book Grid */}
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -83,8 +84,8 @@ export default function BookCatalogPage() {
                     ))}
                   </div>
                   <div className="pt-2">
-                    <Badge variant={book.availableQuantity > 0 ? 'default' : 'destructive'}>
-                      {book.availableQuantity > 0 ? `Còn ${book.availableQuantity} cuốn` : 'Hết sách'}
+                    <Badge variant={book.availableCopies > 0 ? 'default' : 'destructive'}>
+                      {book.availableCopies > 0 ? `Còn ${book.availableCopies} cuốn` : 'Hết sách'}
                     </Badge>
                   </div>
                 </CardContent>
@@ -94,7 +95,6 @@ export default function BookCatalogPage() {
         </div>
       )}
 
-      {/* Pagination */}
       {books && books.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>

@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { bookApi } from '@/api/books'
-import { borrowApi } from '@/api/borrows'
+import { holdApi } from '@/api/holds'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,15 +19,15 @@ export default function BookDetailPage() {
     enabled: !!id,
   })
 
-  const borrowMutation = useMutation({
-    mutationFn: () => borrowApi.borrow(Number(id)),
+  const holdMutation = useMutation({
+    mutationFn: () => holdApi.create({ bookId: Number(id) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['book', id] })
-      toast.success('Mượn sách thành công!')
+      toast.success('Đặt mượn thành công! Bạn có 24h để đến thư viện nhận sách.')
       navigate('/my-borrows')
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Mượn sách thất bại')
+      toast.error(err.response?.data?.message || 'Đặt mượn thất bại')
     },
   })
 
@@ -76,7 +76,7 @@ export default function BookDetailPage() {
               <div><span className="text-muted-foreground">Năm XB:</span> {book.publishYear}</div>
             )}
             <div>
-              <span className="text-muted-foreground">Tổng số:</span> {book.quantity} cuốn
+              <span className="text-muted-foreground">Tổng số:</span> {book.totalCopies} cuốn
             </div>
           </div>
 
@@ -93,16 +93,16 @@ export default function BookDetailPage() {
 
           <div className="flex items-center justify-between">
             <div>
-              <Badge variant={book.availableQuantity > 0 ? 'default' : 'destructive'} className="text-sm">
-                {book.availableQuantity > 0 ? `Còn ${book.availableQuantity} cuốn` : 'Hết sách'}
+              <Badge variant={book.availableCopies > 0 ? 'default' : 'destructive'} className="text-sm">
+                {book.availableCopies > 0 ? `Còn ${book.availableCopies} cuốn` : 'Hết sách'}
               </Badge>
             </div>
             <Button
               size="lg"
-              disabled={book.availableQuantity === 0 || borrowMutation.isPending}
-              onClick={() => borrowMutation.mutate()}
+              disabled={book.availableCopies === 0 || holdMutation.isPending}
+              onClick={() => holdMutation.mutate()}
             >
-              {borrowMutation.isPending ? 'Đang xử lý...' : 'Mượn sách'}
+              {holdMutation.isPending ? 'Đang xử lý...' : 'Đặt mượn (Hold 24h)'}
             </Button>
           </div>
         </CardContent>
