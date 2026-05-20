@@ -7,11 +7,13 @@ import RegisterPage from '@/pages/auth/RegisterPage'
 import DashboardPage from '@/pages/admin/DashboardPage'
 import BookManagementPage from '@/pages/admin/BookManagementPage'
 import BorrowManagementPage from '@/pages/admin/BorrowManagementPage'
+import HoldManagementPage from '@/pages/admin/HoldManagementPage'
 import UserManagementPage from '@/pages/admin/UserManagementPage'
 import BookCatalogPage from '@/pages/student/BookCatalogPage'
 import BookDetailPage from '@/pages/student/BookDetailPage'
 import MyBorrowsPage from '@/pages/student/MyBorrowsPage'
 import NotificationsPage from '@/pages/student/NotificationsPage'
+import ChatPage from '@/pages/student/ChatPage'
 
 function PrivateRoute() {
   const { user, isLoading } = useAuth()
@@ -34,30 +36,28 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Authenticated */}
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<RootRedirect />} />
 
-          {/* Admin/Librarian */}
           <Route element={<AdminRoute />}>
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<DashboardPage />} />
               <Route path="/admin/books" element={<BookManagementPage />} />
               <Route path="/admin/borrows" element={<BorrowManagementPage />} />
+              <Route path="/admin/holds" element={<HoldManagementPage />} />
               <Route path="/admin/users" element={<UserManagementPage />} />
             </Route>
           </Route>
 
-          {/* Student (or any authenticated user) */}
           <Route element={<StudentLayout />}>
             <Route path="/browse" element={<BookCatalogPage />} />
             <Route path="/books/:id" element={<BookDetailPage />} />
             <Route path="/my-borrows" element={<MyBorrowsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/chat" element={<ChatPage />} />
           </Route>
         </Route>
 

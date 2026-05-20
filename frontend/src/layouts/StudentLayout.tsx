@@ -9,11 +9,13 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import NotificationBell from '@/components/shared/NotificationBell'
 import ThemeToggle from '@/components/shared/ThemeToggle'
+import { Search, BookMarked, Bell, Bot, Menu, ExternalLink } from 'lucide-react'
 
 const navItems = [
-  { path: '/browse', label: 'Duyệt sách', icon: '📚' },
-  { path: '/my-borrows', label: 'Sách đang mượn', icon: '📖' },
-  { path: '/notifications', label: 'Thông báo', icon: '🔔' },
+  { path: '/browse', label: 'Duyệt sách', icon: Search },
+  { path: '/my-borrows', label: 'Sách đã mượn', icon: BookMarked },
+  { path: '/notifications', label: 'Thông báo', icon: Bell },
+  { path: '/chat', label: 'Trợ lý AI', icon: Bot },
 ]
 
 function SidebarContent() {
@@ -21,28 +23,31 @@ function SidebarContent() {
   return (
     <div className="flex flex-col h-full">
       <div className="p-6">
-        <h1 className="text-lg font-bold">Thư viện</h1>
+        <h1 className="text-lg font-bold">Awaken Ant Library</h1>
         <p className="text-sm text-muted-foreground">Hệ thống mượn trả sách</p>
       </div>
       <Separator />
       <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-              )
-            }
-          >
-            <span>{item.icon}</span>
-            {item.label}
-          </NavLink>
-        ))}
+        {navItems.map((item) => {
+          const Icon = item.icon
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )
+              }
+            >
+              <Icon className="h-4 w-4" />
+              {item.label}
+            </NavLink>
+          )
+        })}
       </nav>
       {(isAdmin || isLibrarian) && (
         <>
@@ -52,7 +57,7 @@ function SidebarContent() {
               to="/admin/dashboard"
               className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             >
-              <span>⚙️</span>
+              <ExternalLink className="h-4 w-4" />
               Trang quản trị
             </NavLink>
           </div>
@@ -83,7 +88,7 @@ export default function StudentLayout() {
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild className="md:hidden">
               <Button variant="ghost" size="icon">
-                <span className="text-lg">☰</span>
+                <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
