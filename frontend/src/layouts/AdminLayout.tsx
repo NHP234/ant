@@ -9,13 +9,14 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import NotificationBell from '@/components/shared/NotificationBell'
 import ThemeToggle from '@/components/shared/ThemeToggle'
-import { LayoutDashboard, BookOpen, ArrowLeftRight, Users, Clock, Menu, ExternalLink } from 'lucide-react'
+import { LayoutDashboard, BookOpen, ArrowLeftRight, Users, Clock, Tags, Menu, ExternalLink } from 'lucide-react'
 
 const navItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/books', label: 'Quản lý sách', icon: BookOpen },
   { path: '/admin/borrows', label: 'Mượn / Trả', icon: ArrowLeftRight },
   { path: '/admin/holds', label: 'Đặt trước', icon: Clock },
+  { path: '/admin/categories', label: 'Danh mục', icon: Tags },
   { path: '/admin/users', label: 'Người dùng', icon: Users },
 ]
 
@@ -111,6 +112,10 @@ export default function AdminLayout() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem disabled className="text-xs text-muted-foreground">
                 {user?.role}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/admin/profile')}>
+                Thông tin cá nhân
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
