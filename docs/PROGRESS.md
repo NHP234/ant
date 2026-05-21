@@ -144,15 +144,16 @@
 - ✅ Tạo `ChatPage.tsx`: Placeholder UI cho RAG chatbot
 
 #### Phase 5: Shared Components & Polish
-- ⬜ Tạo `components/shared/Pagination.tsx`: Reusable pagination
-- ⬜ Tạo `components/shared/StatusBadge.tsx`: Reusable status badge
+- ✅ Tạo `components/shared/Pagination.tsx`: Reusable pagination
+- ✅ Tạo `components/shared/StatusBadge.tsx`: Reusable status badge
+- ✅ Category management UI (CRUD): `CategoryManagementPage.tsx` + route `/admin/categories`
+- ✅ Profile page: `ProfilePage.tsx` + route `/admin/profile` + menu item in dropdown
+- ✅ Playwright E2E tests: 5 spec files (auth, catalog, admin-flow, book-mgmt, notifications) + playwright.config.ts + api helper
 - ⬜ Tách large pages thành sub-components (max 200 dòng/file)
 - ⬜ Responsive check + Dark mode check
 - ⬜ Kiểm tra full flow: Login → Browse → Hold → Admin Confirm → Borrow
 
 #### Polish & Infrastructure
-- ⬜ Category management UI (CRUD)
-- ⬜ Profile page (xem/sửa thông tin cá nhân)
 - ⬜ Audit log viewer (admin)
 - ⬜ Frontend Dockerfile + docker-compose service
 - ⬜ Fix bugs, UX improvements
@@ -222,3 +223,4 @@
 | 2026-05-20 | Frontend review: API_SPEC vs backend controllers audit (found 7 missing endpoints, 4 DTO mismatches). Created IMPLEMENTATION_PLAN.md. Updated FRONTEND.md + PROGRESS.md. UI wireframe fixes (Hold Mgmt, Notifications screens) |
 | 2026-05-20 | Phase 1 FE: Updated API_SPEC.md khớp backend controllers, sửa 4 API layer files (auth/books/borrows/notifications), tạo 2 files mới (holds/borrowSlips), giữ nguyên useAuth.tsx |
 | 2026-05-20 | Phase 2-4 FE: Layout branding + Lucide icons, routes /admin/holds + /chat, Dashboard (holds pending + recent), Book copies dialog, BorrowSlip expandable table, HoldManagementPage, BookDetail (hold 24h), BookCatalog (debounce), MyBorrows (3 tabs), ChatPage placeholder |
+| 2026-05-21 | Phase 5 FE: Shared components (Pagination, StatusBadge), CategoryManagementPage (CRUD), ProfilePage, route + nav items, Playwright E2E (5 specs + config + api helper), test:e2e script in package.json, PROGRESS.md update |
