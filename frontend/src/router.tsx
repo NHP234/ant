@@ -11,6 +11,7 @@ import HoldManagementPage from '@/pages/admin/HoldManagementPage'
 import UserManagementPage from '@/pages/admin/UserManagementPage'
 import CategoryManagementPage from '@/pages/admin/CategoryManagementPage'
 import ProfilePage from '@/pages/admin/ProfilePage'
+import AuditLogViewerPage from '@/pages/admin/AuditLogViewerPage'
 import BookCatalogPage from '@/pages/student/BookCatalogPage'
 import BookDetailPage from '@/pages/student/BookDetailPage'
 import MyBorrowsPage from '@/pages/student/MyBorrowsPage'
@@ -53,6 +54,7 @@ export default function AppRouter() {
               <Route path="/admin/users" element={<UserManagementPage />} />
               <Route path="/admin/categories" element={<CategoryManagementPage />} />
               <Route path="/admin/profile" element={<ProfilePage />} />
+              <Route path="/admin/audit-logs" element={<AuditLogViewerPage />} />
             </Route>
           </Route>
 

@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import NotificationBell from '@/components/shared/NotificationBell'
 import ThemeToggle from '@/components/shared/ThemeToggle'
-import { LayoutDashboard, BookOpen, ArrowLeftRight, Users, Clock, Tags, Menu, ExternalLink } from 'lucide-react'
+import { LayoutDashboard, BookOpen, ArrowLeftRight, Users, Clock, Tags, Menu, ExternalLink, ScrollText } from 'lucide-react'
 
 const navItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -18,6 +18,7 @@ const navItems = [
   { path: '/admin/holds', label: 'Đặt trước', icon: Clock },
   { path: '/admin/categories', label: 'Danh mục', icon: Tags },
   { path: '/admin/users', label: 'Người dùng', icon: Users },
+  { path: '/admin/audit-logs', label: 'Nhật ký', icon: ScrollText },
 ]
 
 function SidebarContent() {
