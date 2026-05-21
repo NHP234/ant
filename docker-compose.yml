@@ -49,6 +49,14 @@ services:
       redis:
         condition: service_healthy
 
+  frontend:
+    build: ./frontend
+    container_name: library-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
   redis_data:

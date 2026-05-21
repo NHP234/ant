@@ -149,14 +149,11 @@
 - ✅ Category management UI (CRUD): `CategoryManagementPage.tsx` + route `/admin/categories`
 - ✅ Profile page: `ProfilePage.tsx` + route `/admin/profile` + menu item in dropdown
 - ✅ Playwright E2E tests: 5 spec files (auth, catalog, admin-flow, book-mgmt, notifications) + playwright.config.ts + api helper
-- ⬜ Tách large pages thành sub-components (max 200 dòng/file)
-- ⬜ Responsive check + Dark mode check
-- ⬜ Kiểm tra full flow: Login → Browse → Hold → Admin Confirm → Borrow
-
-#### Polish & Infrastructure
-- ⬜ Audit log viewer (admin)
-- ⬜ Frontend Dockerfile + docker-compose service
-- ⬜ Fix bugs, UX improvements
+- ✅ Tách large pages thành sub-components: `BookManagementPage.tsx` → `BookFormDialog.tsx` + `CopiesDialog.tsx` (141 dòng); `MyBorrowsPage.tsx` → `HoldsTab.tsx` + `BorrowingTab.tsx` + `HistoryTab.tsx` (24 dòng)
+- ✅ Audit log viewer (admin): `AuditLogViewerPage.tsx` + `AuditLogController.java` + route `/admin/audit-logs`
+- ✅ Frontend Dockerfile + docker-compose service (nginx + proxy to backend)
+- ⬜ Responsive check + Dark mode check (manual: mở dev tools, toggle theme)
+- ⬜ Kiểm tra full flow: Login → Browse → Hold → Admin Confirm → Borrow (manual: chạy backend + frontend)
 
 ### Tuần 11: RAG Service Setup
 - ⬜ Init FastAPI project
@@ -224,3 +221,4 @@
 | 2026-05-20 | Phase 1 FE: Updated API_SPEC.md khớp backend controllers, sửa 4 API layer files (auth/books/borrows/notifications), tạo 2 files mới (holds/borrowSlips), giữ nguyên useAuth.tsx |
 | 2026-05-20 | Phase 2-4 FE: Layout branding + Lucide icons, routes /admin/holds + /chat, Dashboard (holds pending + recent), Book copies dialog, BorrowSlip expandable table, HoldManagementPage, BookDetail (hold 24h), BookCatalog (debounce), MyBorrows (3 tabs), ChatPage placeholder |
 | 2026-05-21 | Phase 5 FE: Shared components (Pagination, StatusBadge), CategoryManagementPage (CRUD), ProfilePage, route + nav items, Playwright E2E (5 specs + config + api helper), test:e2e script in package.json, PROGRESS.md update |
+| 2026-05-21 | Phase 5 FE (tiếp): Refactor BookManagementPage → BookFormDialog + CopiesDialog (141 dòng), MyBorrowsPage → HoldsTab + BorrowingTab + HistoryTab (24 dòng), AuditLogViewerPage + AuditLogController backend, Frontend Dockerfile + nginx.conf + docker-compose frontend service |
