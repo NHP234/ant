@@ -11,7 +11,7 @@ export default function BookCatalogPage() {
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const { data, isLoading } = useQuery({
     queryKey: ['books', 'catalog', page, search],

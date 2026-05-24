@@ -41,7 +41,6 @@ export interface BookCreateRequest {
   quantity: number
   coverImageUrl?: string
   categoryIds?: number[]
-  categoryIds?: number[]
 }
 
 export interface BookUpdateRequest {

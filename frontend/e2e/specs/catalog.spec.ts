@@ -35,7 +35,7 @@ test.describe('Catalog & Book Detail', () => {
     await page.goto(`/books/${book.id}`)
     await page.waitForTimeout(1000)
 
-    await expect(page.getByText(book.title)).toBeVisible()
+    await expect(page.getByText(book.title).first()).toBeVisible()
     await expect(page.getByText(book.author)).toBeVisible()
     await expect(page.getByText(/Còn/)).toBeVisible()
   })

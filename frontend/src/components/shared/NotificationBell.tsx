@@ -12,7 +12,7 @@ export default function NotificationBell() {
     refetchInterval: 30000,
   })
 
-  const count = data?.data?.data?.count ?? 0
+  const count = data?.data?.data?.unreadCount ?? 0
 
   return (
     <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/notifications')}>

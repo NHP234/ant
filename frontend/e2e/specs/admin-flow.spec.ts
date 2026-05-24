@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { STUDENT, TEST_BOOK, ADMIN } from '../fixtures/test-data'
+import { STUDENT, TEST_BOOK, ADMIN, API_BASE } from '../fixtures/test-data'
 import { apiRegister, apiLogin, apiCreateBook, apiCreateHold, apiConfirmHold } from '../helpers/api'
 
 test.describe('Admin Full Flow: Hold → Confirm → Borrow → Return', () => {
@@ -54,7 +54,7 @@ test.describe('Admin Full Flow: Hold → Confirm → Borrow → Return', () => {
 
   test('admin sees borrow slip and returns book', async ({ page, request }) => {
     const holdsRes = await (await request.get(
-      `http://localhost:8080/api/holds?size=50`,
+      `${API_BASE}/holds?size=50`,
       { headers: { Authorization: `Bearer ${adminToken}` } }
     )).json()
     const activeHold = holdsRes.data.content.find((h: any) => h.status === 'ACTIVE')
