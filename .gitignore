@@ -44,3 +44,5 @@ docker-compose.override.yml
 
 Template_do_an_tot_nghiep
 Ronbun
+seed_books.json
+goodreads_books.json.gz

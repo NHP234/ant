@@ -29,6 +29,8 @@ spring:
 
 server:
   port: 8080
+  tomcat:
+    max-http-post-size: 20971520  # 20MB
 
 app:
   jwt:

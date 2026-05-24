@@ -148,27 +148,28 @@
 - ✅ Tạo `components/shared/StatusBadge.tsx`: Reusable status badge
 - ✅ Category management UI (CRUD): `CategoryManagementPage.tsx` + route `/admin/categories`
 - ✅ Profile page: `ProfilePage.tsx` + route `/admin/profile` + menu item in dropdown
-- ✅ Playwright E2E tests: 5 spec files (auth, catalog, admin-flow, book-mgmt, notifications) + playwright.config.ts + api helper
+- ✅ Playwright E2E tests: 5 spec files (auth, catalog, admin-flow, book-mgmt, notifications) + playwright.config.ts + api helper + e2e/README.md
 - ✅ Tách large pages thành sub-components: `BookManagementPage.tsx` → `BookFormDialog.tsx` + `CopiesDialog.tsx` (141 dòng); `MyBorrowsPage.tsx` → `HoldsTab.tsx` + `BorrowingTab.tsx` + `HistoryTab.tsx` (24 dòng)
 - ✅ Audit log viewer (admin): `AuditLogViewerPage.tsx` + `AuditLogController.java` + route `/admin/audit-logs`
 - ✅ Frontend Dockerfile + docker-compose service (nginx + proxy to backend)
-- ⬜ Responsive check + Dark mode check (manual: mở dev tools, toggle theme)
-- ⬜ Kiểm tra full flow: Login → Browse → Hold → Admin Confirm → Borrow (manual: chạy backend + frontend)
+- ✅ Responsive check + Dark mode check
+- ✅ Kiểm tra full flow: 13 Playwright E2E tests đều pass (auth, catalog, admin-flow, book-mgmt, notifications)
 
-### Tuần 11: RAG Service Setup
-- ⬜ Init FastAPI project
-- ⬜ Setup LangChain + ChromaDB
-- ⬜ Embedding pipeline (book descriptions -> vectors)
-- ⬜ RAG query pipeline (question -> search -> LLM -> answer)
-- ⬜ Prompt engineering cho domain thư viện
-- ⬜ API endpoint: POST /api/chat
+### Tuần 11: RAG Service & Intent Classifier Setup
+- ⬜ Init FastAPI project (requirements, config, models, health check)
+- ⬜ Implement Intent Classifier (SVM + TF-IDF) với 4 intents (BOOK_SEARCH, BORROW_STATUS, HOLD_STATUS, GENERAL_CHAT)
+- ⬜ Ingestion script (nạp sách từ file seed / backend -> ChromaDB bằng `sentence-transformers`)
+- ⬜ RAG Pipeline cho tìm kiếm sách (Vector search + Gemini LLM)
+- ⬜ API Query Pipeline cho mượn/trả (gọi Spring Boot APIs bằng JWT)
+- ⬜ Prompt engineering cho các luồng xử lý
 
-### Tuần 12: RAG Integration
-- ⬜ SpringBoot proxy endpoint tới RAG service
-- ⬜ Frontend: Chat UI component
-- ⬜ Chat history (lưu DB hoặc session)
-- ⬜ Test & refine RAG quality
-- ⬜ Fallback khi RAG service unavailable
+### Tuần 12: Orchestrator & Integration
+- ⬜ Chat Orchestrator (route intent -> đúng pipeline) & POST /api/chat
+- ⬜ Chat history support (multi-turn context)
+- ⬜ Spring Boot `ChatController` proxy & Auto-ingest trigger khi thêm/sửa sách
+- ⬜ Dockerize RAG service & kết nối Docker Compose
+- ⬜ Frontend: Hoàn thiện `ChatPage.tsx` kết nối API thực
+- ⬜ Test & refine (confidence threshold, fallback khi service down)
 
 ---
 
@@ -222,3 +223,4 @@
 | 2026-05-20 | Phase 2-4 FE: Layout branding + Lucide icons, routes /admin/holds + /chat, Dashboard (holds pending + recent), Book copies dialog, BorrowSlip expandable table, HoldManagementPage, BookDetail (hold 24h), BookCatalog (debounce), MyBorrows (3 tabs), ChatPage placeholder |
 | 2026-05-21 | Phase 5 FE: Shared components (Pagination, StatusBadge), CategoryManagementPage (CRUD), ProfilePage, route + nav items, Playwright E2E (5 specs + config + api helper), test:e2e script in package.json, PROGRESS.md update |
 | 2026-05-21 | Phase 5 FE (tiếp): Refactor BookManagementPage → BookFormDialog + CopiesDialog (141 dòng), MyBorrowsPage → HoldsTab + BorrowingTab + HistoryTab (24 dòng), AuditLogViewerPage + AuditLogController backend, Frontend Dockerfile + nginx.conf + docker-compose frontend service |
+| 2026-05-24 | Phase 5 hoàn tất: Fix Playwright strict mode + backend connection lỗi, all 13 tests pass, thêm e2e/README.md, update PROGRESS.md |
