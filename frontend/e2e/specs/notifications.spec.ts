@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { STUDENT, ADMIN } from '../fixtures/test-data'
+import { STUDENT } from '../fixtures/test-data'
 import { apiRegister, apiLogin } from '../helpers/api'
 
 test.describe('Notifications', () => {
@@ -14,7 +14,7 @@ test.describe('Notifications', () => {
     await page.goto('/login')
     await page.fill('input[name="username"]', STUDENT.username)
     await page.fill('input[name="password"]', STUDENT.password)
-    await page.click('button[type="submit"]')
+    await page.getByRole('button', { name: 'Đăng nhập' }).click()
     await page.waitForURL(/\/browse/)
 
     await page.goto('/notifications')

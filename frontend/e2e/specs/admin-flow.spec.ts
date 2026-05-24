@@ -27,29 +27,29 @@ test.describe('Admin Full Flow: Hold → Confirm → Borrow → Return', () => {
     await page.goto('/login')
     await page.fill('input[name="username"]', ADMIN.username)
     await page.fill('input[name="password"]', ADMIN.password)
-    await page.click('button[type="submit"]')
+    await page.getByRole('button', { name: 'Đăng nhập' }).click()
     await page.waitForURL(/\/admin\/dashboard/)
 
-    await expect(page.getByText('Holds đang chờ')).toBeVisible()
-    await expect(page.getByText(STUDENT.fullName)).toBeVisible()
+    await expect(page.getByText('Holds đang chờ').first()).toBeVisible()
+    await expect(page.getByText(STUDENT.fullName).first()).toBeVisible()
   })
 
   test('admin confirms hold in Hold Management', async ({ page, request }) => {
     await page.goto('/login')
     await page.fill('input[name="username"]', ADMIN.username)
     await page.fill('input[name="password"]', ADMIN.password)
-    await page.click('button[type="submit"]')
+    await page.getByRole('button', { name: 'Đăng nhập' }).click()
     await page.waitForURL(/\/admin\/dashboard/)
 
     await page.goto('/admin/holds')
     await page.waitForTimeout(1000)
 
-    await expect(page.getByText(STUDENT.fullName)).toBeVisible()
+    await expect(page.getByText(STUDENT.fullName).first()).toBeVisible()
 
-    await page.click('button:has-text("Xác nhận mượn")')
+    await page.getByRole('button', { name: 'Xác nhận mượn' }).first().click()
     await page.waitForTimeout(2000)
 
-    await expect(page.getByText('Đã xác nhận')).toBeVisible()
+    await expect(page.getByText('Đã xác nhận').first()).toBeVisible()
   })
 
   test('admin sees borrow slip and returns book', async ({ page, request }) => {
@@ -65,25 +65,25 @@ test.describe('Admin Full Flow: Hold → Confirm → Borrow → Return', () => {
     await page.goto('/login')
     await page.fill('input[name="username"]', ADMIN.username)
     await page.fill('input[name="password"]', ADMIN.password)
-    await page.click('button[type="submit"]')
+    await page.getByRole('button', { name: 'Đăng nhập' }).click()
     await page.waitForURL(/\/admin\/dashboard/)
 
     await page.goto('/admin/borrows')
     await page.waitForTimeout(2000)
 
-    await expect(page.getByText(STUDENT.fullName)).toBeVisible()
+    await expect(page.getByText(STUDENT.fullName).first()).toBeVisible()
 
-    const expandBtn = page.locator('table button:has(svg.lucide-chevron-right), table svg.lucide-chevron-right').first()
+    const expandBtn = page.locator('tr[data-state] svg').first()
     if (await expandBtn.isVisible()) {
       await expandBtn.click()
       await page.waitForTimeout(500)
     }
 
-    const returnBtn = page.getByText('Xác nhận trả').first()
+    const returnBtn = page.getByRole('button', { name: 'Xác nhận trả' }).first()
     if (await returnBtn.isVisible()) {
       await returnBtn.click()
       await page.waitForTimeout(2000)
-      await expect(page.getByText('Đã trả')).toBeVisible()
+      await expect(page.getByText('Đã trả', { exact: true }).first()).toBeVisible()
     }
   })
 })

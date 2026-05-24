@@ -11,7 +11,7 @@ test.describe('Catalog & Book Detail', () => {
     await page.goto('/login')
     await page.fill('input[name="username"]', STUDENT.username)
     await page.fill('input[name="password"]', STUDENT.password)
-    await page.click('button[type="submit"]')
+    await page.getByRole('button', { name: 'Đăng nhập' }).click()
     await page.waitForURL(/\/browse/)
 
     await page.goto('/browse')
@@ -29,7 +29,7 @@ test.describe('Catalog & Book Detail', () => {
     await page.goto('/login')
     await page.fill('input[name="username"]', STUDENT.username)
     await page.fill('input[name="password"]', STUDENT.password)
-    await page.click('button[type="submit"]')
+    await page.getByRole('button', { name: 'Đăng nhập' }).click()
     await page.waitForURL(/\/browse/)
 
     await page.goto(`/books/${book.id}`)
@@ -48,13 +48,13 @@ test.describe('Catalog & Book Detail', () => {
     await page.goto('/login')
     await page.fill('input[name="username"]', STUDENT.username)
     await page.fill('input[name="password"]', STUDENT.password)
-    await page.click('button[type="submit"]')
+    await page.getByRole('button', { name: 'Đăng nhập' }).click()
     await page.waitForURL(/\/browse/)
 
     await page.goto(`/books/${book.id}`)
     await page.waitForTimeout(1000)
 
-    await page.click('button:has-text("Đặt mượn")')
+    await page.getByRole('button', { name: /Đặt mượn/ }).click()
     await page.waitForTimeout(2000)
 
     await expect(page).toHaveURL(/\/my-borrows/, { timeout: 10000 })
