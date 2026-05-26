@@ -63,7 +63,7 @@ frontend/src/
 │   │   ├── BookDetailPage.tsx      # Detail + Hold button
 │   │   ├── MyBorrowsPage.tsx       # Tabs: Holds / Borrowing / History
 │   │   ├── NotificationsPage.tsx   # Notification list + Mark read
-│   │   └── ChatPage.tsx            # RAG Chatbot (placeholder)
+│   │   └── ChatPage.tsx            # RAG Chatbot (kết nối API thực)
 │   └── NotFoundPage.tsx
 ├── hooks/
 │   └── useAuth.tsx                # Auth context + provider
@@ -92,7 +92,7 @@ frontend/src/
 /books/:id                  # Book detail + Hold button
 /my-borrows                 # My borrows (tabs: holds/borrowing/history)
 /notifications              # Notifications
-/chat                       # RAG chatbot (placeholder)
+/chat                       # RAG chatbot (AI Trợ lý học tập)
 ```
 
 ## API Layer — Type Mapping
@@ -158,13 +158,12 @@ frontend/src/
 - **Empty states**: Mọi danh sách phải có empty state message
 - **Vietnamese labels**: UI text tiếng Việt, code identifiers tiếng Anh
 
-## Status: 🔄 Cần cập nhật
+## Status: ✅ Đã hoàn thành
 
-Frontend hiện tại (tuần 8) chưa phản ánh backend V9-V12:
-- ❌ Thiếu Hold API + UI
-- ❌ Thiếu Borrow Slip API + UI  
-- ❌ Book DTO field names sai (`quantity` vs `totalCopies`)
-- ❌ Auth response interface lệch
-- ❌ Branding chưa đổi thành "Awaken Ant Library"
-
-→ Xem [IMPLEMENTATION_PLAN.md](../frontend/IMPLEMENTATION_PLAN.md) để biết chi tiết.
+Frontend đã được nâng cấp toàn diện và khớp 100% với Backend V9-V12:
+- ✅ Tích hợp Hold API + UI hoàn chỉnh (đặt giữ sách 24h, hủy hold).
+- ✅ Tích hợp Borrow Slip API + UI quản lý phiếu mượn gộp.
+- ✅ Khớp chuẩn xác Book DTO field names (`totalCopies` / `availableCopies`).
+- ✅ Sửa Auth response interface khớp chuẩn JwtResponse.
+- ✅ Cập nhật Branding toàn hệ thống thành "Awaken Ant Library".
+- ✅ Tích hợp RAG AI Chatbot kết nối trực tiếp với backend proxy và Python service.

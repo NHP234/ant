@@ -35,6 +35,12 @@ public class BookService {
     private final CategoryRepository categoryRepository;
     private final BookMapper bookMapper;
 
+    @org.springframework.beans.factory.annotation.Value("${app.rag.service-url:http://localhost:8000}")
+    private String ragServiceUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${app.rag.internal-key:SuperSecretInternalApiKey123!}")
+    private String internalApiKey;
+
     public PageResponse<BookResponse> getAllBooks(Pageable pageable) {
         Page<Book> page = bookRepository.findAll(pageable);
         List<BookResponse> content = page.getContent().stream()
@@ -88,7 +94,9 @@ public class BookService {
             bookCopyRepository.save(copy);
         }
 
-        return toResponseWithCopyCounts(book);
+        BookResponse response = toResponseWithCopyCounts(book);
+        triggerReIngest();
+        return response;
     }
 
     @Transactional
@@ -105,7 +113,9 @@ public class BookService {
         }
 
         book = bookRepository.save(book);
-        return toResponseWithCopyCounts(book);
+        BookResponse response = toResponseWithCopyCounts(book);
+        triggerReIngest();
+        return response;
     }
 
     @Transactional
@@ -114,6 +124,7 @@ public class BookService {
     public void deleteBook(Long id) {
         Book book = findBookOrThrow(id);
         bookRepository.delete(book);
+        triggerReIngest();
     }
 
     private Book findBookOrThrow(Long id) {
@@ -129,5 +140,23 @@ public class BookService {
         response.setTotalCopies(bookCopyRepository.countByBookId(book.getId()));
         response.setAvailableCopies(bookCopyRepository.countByBookIdAndStatus(book.getId(), CopyStatus.AVAILABLE));
         return response;
+    }
+
+    /**
+     * Kích hoạt đồng bộ hóa vector database sách không đồng bộ (bất đồng bộ).
+     */
+    @org.springframework.scheduling.annotation.Async
+    public void triggerReIngest() {
+        try {
+            org.springframework.web.client.RestClient.create()
+                    .post()
+                    .uri(ragServiceUrl + "/api/ingest")
+                    .header("X-Internal-Key", internalApiKey)
+                    .retrieve()
+                    .toBodilessEntity();
+            org.slf4j.LoggerFactory.getLogger(BookService.class).info("RAG ingest trigger sent successfully.");
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(BookService.class).warn("RAG ingest trigger failed (non-critical): {}", e.getMessage());
+        }
     }
 }

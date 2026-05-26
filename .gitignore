@@ -27,11 +27,18 @@ node_modules/
 dist/
 .env.local
 
-# Python (RAG service - sau này)
+# Python (RAG service)
 __pycache__/
 *.pyc
+*.py[cod]
+*$py.class
 .venv/
 venv/
+.pytest_cache/
+rag-service/chroma_data/
+rag-service/tests/temp_chroma_data/
+rag-service/models/*.joblib
+rag-service/app/models/*.joblib
 
 # Docker
 docker-compose.override.yml

@@ -594,45 +594,45 @@ volumes:
 ## 11. Implementation Plan — Checklist
 
 ### Phase 1: Foundation (Tuần 11 — ngày 1-2)
-- [ ] Init FastAPI project (`rag-service/`)
-- [ ] Setup `requirements.txt` (fastapi, uvicorn, chromadb, sentence-transformers, scikit-learn, underthesea, httpx, python-dotenv, google-generativeai)
-- [ ] Config `.env.example` + `config.py`
-- [ ] Pydantic models (request/response)
-- [ ] Health check endpoint
+- [x] Init FastAPI project (`rag-service/`)
+- [x] Setup `requirements.txt` (fastapi, uvicorn, chromadb, sentence-transformers, scikit-learn, underthesea, httpx, python-dotenv, google-generativeai, psycopg2-binary)
+- [x] Config `.env.example` + `config.py` (cần thêm `DATABASE_URL` để kết nối Postgres đọc dữ liệu sách)
+- [x] Pydantic models (request/response)
+- [x] Health check endpoint
 
 ### Phase 2: Intent Classifier (Tuần 11 — ngày 2-3)
-- [ ] Viết training data (~200 câu, 4 intents)
-- [ ] Implement `IntentClassifier` (SVM + TF-IDF)
-- [ ] Train + save model (`.joblib`)
-- [ ] Unit tests cho classifier (accuracy > 90%)
-- [ ] Confidence threshold + fallback logic
+- [x] Viết training data (~200 câu, 4 intents)
+- [x] Implement `IntentClassifier` (SVM + TF-IDF)
+- [x] Train + save model (`.joblib`)
+- [x] Unit tests cho classifier (accuracy > 90%)
+- [x] Confidence threshold + fallback logic
 
 ### Phase 3: RAG Pipeline (Tuần 11 — ngày 3-5)
-- [ ] Implement ingestion script (PostgreSQL → ChromaDB)
-- [ ] Implement vector search
-- [ ] Prompt templates cho BOOK_SEARCH
-- [ ] LLM service (Gemini API client)
-- [ ] Test RAG end-to-end
+- [x] Implement ingestion script (PostgreSQL → ChromaDB)
+- [x] Implement vector search
+- [x] Prompt templates cho BOOK_SEARCH
+- [x] LLM service (Gemini API client)
+- [x] Test RAG end-to-end
 
 ### Phase 4: API Query Pipeline (Tuần 12 — ngày 1-2)
-- [ ] Implement `api_query_service.py` (call Spring Boot APIs)
-- [ ] Context builders (borrow_context, hold_context)
-- [ ] Prompt templates cho BORROW_STATUS, HOLD_STATUS
-- [ ] Test với mock JWT
+- [x] Implement `api_query_service.py` (call Spring Boot APIs)
+- [x] Context builders (borrow_context, hold_context)
+- [x] Prompt templates cho BORROW_STATUS, HOLD_STATUS
+- [x] Test với mock JWT
 
 ### Phase 5: Chat Orchestrator (Tuần 12 — ngày 2-3)
-- [ ] Implement `chat_orchestrator.py` (route intent → pipeline)
-- [ ] Chat history support (multi-turn context)
-- [ ] `POST /api/chat` endpoint
-- [ ] Error handling + fallback
+- [x] Implement `chat_orchestrator.py` (route intent → pipeline)
+- [x] Chat history support (multi-turn context)
+- [x] `POST /api/chat` endpoint
+- [x] Error handling + fallback
 
 ### Phase 6: Integration (Tuần 12 — ngày 3-5)
-- [ ] Spring Boot `ChatController` (proxy)
-- [ ] Auto-ingest trigger khi thêm/sửa sách
-- [ ] Dockerfile cho rag-service
-- [ ] Docker Compose integration
-- [ ] Frontend: kết nối ChatPage.tsx với API thực
-- [ ] End-to-end test
+- [x] Spring Boot `ChatController` (proxy)
+- [x] Auto-ingest trigger khi thêm/sửa sách
+- [x] Dockerfile cho rag-service
+- [x] Docker Compose integration
+- [x] Frontend: kết nối ChatPage.tsx với API thực
+- [x] End-to-end test
 
 ---
 
@@ -660,4 +660,4 @@ volumes:
 | Tiếng Việt không chính xác | Dùng `underthesea` tokenizer, thêm domain-specific từ vựng |
 | JWT expired khi gọi Spring Boot | Forward nguyên JWT từ frontend, để Spring Boot tự validate |
 
-## Status: ⬜ Chưa bắt đầu
+## Status: ✅ Đã hoàn thành

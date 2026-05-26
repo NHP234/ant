@@ -156,20 +156,20 @@
 - ✅ Kiểm tra full flow: 13 Playwright E2E tests đều pass (auth, catalog, admin-flow, book-mgmt, notifications)
 
 ### Tuần 11: RAG Service & Intent Classifier Setup
-- ⬜ Init FastAPI project (requirements, config, models, health check)
-- ⬜ Implement Intent Classifier (SVM + TF-IDF) với 4 intents (BOOK_SEARCH, BORROW_STATUS, HOLD_STATUS, GENERAL_CHAT)
-- ⬜ Ingestion script (nạp sách từ file seed / backend -> ChromaDB bằng `sentence-transformers`)
-- ⬜ RAG Pipeline cho tìm kiếm sách (Vector search + Gemini LLM)
-- ⬜ API Query Pipeline cho mượn/trả (gọi Spring Boot APIs bằng JWT)
-- ⬜ Prompt engineering cho các luồng xử lý
+- ✅ Init FastAPI project (requirements, config, models, health check)
+- ✅ Implement Intent Classifier (SVM + TF-IDF) với 4 intents (BOOK_SEARCH, BORROW_STATUS, HOLD_STATUS, GENERAL_CHAT)
+- ✅ Ingestion script (nạp sách từ file seed / backend -> ChromaDB bằng `sentence-transformers`)
+- ✅ RAG Pipeline cho tìm kiếm sách (Vector search + Gemini LLM)
+- ✅ API Query Pipeline cho mượn/trả (gọi Spring Boot APIs bằng JWT)
+- ✅ Prompt engineering cho các luồng xử lý
 
 ### Tuần 12: Orchestrator & Integration
-- ⬜ Chat Orchestrator (route intent -> đúng pipeline) & POST /api/chat
-- ⬜ Chat history support (multi-turn context)
-- ⬜ Spring Boot `ChatController` proxy & Auto-ingest trigger khi thêm/sửa sách
-- ⬜ Dockerize RAG service & kết nối Docker Compose
-- ⬜ Frontend: Hoàn thiện `ChatPage.tsx` kết nối API thực
-- ⬜ Test & refine (confidence threshold, fallback khi service down)
+- ✅ Chat Orchestrator (route intent -> đúng pipeline) & POST /api/chat
+- ✅ Chat history support (multi-turn context)
+- ✅ Spring Boot `ChatController` proxy & Auto-ingest trigger khi thêm/sửa sách
+- ✅ Dockerize RAG service & kết nối Docker Compose
+- ✅ Frontend: Hoàn thiện `ChatPage.tsx` kết nối API thực
+- 🔄 Test & refine (confidence threshold, fallback khi service down)
 
 ---
 

@@ -404,6 +404,83 @@
 
 ---
 
+## Admin / Seeding (V12)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | /admin/seed | ADMIN | Import hàng loạt sách từ seed data |
+
+### POST /admin/seed
+```json
+// Request (SeedImportRequest)
+{
+  "books": [
+    {
+      "title": "Clean Code",
+      "author": "Robert C. Martin",
+      "isbn": "978-0132350884",
+      "publisher": "Prentice Hall",
+      "publishYear": 2008,
+      "description": "A handbook of agile software craftsmanship...",
+      "coverImageUrl": "http://example.com/cover.jpg",
+      "categories": ["CNTT", "Lập trình"]
+    }
+  ]
+}
+
+// Response 200 (ApiResponse<SeedImportResponse>)
+{
+  "success": true,
+  "data": {
+    "imported": 1,
+    "skipped": 0,
+    "totalCategories": 2
+  },
+  "message": "Ok"
+}
+```
+
+---
+
+## AI Chatbot (RAG) (V12)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | /chat | User | Gửi tin nhắn hỏi đáp cho Trợ lý AI (RAG) |
+
+### POST /chat
+```json
+// Request (ChatRequest)
+{
+  "question": "Có sách nào về machine learning không?",
+  "chatHistory": [
+    "Xin chào!",
+    "Chào bạn! Tôi có thể giúp gì cho bạn?"
+  ]
+}
+
+// Response 200 (ApiResponse<ChatResponse> - BOOK_SEARCH)
+{
+  "success": true,
+  "data": {
+    "answer": "Thư viện có một số sách về Machine Learning phù hợp cho bạn:\n\n1. **Deep Learning** - Ian Goodfellow...",
+    "intent": "BOOK_SEARCH",
+    "confidence": 0.92,
+    "sourceBooks": [
+      {
+        "bookId": 15,
+        "title": "Deep Learning",
+        "author": "Ian Goodfellow",
+        "relevanceScore": 0.89
+      }
+    ]
+  },
+  "message": "Thành công"
+}
+```
+
+---
+
 ## Error Response Format
 
 ```json

@@ -43,10 +43,30 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      APP_RAG_SERVICE_URL: http://rag-service:8000
+      APP_RAG_INTERNAL_KEY: SuperSecretInternalApiKey123!
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+
+  rag-service:
+    build: ./rag-service
+    container_name: library-rag-service
+    ports:
+      - "8000:8000"
+    environment:
+      - SPRING_BOOT_URL=http://backend:8080/api
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - INTERNAL_API_KEY=SuperSecretInternalApiKey123!
+      - CHROMA_PERSIST_DIR=/data/chroma
+      - ENV=production
+    volumes:
+      - rag_data:/data
+    depends_on:
+      postgres:
         condition: service_healthy
 
   frontend:
@@ -60,3 +80,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  rag_data:

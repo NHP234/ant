@@ -33,15 +33,18 @@ com.example.demo/
 │   ├── BorrowController.java         # Borrow/Return operations
 │   ├── UserController.java           # User management (ADMIN)
 │   ├── NotificationController.java   # User notifications
-│   └── DashboardController.java      # Statistics (ADMIN/LIBRARIAN)
+│   ├── DashboardController.java      # Statistics (ADMIN/LIBRARIAN)
+│   ├── AdminController.java          # Batch import & administration (ADMIN)
+│   └── ChatController.java           # AI RAG Chatbot proxy (STUDENT/User)
 ├── service/
 │   ├── AuthService.java
-│   ├── BookService.java              # + auto-create BookCopies
+│   ├── BookService.java              # + auto-create BookCopies & async RAG trigger
 │   ├── CategoryService.java
 │   ├── BorrowService.java            # + BorrowSlip + BookCopy status mgmt
 │   ├── UserService.java
 │   ├── NotificationService.java
-│   └── DashboardService.java
+│   ├── DashboardService.java
+│   └── SeedImportService.java        # Batch seed data importer (ADMIN)
 ├── repository/
 │   ├── BookRepository.java           # Full-text search
 │   ├── BookCopyRepository.java       # Pessimistic lock for borrow flow
@@ -73,7 +76,10 @@ com.example.demo/
 │   │   ├── RegisterRequest.java
 │   │   ├── BookCreateRequest.java    # quantity → tạo N book_copies
 │   │   ├── BookUpdateRequest.java
-│   │   └── BorrowRequest.java
+│   │   ├── BorrowRequest.java
+│   │   ├── SeedImportRequest.java    # Wrapper for book seeds batch import
+│   │   ├── BookSeedDto.java          # Single book data for seeding
+│   │   └── ChatRequest.java          # Chatbot question & history
 │   └── response/
 │       ├── ApiResponse.java          # Generic wrapper { success, data, message }
 │       ├── AuthResponse.java         # JWT + Refresh token + UserInfo
@@ -85,7 +91,9 @@ com.example.demo/
 │       ├── UserResponse.java
 │       ├── NotificationResponse.java
 │       ├── DashboardStatsResponse.java
-│       └── PageResponse.java         # Generic paginated response
+│       ├── PageResponse.java         # Generic paginated response
+│       ├── SeedImportResponse.java   # Seed batch import statistics
+│       └── ChatResponse.java         # Chatbot response + source books
 ├── mapper/
 │   ├── BookMapper.java               # MapStruct: Book → BookResponse
 │   ├── CategoryMapper.java
@@ -164,9 +172,9 @@ public class GlobalExceptionHandler {
 4. Role-based access:
    - Public: GET /api/books/**, GET /api/categories/**
    - ADMIN/LIBRARIAN: POST/PUT /api/books/**
-   - ADMIN only: DELETE /api/books/**, CRUD /api/categories/**, CRUD /api/users/**
+   - ADMIN only: DELETE /api/books/**, CRUD /api/categories/**, CRUD /api/users/**, POST /api/admin/seed (batch seed data)
    - ADMIN/LIBRARIAN: POST /api/borrows
-   - Authenticated: GET /api/borrows/my
+   - Authenticated: GET /api/borrows/my, POST /api/chat (gửi câu hỏi cho AI Chatbot proxy)
    - ADMIN/LIBRARIAN: PUT /api/borrows/{id}/return, GET /api/borrows, GET /api/borrows/overdue
 ```
 
@@ -262,6 +270,22 @@ categories           | 24h    | @CacheEvict on create/update/delete
   }
 }
 ```
+
+## AI Chatbot & RAG Sync Flow (V12)
+
+### 1. AI Chatbot Proxying
+- Khi người dùng gửi câu hỏi tới `POST /api/chat`, `ChatController` của Spring Boot đóng vai trò proxy bảo mật.
+- Nó tự động forward request (bao gồm `ChatRequest` chứa câu hỏi và lịch sử cuộc hội thoại) kèm theo header JWT Token của người dùng (`Authorization`) sang Python RAG service (`POST /api/chat`).
+- Python RAG service sẽ trích xuất JWT để lấy ID sinh viên phục vụ việc tra cứu thông tin cá nhân (như sách đang mượn/chờ mượn) hoặc thực hiện truy vấn thông tin sách trong cơ sở dữ liệu vector ChromaDB, sau đó dùng Gemini để tạo ra phản hồi thân thiện.
+- **Fallback Cơ Chế**: Nếu RAG service gặp sự cố hoặc offline, Spring Boot sẽ bắt lỗi `Exception` và áp dụng chế độ Fallback, trả về một câu trả lời thân thiện được định nghĩa sẵn để tránh làm gián đoạn trải nghiệm người dùng.
+
+### 2. Auto-ingest khi thêm/sửa sách (Bất đồng bộ)
+- Nhằm giữ cho Vector Database (ChromaDB) luôn khớp với dữ liệu thực tế trong Postgres, `BookService` được trang bị khả năng tự động cập nhật.
+- Mỗi khi có sự thay đổi về sách (Thêm sách mới, Sửa thông tin sách, Xóa sách):
+  - `BookService` gọi phương thức `triggerReIngest()`.
+  - Phương thức này được gắn annotation `@Async` (kích hoạt qua `@EnableAsync` trong `DemoApplication`) để chạy bất đồng bộ trên một thread riêng, hoàn toàn không gây chậm trễ cho HTTP thread của người dùng.
+  - `@Async triggerReIngest()` gửi một HTTP POST request nhanh tới endpoint `/api/ingest` của Python RAG service kèm header bảo mật nội bộ `X-Internal-Key`.
+  - Python RAG service khi nhận tín hiệu sẽ tự động đọc lại các sách mới/sửa đổi từ Postgres và đồng bộ hóa tức thì vào ChromaDB.
 
 ## Notes
 - Admin account tự động tạo qua DataInitializer (username/password từ application.yml)
