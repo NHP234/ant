@@ -11,15 +11,21 @@ from app.services.chat_orchestrator import ChatOrchestrator
 from app.data.intent_training import TRAINING_DATA
 import logging
 
-# Cấu hình logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler()
-    ]
-)
+# Cấu hình logging để hoạt động đồng bộ và không bị Uvicorn ghi đè/tắt đi
+import sys
 logger = logging.getLogger("rag-service")
+logger.setLevel(logging.INFO)
+
+# Thiết lập handler ghi ra stdout cho logger của app
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.propagate = False # Không propagate lên root để tránh bị duplicate log khi Uvicorn cũng ghi nhận
+
+# Cấu hình uvicorn logger để ghi nhận đồng bộ
+logging.getLogger("uvicorn").setLevel(logging.INFO)
+logging.getLogger("uvicorn.access").setLevel(logging.INFO)
 
 app = FastAPI(
     title="Awaken Ant Library - RAG Service API",

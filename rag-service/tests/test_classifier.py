@@ -13,20 +13,9 @@ def test_intent_classifier_flow():
     classifier = IntentClassifier()
     assert not classifier.is_trained
     
-    # 2. Lấy dữ liệu train rút gọn để test nhanh
-    test_data = [
-        ("tìm sách java cơ bản", "BOOK_SEARCH"),
-        ("muốn mượn sách python", "BOOK_SEARCH"),
-        ("tôi đang mượn những sách gì", "BORROW_STATUS"),
-        ("hạn trả sách của tôi", "BORROW_STATUS"),
-        ("tôi đang đặt trước cuốn nào", "HOLD_STATUS"),
-        ("hủy hold sách hộ tôi", "HOLD_STATUS"),
-        ("xin chào trợ lý thư viện", "GENERAL_CHAT"),
-        ("thư viện mấy giờ mở cửa", "GENERAL_CHAT")
-    ]
-    
-    texts = [item[0] for item in test_data]
-    labels = [item[1] for item in test_data]
+    # 2. Lấy dữ liệu huấn luyện thực tế từ TRAINING_DATA để đảm bảo ranh giới quyết định SVM ổn định
+    texts = [item[0] for item in TRAINING_DATA]
+    labels = [item[1] for item in TRAINING_DATA]
     
     # 3. Huấn luyện
     classifier.train(texts, labels)

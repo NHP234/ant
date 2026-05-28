@@ -22,7 +22,7 @@ class ChatOrchestrator:
         self.rag_service = rag_service
         self.api_query_service = APIQueryService()
         self.llm_service = LLMService()
-        self.confidence_threshold = 0.6
+        self.confidence_threshold = 0.5
 
     async def route_and_process(
         self, 

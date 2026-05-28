@@ -63,6 +63,7 @@ services:
       - INTERNAL_API_KEY=SuperSecretInternalApiKey123!
       - CHROMA_PERSIST_DIR=/data/chroma
       - ENV=production
+      - PYTHONUNBUFFERED=1
     volumes:
       - rag_data:/data
     depends_on:

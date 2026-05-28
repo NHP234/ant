@@ -9,7 +9,7 @@
 |-----------|-----------|-----------|
 | Tháng 1: Backend nền tảng | ✅ Done | Tuần 1-4 |
 | Tháng 2: Backend nâng cao + FE | ✅ Done | Tuần 5-8 |
-| Tháng 3: Frontend + RAG | 🔄 In Progress | Tuần 9-12 |
+| Tháng 3: Frontend + RAG | ✅ Done | Tuần 9-12 |
 | Tháng 4: NFC + Hoàn thiện | ⬜ TODO | Tuần 13-16 |
 | Tháng 5: Polish + Báo cáo | ⬜ TODO | Tuần 17-20 |
 
@@ -169,7 +169,7 @@
 - ✅ Spring Boot `ChatController` proxy & Auto-ingest trigger khi thêm/sửa sách
 - ✅ Dockerize RAG service & kết nối Docker Compose
 - ✅ Frontend: Hoàn thiện `ChatPage.tsx` kết nối API thực
-- 🔄 Test & refine (confidence threshold, fallback khi service down)
+- ✅ Test & refine (confidence threshold, fallback khi service down, nâng cấp hiệu chuẩn Calibrated Transformer Embeddings)
 
 ---
 
@@ -224,3 +224,4 @@
 | 2026-05-21 | Phase 5 FE: Shared components (Pagination, StatusBadge), CategoryManagementPage (CRUD), ProfilePage, route + nav items, Playwright E2E (5 specs + config + api helper), test:e2e script in package.json, PROGRESS.md update |
 | 2026-05-21 | Phase 5 FE (tiếp): Refactor BookManagementPage → BookFormDialog + CopiesDialog (141 dòng), MyBorrowsPage → HoldsTab + BorrowingTab + HistoryTab (24 dòng), AuditLogViewerPage + AuditLogController backend, Frontend Dockerfile + nginx.conf + docker-compose frontend service |
 | 2026-05-24 | Phase 5 hoàn tất: Fix Playwright strict mode + backend connection lỗi, all 13 tests pass, thêm e2e/README.md, update PROGRESS.md |
+| 2026-05-28 | Phase 2.5: Nâng cấp bộ phân loại ý định (Intent Classifier) lên mô hình ngữ nghĩa Calibrated SentenceTransformer (MiniLM) + SVM (LinearSVC). Tích hợp hiệu chuẩn xác suất (Platt Scaling) qua `CalibratedClassifierCV` giúp kiểm soát tốt độ tự tin (>0.75 cho BOOK_SEARCH và ~0.58 cho BORROW_STATUS), điều chỉnh threshold orchestrator về 0.5. Copy inject và khởi chạy an toàn trong Docker container, viết tài liệu chi tiết. |

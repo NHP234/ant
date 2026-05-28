@@ -1,99 +1,117 @@
 import os
 import logging
+import re
 import numpy as np
 from sklearn.svm import LinearSVC
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.pipeline import Pipeline
+from sklearn.calibration import CalibratedClassifierCV
+from sentence_transformers import SentenceTransformer
 import joblib
-
-from app.utils.vietnamese import clean_and_tokenize
 
 logger = logging.getLogger("rag-service.classifier")
 
+def clean_text(text: str) -> str:
+    """
+    Làm sạch văn bản cơ bản (chuyển về chữ thường, bỏ ký tự đặc biệt và khoảng trắng thừa).
+    Không dùng tách từ bằng underthesea vì SentenceTransformer hoạt động tốt nhất trên văn bản tự nhiên.
+    """
+    if not text:
+        return ""
+    text = text.lower().strip()
+    # Loại bỏ ký tự đặc biệt, chỉ giữ lại chữ cái, số và khoảng trắng
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
 class IntentClassifier:
     def __init__(self):
-        # Pipeline gồm TF-IDF Vectorizer và SVM (LinearSVC)
-        self.pipeline = Pipeline([
-            ('tfidf', TfidfVectorizer(
-                tokenizer=str.split,     # Tokenizer mặc định là split khoảng trắng vì ta đã pre-tokenize
-                max_features=5000,
-                ngram_range=(1, 2),      # Unigram + Bigram (ví dụ: "trí_tuệ", "nhân_tạo", "trí_tuệ nhân_tạo")
-                sublinear_tf=True
-            )),
-            ('svm', LinearSVC(
-                C=1.0,
-                class_weight='balanced', # Xử lý mất cân bằng mẫu tự động
-                max_iter=10000,
-                random_state=42
-            ))
-        ])
+        self.model_name = 'paraphrase-multilingual-MiniLM-L12-v2'
+        self.device = 'cpu' # Chạy trên CPU để tiết kiệm tài nguyên và tương thích mọi môi trường
+        
+        # Khởi tạo mô hình SVM tuyến tính cơ sở
+        base_svm = LinearSVC(
+            C=1.0,
+            class_weight='balanced',
+            max_iter=10000,
+            random_state=42
+        )
+        # Sử dụng CalibratedClassifierCV với 5-fold cross-validation để hiệu chuẩn xác suất (Platt scaling)
+        # Giúp confidence score phản ánh đúng xác suất thực tế thay vì dùng khoảng cách phân tách thô
+        self.svm = CalibratedClassifierCV(estimator=base_svm, cv=5)
+        self._model = None
         self.is_trained = False
+
+    def _get_model(self) -> SentenceTransformer:
+        """
+        Lazy loading: Chỉ tải SentenceTransformer khi thực sự cần thiết (huấn luyện hoặc dự đoán).
+        Điều này giúp FastAPI khởi động nhanh hơn rất nhiều.
+        """
+        if self._model is None:
+            logger.info(f"Đang tải Embedding Model cho Classifier: {self.model_name}...")
+            self._model = SentenceTransformer(self.model_name, device=self.device)
+            logger.info("Tải Embedding Model cho Classifier thành công!")
+        return self._model
 
     def train(self, texts: list[str], labels: list[str]):
         """
-        Huấn luyện bộ phân loại ý định.
+        Huấn luyện bộ phân loại ý định hiệu chuẩn dựa trên dense embeddings + SVM.
         """
-        logger.info(f"Đang bắt đầu huấn luyện SVM Classifier với {len(texts)} mẫu...")
+        logger.info(f"Đang bắt đầu huấn luyện Calibrated SVM Classifier với {len(texts)} mẫu bằng dense embeddings...")
         
-        # Tiền xử lý tách từ tiếng Việt cho tất cả tập train
-        tokenized_texts = [clean_and_tokenize(t) for t in texts]
+        # Tiền xử lý làm sạch văn bản
+        cleaned_texts = [clean_text(t) for t in texts]
         
-        # Huấn luyện Pipeline
-        self.pipeline.fit(tokenized_texts, labels)
+        # Mã hóa tất cả các câu mẫu sang dense vector embeddings
+        model = self._get_model()
+        logger.info("Đang mã hóa các mẫu huấn luyện sang dense vectors...")
+        embeddings = model.encode(cleaned_texts, convert_to_numpy=True, show_progress_bar=False)
+        
+        # Huấn luyện Calibrated SVM
+        self.svm.fit(embeddings, np.array(labels))
         self.is_trained = True
-        logger.info("Huấn luyện SVM Classifier hoàn tất thành công!")
+        logger.info("Huấn luyện Calibrated SVM Classifier hoàn tất thành công!")
 
     def predict(self, text: str) -> tuple[str, float]:
         """
-        Dự đoán intent của câu hỏi đầu vào.
+        Dự đoán intent của câu hỏi đầu vào dùng dense embedding + Calibrated SVM.
         Trả về: (intent_name, confidence_score)
         """
         if not self.is_trained:
             logger.warning("Bộ phân loại chưa được huấn luyện! Fallback về GENERAL_CHAT.")
             return "GENERAL_CHAT", 0.0
 
-        # Tiền xử lý câu hỏi
-        tokenized_text = clean_and_tokenize(text)
+        # Tiền xử lý làm sạch câu hỏi
+        cleaned_text = clean_text(text)
         
-        # Dự đoán nhãn
-        intent = self.pipeline.predict([tokenized_text])[0]
+        # Mã hóa câu hỏi sang dense vector
+        model = self._get_model()
+        embedding = model.encode([cleaned_text], convert_to_numpy=True, show_progress_bar=False)[0]
         
-        # Tính toán độ tự tin (Confidence) dựa trên decision_function
-        decision_scores = self.pipeline.decision_function([tokenized_text])[0]
+        # Dự đoán xác suất cho tất cả các lớp sử dụng mô hình đã hiệu chuẩn
+        probabilities = self.svm.predict_proba([embedding])[0]
+        classes = self.svm.classes_
         
-        # Nếu chỉ có 2 lớp, decision_function trả về một số thực đơn lẻ
-        # Nếu có nhiều lớp (> 2), decision_function trả về mảng scores cho từng lớp
-        if isinstance(decision_scores, np.ndarray):
-            # Tính softmax hoặc chuẩn hóa scores để có tỷ lệ tự tin tương đối
-            exp_scores = np.exp(decision_scores - np.max(decision_scores))  # Tránh overflow
-            probabilities = exp_scores / np.sum(exp_scores)
-            
-            # Lấy index của intent dự đoán để lấy xác suất tương ứng
-            classes = self.pipeline.named_steps['svm'].classes_
-            class_idx = list(classes).index(intent)
-            confidence = float(probabilities[class_idx])
-        else:
-            # 2 lớp: score càng xa 0 càng tự tin. Chuẩn hóa về khoảng 0.5 - 1.0
-            sigmoid = 1 / (1 + np.exp(-abs(decision_scores)))
-            confidence = float(sigmoid)
+        # Nhãn dự đoán là nhãn có xác suất cao nhất
+        class_idx = np.argmax(probabilities)
+        intent = classes[class_idx]
+        confidence = float(probabilities[class_idx])
 
-        logger.info(f"Dự đoán ý định: '{text}' -> {intent} (độ tự tin: {confidence:.2f})")
+        logger.info(f"Dự đoán ý định (Hiệu chuẩn): '{text}' -> {intent} (độ tự tin: {confidence:.2f})")
         return intent, confidence
 
     def save(self, path: str):
         """
-        Lưu model pipeline ra file joblib.
+        Lưu duy nhất mô hình Calibrated SVM ra file joblib để dung lượng file cực kỳ nhẹ và tránh lỗi serialization PyTorch.
         """
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        joblib.dump(self.pipeline, path)
-        logger.info(f"Đã lưu mô hình thành công vào {path}")
+        joblib.dump(self.svm, path)
+        logger.info(f"Đã lưu mô hình Calibrated SVM thành công vào {path}")
 
     def load(self, path: str):
         """
-        Tải model pipeline từ file joblib.
+        Tải mô hình Calibrated SVM từ file joblib.
         """
         if not os.path.exists(path):
             raise FileNotFoundError(f"Không tìm thấy file mô hình tại {path}")
-        self.pipeline = joblib.load(path)
+        self.svm = joblib.load(path)
         self.is_trained = True
-        logger.info(f"Đã tải mô hình thành công từ {path}")
+        logger.info(f"Đã tải mô hình Calibrated SVM thành công từ {path}")
