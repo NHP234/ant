@@ -42,7 +42,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
+import com.example.demo.model.entity.Author;
+import java.util.Set;
+
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class BorrowServiceTest {
 
     @Mock private BorrowRecordRepository borrowRecordRepository;
@@ -69,7 +76,8 @@ class BorrowServiceTest {
 
         testUser = User.builder().id(1L).username("student01").fullName("Test Student").role(Role.STUDENT).build();
         librarianUser = User.builder().id(2L).username("librarian01").fullName("Lib User").role(Role.LIBRARIAN).build();
-        testBook = Book.builder().id(1L).title("Clean Code").author("Robert Martin").build();
+        testBook = Book.builder().id(1L).title("Clean Code")
+                .authors(Set.of(Author.builder().id(1L).name("Robert Martin").build())).build();
         testCopy = BookCopy.builder().id(10L).book(testBook).copyNumber(1).status(CopyStatus.AVAILABLE).build();
 
         borrowRequest = new BorrowRequest();

@@ -4,7 +4,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 DATA_URL = "https://mcauleylab.ucsd.edu/public_datasets/gdrive/goodreads/goodreads_books.json.gz"
 LOCAL_GZ = "goodreads_books.json.gz"
 OUTPUT_FILE = "seed_books.json"
-TARGET_COUNT = 5000
+TARGET_COUNT = 15000
 MIN_DESC_LENGTH = 100
 
 SHELF_TO_CATEGORY = {
@@ -80,9 +80,32 @@ def map_category(shelves):
                 best = (cat, count)
     return best[0] if best else None
 
-def process_file(local_path):
+def load_authors(authors_gz_path):
+    print(f"Loading authors map from {authors_gz_path}...")
+    authors_map = {}
+    if not os.path.exists(authors_gz_path):
+        print(f"Warning: {authors_gz_path} not found. Authors mapping will be skipped.")
+        return authors_map
+    
+    start = time.time()
+    with gzip.open(authors_gz_path, 'rt', encoding='utf-8') as f:
+        for line in f:
+            try:
+                data = json.loads(line)
+                aid = data.get('author_id')
+                name = data.get('name')
+                if aid and name:
+                    authors_map[aid] = name.strip()
+            except Exception:
+                continue
+    elapsed = time.time() - start
+    print(f"Loaded {len(authors_map)} authors in {elapsed:.1f}s.")
+    return authors_map
+
+def process_file(local_path, authors_map):
     print(f"Processing {local_path}...")
     books = []
+    seen_isbns = set()
     fallback_idx = 0
     start = time.time()
 
@@ -105,15 +128,23 @@ def process_file(local_path):
             if not title:
                 continue
 
+            isbn = data.get('isbn', '').strip()
+            if isbn and isbn in seen_isbns:
+                continue
+            if isbn:
+                seen_isbns.add(isbn)
+
             authors = data.get('authors', [])
             author_names = []
             for a in authors:
-                name = a.get('name', '').strip()
-                if name:
-                    author_names.append(name)
+                aid = a.get('author_id', '')
+                if aid and aid in authors_map:
+                    author_names.append(authors_map[aid])
                 else:
-                    aid = a.get('author_id', '')
-                    if aid:
+                    name = a.get('name', '').strip()
+                    if name:
+                        author_names.append(name)
+                    elif aid:
                         author_names.append(f"Author #{aid}")
             if not author_names:
                 continue
@@ -176,7 +207,9 @@ def process_file(local_path):
 
 def extract_books():
     download_file(DATA_URL, LOCAL_GZ)
-    process_file(LOCAL_GZ)
+    authors_gz = "goodreads_book_authors.json.gz"
+    authors_map = load_authors(authors_gz)
+    process_file(LOCAL_GZ, authors_map)
 
 if __name__ == "__main__":
     extract_books()

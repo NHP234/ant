@@ -35,12 +35,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.example.demo.repository.AuthorRepository;
+import com.example.demo.model.entity.Author;
+
 @ExtendWith(MockitoExtension.class)
 class BookServiceTest {
 
     @Mock private BookRepository bookRepository;
     @Mock private BookCopyRepository bookCopyRepository;
     @Mock private CategoryRepository categoryRepository;
+    @Mock private AuthorRepository authorRepository;
     @Mock private BookMapper bookMapper;
 
     @InjectMocks private BookService bookService;
@@ -51,8 +55,9 @@ class BookServiceTest {
     @BeforeEach
     void setUp() {
         testBook = Book.builder()
-                .id(1L).title("Clean Code").author("Robert Martin")
-            .isbn("978-0132350884").build();
+                .id(1L).title("Clean Code")
+                .authors(Set.of(Author.builder().id(1L).name("Robert Martin").build()))
+                .isbn("978-0132350884").build();
 
         testBookResponse = BookResponse.builder()
                 .id(1L).title("Clean Code").author("Robert Martin")

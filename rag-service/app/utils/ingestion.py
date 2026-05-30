@@ -28,12 +28,14 @@ def load_books_from_postgres() -> list[dict]:
             SELECT 
                 b.id, 
                 b.title, 
-                b.author, 
+                COALESCE(string_agg(DISTINCT auth.name, ', '), '') as author,
                 b.publisher, 
                 b.publish_year as "publishYear", 
                 b.description,
-                COALESCE(string_agg(c.name, ','), '') as categories
+                COALESCE(string_agg(DISTINCT c.name, ','), '') as categories
             FROM books b
+            LEFT JOIN book_authors ba ON b.id = ba.book_id
+            LEFT JOIN authors auth ON ba.author_id = auth.id
             LEFT JOIN book_categories bc ON b.id = bc.book_id
             LEFT JOIN categories c ON bc.category_id = c.id
             GROUP BY b.id

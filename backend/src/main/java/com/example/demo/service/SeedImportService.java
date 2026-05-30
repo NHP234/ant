@@ -9,6 +9,8 @@ import com.example.demo.model.enums.CopyStatus;
 import com.example.demo.repository.BookCopyRepository;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.CategoryRepository;
+import com.example.demo.repository.AuthorRepository;
+import com.example.demo.model.entity.Author;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,6 +30,7 @@ public class SeedImportService {
     private final BookRepository bookRepository;
     private final BookCopyRepository bookCopyRepository;
     private final CategoryRepository categoryRepository;
+    private final AuthorRepository authorRepository;
 
     private static final int MAX_STRING_LENGTH = 255;
     private static final int COPIES_PER_BOOK = 3;
@@ -82,7 +85,6 @@ public class SeedImportService {
 
         Book book = Book.builder()
                 .title(title)
-                .author(author)
                 .isbn(isbn)
                 .publisher(truncate(dto.getPublisher()))
                 .publishYear(dto.getPublishYear())
@@ -90,6 +92,21 @@ public class SeedImportService {
                 .coverImageUrl(dto.getCoverImageUrl())
                 .categories(categories)
                 .build();
+
+        if (author != null && !author.isBlank()) {
+            Set<Author> authors = new HashSet<>();
+            String[] authorNames = author.split(",");
+            for (String name : authorNames) {
+                String trimmedName = name.trim();
+                if (!trimmedName.isEmpty()) {
+                    Author auth = authorRepository.findByName(trimmedName)
+                            .orElseGet(() -> authorRepository.save(Author.builder().name(trimmedName).build()));
+                    authors.add(auth);
+                }
+            }
+            book.setAuthors(authors);
+        }
+
         book = bookRepository.save(book);
 
         for (int i = 1; i <= COPIES_PER_BOOK; i++) {

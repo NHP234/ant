@@ -16,6 +16,7 @@ public class BookResponse implements Serializable {
     private Long id;
     private String title;
     private String author;
+    private Set<AuthorResponse> authors;
     private String isbn;
     private String publisher;
     private Integer publishYear;

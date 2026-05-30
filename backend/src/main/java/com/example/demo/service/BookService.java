@@ -14,6 +14,8 @@ import com.example.demo.model.enums.CopyStatus;
 import com.example.demo.repository.BookCopyRepository;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.CategoryRepository;
+import com.example.demo.repository.AuthorRepository;
+import com.example.demo.model.entity.Author;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -33,6 +35,7 @@ public class BookService {
     private final BookRepository bookRepository;
     private final BookCopyRepository bookCopyRepository;
     private final CategoryRepository categoryRepository;
+    private final AuthorRepository authorRepository;
     private final BookMapper bookMapper;
 
     @org.springframework.beans.factory.annotation.Value("${app.rag.service-url:http://localhost:8000}")
@@ -76,6 +79,8 @@ public class BookService {
     public BookResponse createBook(BookCreateRequest request) {
         Book book = bookMapper.toEntity(request);
 
+        updateBookAuthors(book, request.getAuthor());
+
         if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
             Set<Category> categories = new HashSet<>(categoryRepository.findAllById(request.getCategoryIds()));
             book.setCategories(categories);
@@ -106,6 +111,10 @@ public class BookService {
         Book book = findBookOrThrow(id);
 
         bookMapper.updateEntity(request, book);
+
+        if (request.getAuthor() != null) {
+            updateBookAuthors(book, request.getAuthor());
+        }
 
         if (request.getCategoryIds() != null) {
             Set<Category> categories = new HashSet<>(categoryRepository.findAllById(request.getCategoryIds()));
@@ -158,5 +167,23 @@ public class BookService {
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(BookService.class).warn("RAG ingest trigger failed (non-critical): {}", e.getMessage());
         }
+    }
+
+    private void updateBookAuthors(Book book, String authorStr) {
+        if (authorStr == null || authorStr.isBlank()) {
+            return;
+        }
+
+        Set<Author> authors = new HashSet<>();
+        String[] authorNames = authorStr.split(",");
+        for (String name : authorNames) {
+            String trimmedName = name.trim();
+            if (!trimmedName.isEmpty()) {
+                Author author = authorRepository.findByName(trimmedName)
+                        .orElseGet(() -> authorRepository.save(Author.builder().name(trimmedName).build()));
+                authors.add(author);
+            }
+        }
+        book.setAuthors(authors);
     }
 }

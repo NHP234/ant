@@ -14,6 +14,7 @@ erDiagram
     book_copies ||--o{ borrow_records : "has many"
     book_copies ||--o{ book_holds : "has many"
     books }o--o{ categories : "many-to-many (book_categories)"
+    books }o--o{ authors : "many-to-many (book_authors)"
     users ||--o{ notifications : "has many"
     users ||--o{ audit_logs : "has many"
 ```
@@ -36,13 +37,12 @@ erDiagram
 | created_at | TIMESTAMP | DEFAULT NOW() | |
 
 ### books
-> Đại diện cho một **đầu sách** (metadata). Số lượng bản sao và NFC tag được quản lý qua bảng `book_copies`.
+> Đại diện cho một **đầu sách** (metadata). Số lượng bản sao và NFC tag được quản lý qua bảng `book_copies`. Tác giả được chuẩn hóa sang bảng `authors` (V13).
 
 | Column | Type | Constraints | Note |
 |--------|------|-------------|------|
 | id | BIGSERIAL | PK | |
 | title | VARCHAR(255) | NOT NULL | |
-| author | VARCHAR(255) | NOT NULL | |
 | isbn | VARCHAR(20) | UNIQUE, NULLABLE | |
 | publisher | VARCHAR(255) | NULLABLE | |
 | publish_year | INTEGER | NULLABLE | |
@@ -50,6 +50,22 @@ erDiagram
 | cover_image_url | VARCHAR(500) | NULLABLE | |
 | created_at | TIMESTAMP | DEFAULT NOW() | |
 | updated_at | TIMESTAMP | DEFAULT NOW() | |
+
+### authors *(V13 - New)*
+> Đại diện cho một **tác giả**. Một sách có thể có nhiều tác giả (Many-to-Many).
+
+| Column | Type | Constraints | Note |
+|--------|------|-------------|------|
+| id | BIGSERIAL | PK | |
+| name | VARCHAR(255) | NOT NULL | |
+| created_at | TIMESTAMP | DEFAULT NOW() | |
+| updated_at | TIMESTAMP | DEFAULT NOW() | |
+
+### book_authors (Join table) *(V13 - New)*
+| Column | Type | Constraints | Note |
+|--------|------|-------------|------|
+| book_id | BIGINT | FK → books.id, PK | |
+| author_id | BIGINT | FK → authors.id, PK | |
 
 > **Lưu ý**: `quantity` và `available_quantity` đã bị loại bỏ (V9). Giờ tính toán từ `COUNT(book_copies)` — luôn chính xác, không cần đồng bộ.
 
@@ -158,7 +174,6 @@ erDiagram
 CREATE INDEX idx_borrow_records_status ON borrow_records(status);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id) WHERE is_read = false;
 CREATE INDEX idx_books_title ON books(title);
-CREATE INDEX idx_books_author ON books(author);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 CREATE INDEX idx_users_nfc_card_uid ON users(nfc_card_uid) WHERE nfc_card_uid IS NOT NULL;
 
@@ -173,6 +188,11 @@ CREATE INDEX idx_borrow_records_slip_id ON borrow_records(slip_id);
 CREATE INDEX idx_book_holds_user_status ON book_holds(user_id, status);
 CREATE INDEX idx_book_holds_copy_id ON book_holds(copy_id);
 CREATE INDEX idx_book_holds_expires_active ON book_holds(expires_at) WHERE status = 'ACTIVE';
+
+-- V13 indexes
+CREATE INDEX idx_authors_name ON authors(name);
+CREATE INDEX idx_book_authors_book ON book_authors(book_id);
+CREATE INDEX idx_book_authors_author ON book_authors(author_id);
 ```
 
 ## Flyway Migrations
@@ -189,7 +209,9 @@ db/migration/
 ├── V8__add_fulltext_search.sql                   # tsvector + unaccent + GIN index
 ├── V9__add_book_copies_and_borrow_slips.sql      # book_copies, borrow_slips, refactor borrow_records
 ├── V10__drop_borrow_records_user_id.sql          # remove denormalized user_id from borrow_records
-└── V11__add_book_holds_and_hold_ban.sql          # book_holds + hold_ban_until
+├── V11__add_book_holds_and_hold_ban.sql          # book_holds + hold_ban_until
+├── V12__update_borrow_source_to_counter.sql      # default borrow source to COUNTER
+└── V13__add_authors_table.sql                     # authors, book_authors (Many-to-Many authors)
 ```
 
 ## Seed Data (V7)
@@ -207,7 +229,7 @@ books (đầu sách — metadata)           book_copies (cuốn sách vật lý)
 ─────────────────────────              ──────────────────────────────
 id: 1                                  id: 1, book_id: 1, copy: 1, nfc: "AA:BB", AVAILABLE
 title: "Clean Code"                    id: 2, book_id: 1, copy: 2, nfc: "CC:DD", BORROWED
-author: "Robert C. Martin"            id: 3, book_id: 1, copy: 3, nfc: null,    AVAILABLE
+authors: ["Robert C. Martin"]          id: 3, book_id: 1, copy: 3, nfc: null,    AVAILABLE
 ```
 - `totalCopies` = `COUNT(book_copies WHERE book_id = X)`
 - `availableCopies` = `COUNT(book_copies WHERE book_id = X AND status = 'AVAILABLE')`
