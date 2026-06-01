@@ -233,25 +233,26 @@ Flow:
 Postcondition: Borrow record được tạo, SV nhận notification
 ```
 
-### UC-03: Mượn/trả nhanh bằng NFC
+### UC-03: Mượn/trả sách tự động qua Self-Service Kiosk (NFC)
 
 ```
-Actor: Thủ thư + Sinh viên
-Precondition: Thủ thư đã đăng nhập, NFC reader kết nối, thẻ SV và tag sách đã đăng ký
+Actor: Sinh viên (Tự phục vụ)
+Precondition: Kiosk đang mở trang chờ, thiết bị ESP32 (RFID) sẵn sàng, thẻ SV và tag sách đã đăng ký.
 
-Flow mượn:
-  1. Thủ thư bấm "Phiên mượn mới"
-  2. Sinh viên đưa thẻ, thủ thư quẹt thẻ SV -> hệ thống hiện thông tin SV
-  3. Thủ thư quẹt tag NFC trên sách -> sách được thêm vào danh sách mượn
-  4. Quẹt thêm sách nếu cần
-  5. Thủ thư bấm "Xác nhận mượn"
-  6. Hệ thống tạo borrow_records cho tất cả sách
+Flow mượn sách:
+  1. Kiosk hiển thị màn hình chờ: "Vui lòng quẹt thẻ sinh viên".
+  2. Sinh viên quẹt thẻ NFC -> Kiosk hiện thông tin SV và 2 nút "Mượn sách" / "Trả sách".
+  3. Sinh viên chọn "Mượn sách".
+  4. Màn hình Kiosk chuyển sang: "Vui lòng quẹt lần lượt các sách cần mượn".
+  5. Sinh viên quẹt tag sách -> sách hiển thị lên màn hình Kiosk.
+  6. Sinh viên bấm nút "Hoàn tất" (hoặc hệ thống tự Timeout sau 30s không thao tác).
+  7. Hệ thống tự động tạo borrow_records, thông báo thành công và quay lại màn hình chờ.
 
-Flow trả:
-  1. Thủ thư bấm "Phiên trả sách"
-  2. Quẹt thẻ SV -> hiện danh sách sách đang mượn
-  3. Quẹt tag sách trả -> sách được tick trong danh sách
-  4. Thủ thư bấm "Xác nhận trả"
+Flow trả sách:
+  1. Sinh viên quẹt thẻ NFC -> chọn "Trả sách".
+  2. Màn hình hiện danh sách các sách đang mượn.
+  3. Sinh viên quẹt sách trả -> Sách tương ứng được đánh dấu "Đã trả".
+  4. Bấm "Hoàn tất" (hoặc Timeout) -> Hệ thống cập nhật trạng thái sách và quay lại màn hình chờ.
 ```
 
 ### UC-04: Sinh viên hỏi chatbot AI

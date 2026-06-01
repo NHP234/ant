@@ -1,172 +1,139 @@
-# NFC Integration
+# NFC/RFID Integration (ESP32 + RC522)
 
-> Bonus feature: Quẹt thẻ sinh viên + quẹt sách để mượn/trả nhanh tại quầy thư viện.
+> **Bonus feature:** Quẹt thẻ sinh viên + quẹt sách để mượn/trả nhanh tại quầy thư viện, ứng dụng IoT vào quản lý.
 
 ## Mục đích
 
-Thủ thư thao tác trên hệ thống, sinh viên chỉ cần đưa thẻ và sách ra quẹt. Không cần sinh viên đăng nhập hay chạm máy tính.
+Biến hệ thống thư viện thành một **Self-Service Kiosk** (Trạm tự phục vụ) chuẩn mực như các thư viện đại học hiện đại. 
+Sinh viên tự mượn/trả sách mà không cần thủ thư can thiệp. Tăng tính thực tế và "demo effect" (hiệu ứng WOW) cho đồ án tốt nghiệp bằng cách tích hợp thiết bị IoT (ESP32). Kiosk sẽ xử lý các phiên giao dịch dựa trên quẹt thẻ và tự động kết thúc (timeout) hoặc bấm nút.
 
 ## Hardware
 
-- **NFC Reader**: ACR122U USB NFC Reader (~300-500k VND trên Shopee/Lazada), cắm USB vào máy tính quầy thủ thư
-- **Thẻ sinh viên**: Dùng luôn thẻ sinh viên nếu có NFC, hoặc phát thẻ NFC riêng (NTAG215 / Mifare Classic 1K, ~5-10k/thẻ)
-- **NFC Tag trên sách**: Dán tag NTAG215 lên bìa sau mỗi cuốn sách (~5-10k/tag, demo chỉ cần 5-10 cuốn)
+Thay vì dùng đầu đọc USB cắm trực tiếp vào máy tính, dự án sử dụng mô hình IoT:
+- **Vi điều khiển**: ESP32 (có sẵn Wi-Fi, giá rẻ, dễ lập trình).
+- **Module đọc thẻ**: RC522 (Module RFID 13.56MHz, giao tiếp SPI với ESP32, giá rất rẻ).
+- **Thẻ sinh viên**: Thẻ nhựa RFID/NFC tần số 13.56MHz (Mifare Classic 1K) dùng làm thẻ định danh sinh viên.
+- **Tag trên sách**: Tag RFID/NFC dạng sticker (Mifare 1K / NTAG215) dán lên bìa sách. (Demo khoảng 5-10 cuốn).
 
-## Flow mượn sách
+## Architecture (Kiến trúc kết nối)
 
-```
-1. Thủ thư đăng nhập hệ thống (role LIBRARIAN), bấm "Phiên mượn mới"
-2. Sinh viên đưa thẻ -> thủ thư quẹt thẻ sinh viên vào đầu đọc
-   -> Hệ thống nhận UID -> tra bảng users (nfc_card_uid) -> hiện thông tin sinh viên
-3. Quẹt sách 1 vào đầu đọc
-   -> Hệ thống nhận UID -> tra bảng books (nfc_tag_uid) -> thêm sách vào danh sách mượn
-4. Quẹt sách 2 -> thêm sách nữa
-5. Thủ thư bấm "Xác nhận mượn" -> hệ thống tạo borrow_records cho tất cả sách
-```
-
-## Flow trả sách
+Mô hình Client-Server qua Wi-Fi kết hợp màn hình Kiosk:
 
 ```
-1. Thủ thư bấm "Phiên trả sách"
-2. Quẹt thẻ sinh viên -> hiện danh sách sách đang mượn
-3. Quẹt sách trả -> sách đó được tick/chọn trong danh sách
-4. Thủ thư bấm "Xác nhận trả" -> cập nhật borrow_records
+[Thẻ/Tag 13.56MHz] 
+       | (RF)
+       v
+  [Module RC522] 
+       | (SPI)
+       v
+    [ESP32] =====(Wi-Fi)====> REST API: POST /api/nfc/scan { "uid": "AA:BB:CC" }
+                                      |
+                                      v
+                             [SpringBoot Backend]
+                                      |
+                                      | 1. Tra users.nfc_card_uid -> nếu tìm thấy -> trả user info
+                                      | 2. Nếu không -> tra book_copies.nfc_tag_uid -> nếu tìm thấy -> trả copy info (kèm book info)
+                                      | 3. Nếu không tìm thấy -> trả lỗi "UID chưa đăng ký"
+                                      v
+                    [WebSocket / SSE push event tới Frontend Kiosk]
+                                      |
+                                      v
+         [Frontend React (Trang Kiosk công cộng) nhận event và cập nhật UI]
 ```
 
-## Flow đăng ký thẻ cho sinh viên
+## Luồng nghiệp vụ Self-Service Kiosk (Business Flows)
 
-```
-1. Admin/Librarian vào trang quản lý users
-2. Chọn sinh viên cần gán thẻ
-3. Bấm "Đăng ký thẻ NFC" -> quẹt thẻ mới -> lưu UID vào users.nfc_card_uid
-```
+Kiosk là một màn hình (tablet hoặc màn hình phụ) luôn mở ở trang `/kiosk` (không yêu cầu đăng nhập, hoặc dùng token KIOSK_ROLE riêng).
 
-## Flow đăng ký NFC tag cho sách
+### Flow mượn sách tự động
+1. Kiosk luôn ở màn hình chờ: "Vui lòng quẹt thẻ sinh viên để bắt đầu".
+2. Sinh viên quẹt thẻ vào ESP32 -> Backend nhận diện được User và push event tới Kiosk.
+3. Kiosk chuyển sang màn hình chứa profile sinh viên và 2 lựa chọn: **[Mượn Sách]** - **[Trả Sách]**.
+4. Sinh viên bấm (hoặc chạm trên màn hình cảm ứng) vào nút **[Mượn Sách]**. Kiosk hiện: "Vui lòng quẹt lần lượt các sách bạn muốn mượn".
+5. Sinh viên quẹt sách 1, sách 2 -> Kiosk nhận event từ Backend và liệt kê các sách lên màn hình.
+6. Kết thúc phiên: Sinh viên bấm nút **[Hoàn Tất]** (hoặc hệ thống tự **Timeout** sau 30 giây không thao tác).
+7. Kiosk gọi API xác nhận mượn, hệ thống sinh `borrow_records`, báo thành công và Kiosk reset về màn hình chờ ban đầu.
 
-```
-1. Admin/Librarian vào trang quản lý sách
-2. Chọn sách cần gán tag
-3. Bấm "Gán NFC tag" -> quẹt tag -> lưu UID vào books.nfc_tag_uid
-```
+### Flow trả sách tự động
+1. Tương tự, sau khi quẹt thẻ, sinh viên chọn **[Trả Sách]**.
+2. Kiosk gọi API lấy danh sách những cuốn sách sinh viên đang mượn và hiển thị lên màn hình.
+3. Sinh viên quẹt từng quyển sách -> Kiosk đánh dấu sách đó đã được nhận diện.
+4. Bấm **[Hoàn Tất]** hoặc đợi **Timeout** -> Hệ thống cập nhật trạng thái `borrow_records` sang RETURNED và quay về màn hình chờ.
 
-## Architecture
+### Flow đăng ký thẻ/tag (Dành cho Admin/Librarian)
+1. Kiosk chỉ dùng để mượn/trả. Việc gán thẻ vẫn làm trên giao diện Quản trị.
+2. Admin vào trang quản lý User/Book Copy -> Bấm "Gắn thẻ NFC". Quẹt thẻ vào đầu đọc ESP32 -> Frontend nhận event và lưu UID vào database.
 
-```
-[NFC Reader USB] -> [Python NFC Script (pyscard)]
-                        |
-                        | REST call: POST /api/nfc/scan { uid: "AA:BB:CC" }
-                        v
-                    [SpringBoot Backend]
-                        |
-                        | 1. Tra users.nfc_card_uid -> nếu tìm thấy -> trả user info
-                        | 2. Nếu không -> tra books.nfc_tag_uid -> nếu tìm thấy -> trả book info
-                        | 3. Nếu không tìm thấy ở cả 2 -> trả lỗi "UID chưa đăng ký"
-                        v
-                    [WebSocket push event tới Frontend]
-                        |
-                        v
-                    [Frontend cập nhật UI real-time]
-```
+## Kế hoạch Triển khai Chi tiết
 
-## Database
+### Phase 1: Phần cứng & ESP32 Firmware
+1. **Đấu nối dây (Wiring)**: 
+   - RC522 <-> ESP32 (Dùng giao tiếp SPI: SDA, SCK, MOSI, MISO, IRQ, GND, RST, 3.3V).
+2. **Lập trình ESP32 (Arduino IDE / PlatformIO)**:
+   - Thư viện: `MFRC522` (đọc thẻ) và `WiFi`, `HTTPClient` (gửi request).
+   - Logic: 
+     - ESP32 kết nối Wi-Fi thư viện (hoặc LAN).
+     - Vòng lặp liên tục quét thẻ. Nếu có thẻ mới, đọc UID (chuyển sang chuỗi Hex, ví dụ `04:A2:B3:C4`).
+     - Gửi HTTP POST request đến `http://<SERVER_IP>:8080/api/nfc/scan` với payload JSON: `{"uid": "04:A2:B3:C4"}`.
+     - Xử lý debounce: Tránh việc 1 thẻ quẹt gửi request liên tục (delay 2-3s sau mỗi lần đọc thành công).
 
-- `users.nfc_card_uid` (VARCHAR(50), UNIQUE, NULLABLE): UID thẻ sinh viên
-- `books.nfc_tag_uid` (VARCHAR(50), UNIQUE, NULLABLE): UID tag NFC dán trên sách
+### Phase 2: Backend (Spring Boot)
+1. **Database Schema**: 
+   - Đảm bảo bảng `users` có cột `nfc_card_uid` (VARCHAR, UNIQUE, NULLABLE).
+   - Đảm bảo bảng `book_copies` có cột `nfc_tag_uid` (VARCHAR, UNIQUE, NULLABLE).
+2. **REST API**:
+   - `POST /api/nfc/scan`: Endpoint nhận payload từ ESP32. Nhận `uid` và tìm kiếm trong `users` và `book_copies`. Trả về loại định danh (USER, BOOK_COPY, UNKNOWN).
+     - *Lưu ý: Có thể dùng header `x-api-key` cố định cấu hình trên ESP32 và Backend để bảo mật endpoint này.*
+   - `POST /api/nfc/register-user` và `POST /api/nfc/register-book-copy`: Dùng để gán UID vào Entity tương ứng khi setup hệ thống.
+3. **Real-time Event Push (WebSocket / SSE)**:
+   - Cấu hình Spring WebSocket hoặc Server-Sent Events (SSE). 
+   - Khi có request hợp lệ tới `/api/nfc/scan`, Backend xử lý xong sẽ broadcast một event (VD: `NfcScanEvent`) xuống các client (Frontend của Librarian) đang subscribe.
 
-## API Endpoints
+### Phase 3: Frontend (React)
+1. **Integration**: Connect tới WebSocket / SSE endpoint của Backend để lắng nghe `NfcScanEvent`.
+2. **Giao diện Kiosk (`/kiosk`)**: 
+   - Đây là trang full-screen, ẩn Navbar/Sidebar.
+   - Quản lý state theo các step: `WAITING_FOR_USER` -> `SELECT_MODE` -> `SCANNING_BOOKS` -> `PROCESSING` -> `WAITING_FOR_USER`.
+   - Có một bộ đếm ngược (timer) chạy ngầm (VD 30 giây) khi ở state `SELECT_MODE` hoặc `SCANNING_BOOKS`. Bất kỳ thao tác touch/quẹt thẻ nào cũng reset timer này. Hết timer thì tự động "Hoàn Tất" hoặc "Hủy" tùy logic.
+   - Các nút to, rõ ràng, tối ưu cho thao tác chạm (touch-friendly).
+
+## API Endpoints (Dự kiến)
 
 ### POST /api/nfc/scan
-Endpoint chính - nhận UID từ NFC reader, tự phân biệt thẻ sinh viên hay sách.
-```json
-// Request
-{ "uid": "04:A2:B3:C4:D5:E6:F7" }
+Endpoint này nhận request trực tiếp từ ESP32 qua Wi-Fi.
 
-// Response (nếu là sinh viên)
+```json
+// Request (từ ESP32)
+{
+  "uid": "04:A2:B3:C4:D5:E6"
+}
+
+// Response (nếu là User)
 {
   "type": "USER",
   "data": {
-    "userId": 123,
-    "fullName": "Nguyen Van A",
-    "studentId": "20200001",
-    "currentBorrowCount": 3
+    "id": 123,
+    "fullName": "Nguyễn Văn A",
+    "studentId": "20200001"
   }
 }
 
-// Response (nếu là sách)
+// Response (nếu là Book Copy)
 {
-  "type": "BOOK",
+  "type": "BOOK_COPY",
   "data": {
-    "bookId": 45,
-    "title": "Clean Code",
-    "author": "Robert C. Martin",
-    "available": true
+    "copyId": 45,
+    "bookId": 12,
+    "copyNumber": 1,
+    "title": "Clean Architecture",
+    "status": "AVAILABLE"
   }
 }
-
-// Response (UID chưa đăng ký)
-{ "type": "UNKNOWN", "data": null }
 ```
 
-### POST /api/nfc/register-card
-```json
-// Gán thẻ NFC cho sinh viên
-{ "userId": 123, "nfcCardUid": "04:A2:B3:C4:D5:E6:F7" }
-```
-
-### POST /api/nfc/register-tag
-```json
-// Gán NFC tag cho sách
-{ "bookId": 45, "nfcTagUid": "08:C3:D4:E5:F6:A7:B8" }
-```
-
-### DELETE /api/nfc/unregister-card/{userId}
-Gỡ thẻ NFC khỏi sinh viên.
-
-### DELETE /api/nfc/unregister-tag/{bookId}
-Gỡ NFC tag khỏi sách.
-
-## Implementation - Python NFC Script
-
-```python
-# Pseudo-code
-import requests
-from smartcard.System import readers
-from smartcard.CardMonitoring import CardMonitor, CardObserver
-
-API_URL = "http://localhost:8080/api"
-API_TOKEN = "..." # JWT của librarian đang đăng nhập
-
-class NFCObserver(CardObserver):
-    def update(self, observable, actions):
-        added, removed = actions
-        for card in added:
-            uid = self.read_uid(card)
-            response = requests.post(
-                f"{API_URL}/nfc/scan",
-                json={"uid": uid},
-                headers={"Authorization": f"Bearer {API_TOKEN}"}
-            )
-            print(response.json())
-
-monitor = CardMonitor()
-observer = NFCObserver()
-monitor.addObserver(observer)
-# Script chạy liên tục, tự detect khi có thẻ/tag mới quẹt
-```
-
-## Frontend - Trang "Phiên mượn/trả"
-
-Trang này dành cho thủ thư, giao diện đơn giản:
-- **Trạng thái**: "Chờ quẹt thẻ sinh viên..." -> "Đã nhận diện: Nguyễn Văn A" -> "Chờ quẹt sách..."
-- **Danh sách sách**: Hiện các sách đã quẹt, có nút xóa nếu quẹt nhầm
-- **Nút xác nhận**: "Xác nhận mượn" / "Xác nhận trả"
-- Frontend nhận event từ backend qua WebSocket (hoặc SSE) khi có NFC scan mới
-
-## Ưu tiên
-
-NFC là **bonus feature**, chỉ làm khi backend + frontend + RAG đã hoàn thành.
-Nếu thiếu thời gian hoặc chưa có hardware:
-- Có thể demo bằng cách nhập UID thủ công trên giao diện web
-- Dùng NFC trên điện thoại Android (NFC Tools app) để đọc UID rồi nhập tay
-
-## Status: chưa bắt đầu
+## Ưu tiên & Đánh giá
+- Đây là tính năng **rất ăn điểm** (Wow factor) khi bảo vệ đồ án vì nó thể hiện sự kết hợp giữa Web Application và thiết bị phần cứng IoT.
+- Giải pháp ESP32 + RC522 vượt trội hơn việc dùng đầu đọc USB (ACR122U) vì:
+  - Giá thành rẻ hơn đáng kể.
+  - ESP32 hoạt động độc lập qua mạng Wi-Fi, không cần cắm dây trực tiếp vào máy tính thủ thư.
+  - Mang tính chất hệ thống phân tán (IoT Node -> API Gateway) chuẩn mực hơn so với chạy script Python cục bộ.

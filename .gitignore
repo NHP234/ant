@@ -13,8 +13,11 @@ desktop.ini
 *.ipr
 .vscode/
 
+.agents/
+AGENTS.md
+
 # Cursor
-.cursor/plans/
+.cursor/
 
 # Java / Maven
 target/
