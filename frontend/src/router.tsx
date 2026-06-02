@@ -18,6 +18,8 @@ import MyBorrowsPage from '@/pages/student/MyBorrowsPage'
 import NotificationsPage from '@/pages/student/NotificationsPage'
 import ChatPage from '@/pages/student/ChatPage'
 
+import KioskPage from '@/pages/KioskPage'
+
 function PrivateRoute() {
   const { user, isLoading } = useAuth()
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
@@ -41,6 +43,7 @@ export default function AppRouter() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/kiosk" element={<KioskPage />} />
 
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<RootRedirect />} />
