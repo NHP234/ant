@@ -13,6 +13,7 @@ public interface BorrowRecordMapper {
     @Mapping(source = "copy.book.id", target = "bookId")
     @Mapping(source = "copy.book.title", target = "bookTitle")
     @Mapping(target = "bookAuthor", expression = "java(mapAuthorsToString(borrowRecord.getCopy().getBook().getAuthors()))")
+    @Mapping(source = "copy.book.coverImageUrl", target = "bookCoverImageUrl")
     @Mapping(source = "copy.id", target = "copyId")
     @Mapping(source = "copy.copyNumber", target = "copyNumber")
     @Mapping(source = "slip.borrowDate", target = "borrowDate")

@@ -16,6 +16,8 @@ public interface BorrowRecordRepository extends JpaRepository<BorrowRecord, Long
 
     Page<BorrowRecord> findBySlipUserId(Long userId, Pageable pageable);
 
+    Page<BorrowRecord> findBySlipUserIdAndStatusIn(Long userId, Collection<BorrowStatus> statuses, Pageable pageable);
+
     int countBySlipUserIdAndStatus(Long userId, BorrowStatus status);
 
     int countBySlipUserIdAndStatusIn(Long userId, Collection<BorrowStatus> statuses);
@@ -34,4 +36,7 @@ public interface BorrowRecordRepository extends JpaRepository<BorrowRecord, Long
     List<BorrowRecord> findByStatusAndSlipDueDateBefore(@Param("status") BorrowStatus status, @Param("dateTime") LocalDateTime dateTime);
 
     long countByStatus(BorrowStatus status);
+
+    @Query("SELECT r FROM BorrowRecord r WHERE r.slip.user.studentId = :studentId AND r.status IN ('BORROWING', 'OVERDUE') ORDER BY r.createdAt DESC")
+    List<BorrowRecord> findActiveBorrowsByStudentId(@Param("studentId") String studentId);
 }

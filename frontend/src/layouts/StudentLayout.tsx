@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -9,25 +9,29 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import NotificationBell from '@/components/shared/NotificationBell'
 import ThemeToggle from '@/components/shared/ThemeToggle'
-import { Search, BookMarked, Bell, Bot, Menu, ExternalLink } from 'lucide-react'
+import { Search, BookMarked, Bell, Bot, Menu, ExternalLink, Library } from 'lucide-react'
 
 const navItems = [
-  { path: '/browse', label: 'Duyệt sách', icon: Search },
-  { path: '/my-borrows', label: 'Sách đã mượn', icon: BookMarked },
+  { path: '/browse', label: 'Khám phá', icon: Search },
+  { path: '/my-borrows', label: 'Tủ sách của tôi', icon: BookMarked },
   { path: '/notifications', label: 'Thông báo', icon: Bell },
-  { path: '/chat', label: 'Trợ lý AI', icon: Bot },
+  { path: '/chat', label: 'Thư ký Ant', icon: Bot },
 ]
 
 function SidebarContent() {
   const { isAdmin, isLibrarian } = useAuth()
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-6">
-        <h1 className="text-lg font-bold">Awaken Ant Library</h1>
-        <p className="text-sm text-muted-foreground">Hệ thống mượn trả sách</p>
+    <div className="flex flex-col h-full bg-card/60 backdrop-blur-xl">
+      <div className="p-6 pb-4">
+        <div className="flex items-center gap-2 text-primary font-heading mb-1">
+          <Library className="h-6 w-6" />
+          <h1 className="text-xl font-bold tracking-tight">Awaken Ant</h1>
+        </div>
+        <p className="text-xs font-serif italic text-muted-foreground ml-8">Nơi tri thức thức tỉnh</p>
       </div>
-      <Separator />
-      <nav className="flex-1 p-4 space-y-1">
+      <div className="px-4"><Separator className="bg-border/50" /></div>
+      
+      <nav className="flex-1 p-4 space-y-1.5">
         {navItems.map((item) => {
           const Icon = item.icon
           return (
@@ -36,10 +40,10 @@ function SidebarContent() {
               to={item.path}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 translate-x-1'
+                    : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                 )
               }
             >
@@ -51,11 +55,11 @@ function SidebarContent() {
       </nav>
       {(isAdmin || isLibrarian) && (
         <>
-          <Separator />
+          <div className="px-4"><Separator className="bg-border/50" /></div>
           <div className="p-4">
             <NavLink
               to="/admin/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all"
             >
               <ExternalLink className="h-4 w-4" />
               Trang quản trị
@@ -70,6 +74,7 @@ function SidebarContent() {
 export default function StudentLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleLogout = () => {
@@ -78,54 +83,67 @@ export default function StudentLayout() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside className="hidden md:flex md:w-64 md:flex-col border-r bg-card">
+    <div className="flex h-screen overflow-hidden bg-background">
+      {/* Background patterns */}
+      <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] pointer-events-none mix-blend-overlay z-0"></div>
+      
+      <aside className="hidden md:flex md:w-64 md:flex-col border-r border-border/50 bg-card/40 relative z-20">
         <SidebarContent />
       </aside>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 md:px-6">
+      <div className="flex flex-1 flex-col overflow-hidden relative z-10">
+        {/* Glassmorphism Header */}
+        <header className="flex h-16 items-center gap-4 border-b border-border/50 bg-background/60 backdrop-blur-md px-4 md:px-8 sticky top-0 z-30">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="rounded-full">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
+            <SheetContent side="left" className="w-64 p-0 border-r-0">
               <SidebarContent />
             </SheetContent>
           </Sheet>
 
           <div className="flex-1" />
 
-          <ThemeToggle />
-          <NotificationBell />
+          <div className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle />
+            <NotificationBell />
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2">
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback className="text-xs">
-                    {user?.username?.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:inline text-sm">{user?.username}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled className="text-xs text-muted-foreground">
-                {user?.role}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                Đăng xuất
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2 rounded-full pl-2 pr-4 bg-muted/30 hover:bg-muted/60 transition-colors">
+                  <Avatar className="h-8 w-8 ring-2 ring-primary/20">
+                    <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                      {user?.username?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden sm:inline text-sm font-medium">{user?.username}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                <DropdownMenuItem disabled className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  {user?.role}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+                  Đăng xuất
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
+          <div className="absolute inset-0 max-w-full">
+            <div className="h-full w-full p-4 md:p-8 pb-20">
+              {/* Page transitions based on route change */}
+              <div key={location.pathname} className="animate-in fade-in slide-in-from-bottom-4 duration-700 h-full">
+                <Outlet />
+              </div>
+            </div>
+          </div>
         </main>
       </div>
     </div>

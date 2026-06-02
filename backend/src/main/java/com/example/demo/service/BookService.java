@@ -73,6 +73,30 @@ public class BookService {
         return toResponseWithCopyCounts(book);
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<BookResponse> getBooksByCategory(Long categoryId, Pageable pageable) {
+        Page<Book> page = bookRepository.findByCategoriesId(categoryId, pageable);
+        List<BookResponse> content = page.getContent().stream()
+                .map(this::toResponseWithCopyCounts)
+                .toList();
+        return PageResponse.from(page, content);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<BookResponse> getSimilarBooks(Long bookId, Pageable pageable) {
+        Book book = findBookOrThrow(bookId);
+        Page<Book> page;
+        if (book.getCategories() != null && !book.getCategories().isEmpty()) {
+            page = bookRepository.findDistinctByCategoriesInAndIdNot(book.getCategories(), bookId, pageable);
+        } else {
+            page = Page.empty(pageable);
+        }
+        List<BookResponse> content = page.getContent().stream()
+                .map(this::toResponseWithCopyCounts)
+                .toList();
+        return PageResponse.from(page, content);
+    }
+
     @Transactional
     @CacheEvict(value = "book", allEntries = true)
     @Auditable(action = "CREATE", entityType = "BOOK")

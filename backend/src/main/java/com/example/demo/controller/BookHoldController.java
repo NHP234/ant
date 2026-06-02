@@ -6,6 +6,7 @@ import com.example.demo.dto.request.HoldCreateRequest;
 import com.example.demo.dto.response.ApiResponse;
 import com.example.demo.dto.response.HoldResponse;
 import com.example.demo.dto.response.PageResponse;
+import com.example.demo.model.enums.HoldStatus;
 import com.example.demo.service.BookHoldService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,6 +22,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,8 +48,9 @@ public class BookHoldController {
     @GetMapping("/my")
     public ResponseEntity<ApiResponse<PageResponse<HoldResponse>>> getMyHolds(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @RequestParam(required = false) String statuses,
             Authentication authentication) {
-        Page<HoldResponse> page = bookHoldService.getMyHolds(authentication.getName(), pageable);
+        Page<HoldResponse> page = bookHoldService.getMyHolds(authentication.getName(), parseStatuses(statuses), pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page, page.getContent())));
     }
 
@@ -89,5 +94,17 @@ public class BookHoldController {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toSet());
         return roles.contains("ROLE_ADMIN") || roles.contains("ROLE_LIBRARIAN");
+    }
+
+    private List<HoldStatus> parseStatuses(String statuses) {
+        if (statuses == null || statuses.isBlank()) {
+            return List.of();
+        }
+
+        return Arrays.stream(statuses.split(","))
+                .map(String::trim)
+                .filter(status -> !status.isBlank())
+                .map(status -> HoldStatus.valueOf(status.toUpperCase(Locale.ROOT)))
+                .toList();
     }
 }

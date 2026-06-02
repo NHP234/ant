@@ -25,6 +25,9 @@ SHELF_TO_CATEGORY = {
 
 FALLBACK_CATEGORIES = [1, 2, 3, 4, 5, 6, 7, 8]
 
+def normalize_key(value):
+    return " ".join((value or "").strip().lower().split())
+
 def download_file(url, local_path, max_retries=10):
     for attempt in range(max_retries):
         headers = {}
@@ -106,6 +109,7 @@ def process_file(local_path, authors_map):
     print(f"Processing {local_path}...")
     books = []
     seen_isbns = set()
+    seen_seed_keys = set()
     fallback_idx = 0
     start = time.time()
 
@@ -149,6 +153,15 @@ def process_file(local_path, authors_map):
             if not author_names:
                 continue
 
+            if not isbn:
+                seed_key = (
+                    normalize_key(title),
+                    tuple(sorted(normalize_key(author) for author in author_names))
+                )
+                if seed_key in seen_seed_keys:
+                    continue
+                seen_seed_keys.add(seed_key)
+
             pub_year = data.get('publication_year', '')
             if pub_year and isinstance(pub_year, str) and pub_year.isdigit():
                 pub_year = int(pub_year)
@@ -173,9 +186,9 @@ def process_file(local_path, authors_map):
                 "title": title.strip(),
                 "author": ", ".join(author_names),
                 "description": desc.strip(),
-                "cover_image_url": img_url,
+                "coverImageUrl": img_url,
                 "isbn": data.get('isbn', ''),
-                "publish_year": pub_year,
+                "publishYear": pub_year,
                 "publisher": data.get('publisher', ''),
                 "categories": categories
             }

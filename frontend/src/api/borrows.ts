@@ -1,6 +1,8 @@
 import api from './axios'
 import type { PageResponse } from './books'
 
+export type BorrowStatus = 'BORROWING' | 'RETURNED' | 'OVERDUE'
+
 export interface BorrowRecord {
   id: number
   userId: number
@@ -8,12 +10,13 @@ export interface BorrowRecord {
   bookId: number
   bookTitle: string
   bookAuthor: string
+  bookCoverImageUrl?: string
   copyId: number
   copyNumber: number
   borrowDate: string
   dueDate: string
   returnDate: string | null
-  status: 'BORROWING' | 'RETURNED' | 'OVERDUE'
+  status: BorrowStatus
   note: string | null
   createdAt: string
 }
@@ -34,12 +37,21 @@ export const borrowApi = {
       params: note ? { note } : undefined,
     }),
 
-  getMyBorrows: (page = 0, size = 10) =>
-    api.get<{ data: PageResponse<BorrowRecord> }>('/borrows/my', { params: { page, size } }),
+  getMyBorrows: (page = 0, size = 10, statuses?: BorrowStatus[]) =>
+    api.get<{ data: PageResponse<BorrowRecord> }>('/borrows/my', {
+      params: {
+        page,
+        size,
+        ...(statuses?.length ? { statuses: statuses.join(',') } : {}),
+      },
+    }),
 
   getAll: (page = 0, size = 10) =>
     api.get<{ data: PageResponse<BorrowRecord> }>('/borrows', { params: { page, size } }),
 
   getOverdue: () =>
     api.get<{ data: BorrowRecord[] }>('/borrows/overdue'),
+
+  getActiveBorrows: (studentId: string) =>
+    api.get<{ data: BorrowRecord[] }>('/borrows/active', { params: { studentId } }),
 }

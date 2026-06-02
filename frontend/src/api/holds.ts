@@ -1,15 +1,19 @@
 import api from './axios'
 import type { PageResponse } from './books'
 
+export type HoldStatus = 'ACTIVE' | 'FULFILLED' | 'EXPIRED' | 'CANCELED'
+
 export interface Hold {
   id: number
   userId: number
   userFullName: string
   bookId: number
   bookTitle: string
+  bookAuthor: string
+  bookCoverImageUrl?: string
   copyId: number | null
   copyNumber: number | null
-  status: 'ACTIVE' | 'FULFILLED' | 'EXPIRED' | 'CANCELED'
+  status: HoldStatus
   reservedAt: string
   expiresAt: string
   fulfilledAt: string | null
@@ -35,8 +39,14 @@ export const holdApi = {
   create: (data: HoldCreateRequest) =>
     api.post<{ data: Hold }>('/holds', data),
 
-  getMyHolds: (page = 0, size = 10) =>
-    api.get<{ data: PageResponse<Hold> }>('/holds/my', { params: { page, size } }),
+  getMyHolds: (page = 0, size = 10, statuses?: HoldStatus[]) =>
+    api.get<{ data: PageResponse<Hold> }>('/holds/my', {
+      params: {
+        page,
+        size,
+        ...(statuses?.length ? { statuses: statuses.join(',') } : {}),
+      },
+    }),
 
   getAll: (page = 0, size = 10) =>
     api.get<{ data: PageResponse<Hold> }>('/holds', { params: { page, size } }),

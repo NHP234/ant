@@ -1,13 +1,65 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { borrowApi } from '@/api/borrows'
+import type { BorrowRecord } from '@/api/borrows'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card } from '@/components/ui/card'
 import Pagination from '@/components/shared/Pagination'
+import BookCover from '@/components/shared/BookCover'
+import { CalendarCheck } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('vi-VN')
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('vi-VN', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  })
+}
+
+function HistoryCard({ record }: { record: BorrowRecord }) {
+  return (
+    <Card className="overflow-hidden border-border/50 hover:border-border/80 transition-all bg-card/50">
+      <div className="flex gap-4 p-4">
+        {/* Cover Thumbnail */}
+        <div className="w-16 sm:w-20 aspect-[2/3] bg-muted shrink-0 relative rounded-sm overflow-hidden opacity-80 grayscale-[30%]">
+          <BookCover
+            src={record.bookCoverImageUrl}
+            title={record.bookTitle}
+            showIcon
+            fallbackClassName="[&_span]:hidden"
+          />
+        </div>
+        
+        {/* Content */}
+        <div className="flex-1 flex flex-col justify-center">
+          <div className="flex justify-between items-start gap-2">
+            <div>
+              <Link to={`/books/${record.bookId}`} className="hover:underline decoration-primary">
+                <h3 className="font-heading font-medium text-base line-clamp-1">{record.bookTitle}</h3>
+              </Link>
+              <p className="text-muted-foreground text-xs mt-0.5">{record.bookAuthor}</p>
+            </div>
+            <Badge variant="secondary" className="bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-300 font-normal shrink-0">
+              Đã trả sách
+            </Badge>
+          </div>
+
+          <div className="mt-3 flex items-center gap-6 text-xs text-muted-foreground">
+            <div className="flex flex-col">
+              <span className="uppercase text-[10px] tracking-wider mb-0.5">Ngày mượn</span>
+              <span>{formatDate(record.borrowDate)}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="uppercase text-[10px] tracking-wider mb-0.5">Ngày trả</span>
+              <span className="flex items-center gap-1 font-medium text-stone-600 dark:text-stone-300">
+                <CalendarCheck className="w-3.5 h-3.5" />
+                {record.returnDate ? formatDate(record.returnDate) : '-'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
 }
 
 export default function HistoryTab() {
@@ -15,44 +67,38 @@ export default function HistoryTab() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['my-borrows', 'history', page],
-    queryFn: () => borrowApi.getMyBorrows(page, 20),
+    queryFn: () => borrowApi.getMyBorrows(page, 20, ['RETURNED']),
   })
 
   const borrows = data?.data?.data
-  const returned = borrows?.content?.filter(r => r.status === 'RETURNED') ?? []
+  const returned = borrows?.content ?? []
 
-  if (isLoading) return <div className="text-center py-8">Đang tải...</div>
-  if (!returned.length) return <div className="text-center py-8 text-muted-foreground">Bạn chưa trả sách nào</div>
+  if (isLoading) return (
+    <div className="grid sm:grid-cols-2 gap-4 pt-4">
+      {[1, 2, 3, 4].map(i => <Card key={i} className="h-28 animate-pulse bg-muted" />)}
+    </div>
+  )
+  if (!returned.length) return (
+    <div className="text-center py-16 text-muted-foreground">
+      <div className="bg-stone-100 dark:bg-stone-900/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+        <CalendarCheck className="w-10 h-10 text-stone-300" />
+      </div>
+      <p>Bạn chưa có lịch sử trả sách nào.</p>
+    </div>
+  )
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Tên sách</TableHead>
-            <TableHead>Tác giả</TableHead>
-            <TableHead>Ngày mượn</TableHead>
-            <TableHead>Ngày trả</TableHead>
-            <TableHead>Trạng thái</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {returned.map((record) => (
-            <TableRow key={record.id}>
-              <TableCell className="font-medium">{record.bookTitle}</TableCell>
-              <TableCell className="text-muted-foreground">{record.bookAuthor}</TableCell>
-              <TableCell>{formatDate(record.borrowDate)}</TableCell>
-              <TableCell>{record.returnDate ? formatDate(record.returnDate) : '-'}</TableCell>
-              <TableCell>
-                <Badge variant="secondary">Đã trả</Badge>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="grid md:grid-cols-2 gap-4">
+        {returned.map(record => (
+           <HistoryCard key={record.id} record={record} />
+        ))}
+      </div>
 
       {borrows && borrows.totalPages > 1 && (
-        <Pagination page={page} totalPages={borrows.totalPages} onPageChange={setPage} />
+        <div className="pt-4 border-t">
+          <Pagination page={page} totalPages={borrows.totalPages} onPageChange={setPage} />
+        </div>
       )}
     </div>
   )

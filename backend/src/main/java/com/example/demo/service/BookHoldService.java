@@ -235,8 +235,15 @@ public class BookHoldService {
 
     @Transactional(readOnly = true)
     public Page<HoldResponse> getMyHolds(String username, Pageable pageable) {
+        return getMyHolds(username, List.of(), pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<HoldResponse> getMyHolds(String username, List<HoldStatus> statuses, Pageable pageable) {
         User user = findUserOrThrow(username);
-        Page<BookHold> page = bookHoldRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
+        Page<BookHold> page = (statuses == null || statuses.isEmpty())
+                ? bookHoldRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable)
+                : bookHoldRepository.findByUserIdAndStatusInOrderByCreatedAtDesc(user.getId(), statuses, pageable);
         return page.map(bookHoldMapper::toResponse);
     }
 

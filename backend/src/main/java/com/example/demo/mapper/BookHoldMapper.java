@@ -12,9 +12,20 @@ public interface BookHoldMapper {
     @Mapping(source = "user.fullName", target = "userFullName")
     @Mapping(source = "copy.book.id", target = "bookId")
     @Mapping(source = "copy.book.title", target = "bookTitle")
+    @Mapping(target = "bookAuthor", expression = "java(mapAuthorsToString(hold.getCopy().getBook().getAuthors()))")
+    @Mapping(source = "copy.book.coverImageUrl", target = "bookCoverImageUrl")
     @Mapping(source = "copy.id", target = "copyId")
     @Mapping(source = "copy.copyNumber", target = "copyNumber")
     @Mapping(target = "status", expression = "java(hold.getStatus().name())")
     @Mapping(target = "librarianName", expression = "java(hold.getLibrarian() != null ? hold.getLibrarian().getFullName() : null)")
     HoldResponse toResponse(BookHold hold);
+
+    default String mapAuthorsToString(java.util.Set<com.example.demo.model.entity.Author> authors) {
+        if (authors == null || authors.isEmpty()) {
+            return "";
+        }
+        return authors.stream()
+                .map(com.example.demo.model.entity.Author::getName)
+                .collect(java.util.stream.Collectors.joining(", "));
+    }
 }

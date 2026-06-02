@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import jakarta.persistence.LockModeType;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface BookRepository extends JpaRepository<Book, Long> {
@@ -22,6 +23,12 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Page<Book> fullTextSearch(@Param("query") String query, Pageable pageable);
 
     Optional<Book> findByIsbn(String isbn);
+
+    List<Book> findByIsbnIsNullAndTitleIgnoreCase(String title);
+    
+    Page<Book> findByCategoriesId(Long categoryId, Pageable pageable);
+    
+    Page<Book> findDistinctByCategoriesInAndIdNot(java.util.Collection<com.example.demo.model.entity.Category> categories, Long id, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM Book b WHERE b.id = :id")

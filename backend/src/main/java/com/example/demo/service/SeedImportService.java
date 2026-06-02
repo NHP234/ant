@@ -13,14 +13,17 @@ import com.example.demo.repository.AuthorRepository;
 import com.example.demo.model.entity.Author;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,7 @@ public class SeedImportService {
     private static final int MAX_STRING_LENGTH = 255;
     private static final int COPIES_PER_BOOK = 3;
 
+    @CacheEvict(value = "book", allEntries = true)
     public SeedImportResponse importBooks(List<BookSeedDto> books) {
         int imported = 0;
         int skipped = 0;
@@ -64,8 +68,10 @@ public class SeedImportService {
             isbn = null;
         }
 
-        if (isbn != null && bookRepository.findByIsbn(isbn).isPresent()) {
-            log.warn("Duplicate ISBN '{}' for book '{}', skipping", isbn, title);
+        Book existingBook = findExistingBook(isbn, title, author).orElse(null);
+        if (existingBook != null) {
+            backfillMissingMetadata(existingBook, dto);
+            log.warn("Duplicate seed book '{}' (isbn: {}), skipping create", title, isbn);
             return false;
         }
 
@@ -120,8 +126,85 @@ public class SeedImportService {
         return true;
     }
 
+    private Optional<Book> findExistingBook(String isbn, String title, String author) {
+        if (isbn != null) {
+            return bookRepository.findByIsbn(isbn);
+        }
+
+        Set<String> seedAuthors = normalizeAuthorNames(author);
+        if (seedAuthors.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return bookRepository.findByIsbnIsNullAndTitleIgnoreCase(title).stream()
+                .filter(book -> normalizeAuthorNames(book.getAuthors()).equals(seedAuthors))
+                .findFirst();
+    }
+
+    private Set<String> normalizeAuthorNames(Set<Author> authors) {
+        if (authors == null) {
+            return Set.of();
+        }
+
+        return authors.stream()
+                .map(Author::getName)
+                .map(this::normalizeKey)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toSet());
+    }
+
+    private Set<String> normalizeAuthorNames(String author) {
+        if (author == null || author.isBlank()) {
+            return Set.of();
+        }
+
+        return List.of(author.split(",")).stream()
+                .map(this::normalizeKey)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toSet());
+    }
+
+    private void backfillMissingMetadata(Book book, BookSeedDto dto) {
+        boolean changed = false;
+
+        if (isBlank(book.getCoverImageUrl()) && !isBlank(dto.getCoverImageUrl())) {
+            book.setCoverImageUrl(dto.getCoverImageUrl());
+            changed = true;
+        }
+
+        if (book.getPublishYear() == null && dto.getPublishYear() != null) {
+            book.setPublishYear(dto.getPublishYear());
+            changed = true;
+        }
+
+        if (isBlank(book.getPublisher()) && !isBlank(dto.getPublisher())) {
+            book.setPublisher(truncate(dto.getPublisher()));
+            changed = true;
+        }
+
+        if (isBlank(book.getDescription()) && !isBlank(dto.getDescription())) {
+            book.setDescription(dto.getDescription());
+            changed = true;
+        }
+
+        if (changed) {
+            bookRepository.save(book);
+        }
+    }
+
     private String truncate(String value) {
         if (value == null) return null;
         return value.length() <= MAX_STRING_LENGTH ? value : value.substring(0, MAX_STRING_LENGTH);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private String normalizeKey(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 }

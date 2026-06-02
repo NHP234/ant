@@ -16,6 +16,8 @@ public class HoldResponse {
     private String userFullName;
     private Long bookId;
     private String bookTitle;
+    private String bookAuthor;
+    private String bookCoverImageUrl;
     private Long copyId;
     private Integer copyNumber;
     private String status;

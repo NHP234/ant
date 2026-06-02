@@ -107,10 +107,16 @@ public class BorrowService {
     }
 
     public PageResponse<BorrowRecordResponse> getMyBorrows(String username, Pageable pageable) {
+        return getMyBorrows(username, List.of(), pageable);
+    }
+
+    public PageResponse<BorrowRecordResponse> getMyBorrows(String username, List<BorrowStatus> statuses, Pageable pageable) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
 
-        Page<BorrowRecord> page = borrowRecordRepository.findBySlipUserId(user.getId(), pageable);
+        Page<BorrowRecord> page = (statuses == null || statuses.isEmpty())
+                ? borrowRecordRepository.findBySlipUserId(user.getId(), pageable)
+                : borrowRecordRepository.findBySlipUserIdAndStatusIn(user.getId(), statuses, pageable);
         List<BorrowRecordResponse> content = page.getContent().stream()
                 .map(borrowRecordMapper::toResponse)
                 .toList();
@@ -128,6 +134,13 @@ public class BorrowService {
     public List<BorrowRecordResponse> getOverdueBorrows() {
         List<BorrowRecord> records = borrowRecordRepository
                 .findByStatusAndSlipDueDateBefore(BorrowStatus.BORROWING, LocalDateTime.now());
+        return records.stream()
+                .map(borrowRecordMapper::toResponse)
+                .toList();
+    }
+
+    public List<BorrowRecordResponse> getActiveBorrowsByStudentId(String studentId) {
+        List<BorrowRecord> records = borrowRecordRepository.findActiveBorrowsByStudentId(studentId);
         return records.stream()
                 .map(borrowRecordMapper::toResponse)
                 .toList();

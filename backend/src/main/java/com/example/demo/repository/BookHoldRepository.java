@@ -17,6 +17,8 @@ public interface BookHoldRepository extends JpaRepository<BookHold, Long> {
 
     Page<BookHold> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
+    Page<BookHold> findByUserIdAndStatusInOrderByCreatedAtDesc(Long userId, Collection<HoldStatus> statuses, Pageable pageable);
+
     long countByUserIdAndStatusIn(Long userId, Collection<HoldStatus> statuses);
 
     Optional<BookHold> findByIdAndStatus(Long id, HoldStatus status);

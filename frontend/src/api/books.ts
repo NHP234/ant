@@ -61,6 +61,12 @@ export const bookApi = {
   getById: (id: number) =>
     api.get<{ data: Book }>(`/books/${id}`),
 
+  getSimilar: (id: number, page = 0, size = 4) =>
+    api.get<{ data: PageResponse<Book> }>(`/books/${id}/similar`, { params: { page, size } }),
+
+  getByCategory: (categoryId: number, page = 0, size = 10) =>
+    api.get<{ data: PageResponse<Book> }>(`/books/category/${categoryId}`, { params: { page, size } }),
+
   search: (q: string, page = 0, size = 10) =>
     api.get<{ data: PageResponse<Book> }>('/books/search', { params: { q, page, size } }),
 

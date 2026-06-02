@@ -47,6 +47,22 @@ public class BookController {
         return ResponseEntity.ok(ApiResponse.ok(book));
     }
 
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<ApiResponse<PageResponse<BookResponse>>> getBooksByCategory(
+            @PathVariable Long categoryId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<BookResponse> books = bookService.getBooksByCategory(categoryId, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(books));
+    }
+
+    @GetMapping("/{id}/similar")
+    public ResponseEntity<ApiResponse<PageResponse<BookResponse>>> getSimilarBooks(
+            @PathVariable Long id,
+            @PageableDefault(size = 4) Pageable pageable) {
+        PageResponse<BookResponse> books = bookService.getSimilarBooks(id, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(books));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<ApiResponse<BookResponse>> createBook(@Valid @RequestBody BookCreateRequest request) {
