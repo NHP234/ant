@@ -40,6 +40,13 @@ _(Chưa có issue nào)_
 - **Nguyên nhân**: Frontend `useAuth.tsx` destructure `{ username, role }` trực tiếp từ `res.data.data`, nhưng backend trả `{ accessToken, refreshToken, user: { username, role } }` → role luôn `undefined` → `isAdmin = false` → redirect về `/browse`
 - **Giải pháp**: Đổi thành `const { accessToken, refreshToken, user } = res.data.data`
 
+### [BUG-003] Seed import không lưu ảnh bìa sách từ Goodreads
+- **Loại**: Bug
+- **Ngày tạo**: 2026-06-02
+- **Resolved**: 2026-06-02
+- **Nguyên nhân**: `extract_books.py` sinh field snake_case (`cover_image_url`, `publish_year`) nhưng backend `BookSeedDto` chỉ nhận camelCase (`coverImageUrl`, `publishYear`), khiến `cover_image_url` trong DB bị `null` sau import qua `/api/admin/seed`.
+- **Giải pháp**: Thêm `@JsonAlias` cho `BookSeedDto`, đổi script extract sang camelCase cho seed mới, thêm fallback ảnh bìa ở frontend, và cho `SeedImportService` backfill metadata thiếu khi re-run import với ISBN đã tồn tại.
+
 ### [ENH-001] Schema Refactor V9: book_copies + borrow_slips
 - **Loại**: Enhancement
 - **Ngày tạo**: 2026-05-15

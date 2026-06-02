@@ -176,11 +176,25 @@
 ## Tháng 4: NFC + Hoàn thiện
 
 ### Tuần 13: NFC Integration
-- ⬜ Setup NFC reader hardware
-- ⬜ Python script đọc NFC UID
-- ⬜ API: mapping NFC card -> user account
-- ⬜ Flow: quẹt thẻ -> auto identify user -> mượn/trả
-- ⬜ Frontend: NFC status indicator
+- ✅ Lập trình ESP32 firmware đọc thẻ RC522 gửi API qua Wi-Fi (debounce 2s, format hex uppercase)
+- ✅ Thiết kế & hiện thực hóa NFC database schema (users.nfc_card_uid và book_copies.nfc_tag_uid)
+- ✅ REST API: POST /api/nfc/scan nhận dạng và phát sóng sự kiện quẹt thẻ (X-API-KEY secure)
+- ✅ REST API: đăng ký/gán thẻ NFC cho User và Book Copy (idempotent, unique check)
+- ✅ Real-time Stream: SSE (Server-Sent Events) endpoint GET /api/nfc/stream đẩy sự kiện quẹt thẻ tới Kiosk
+- ✅ Viết bộ 14 unit tests cho NfcService đạt coverage tối đa
+- ### Phase 4: Kiosk & RAG Chatbot (Đang tiến hành)
+- [x] Tích hợp phần cứng NFC (Mô phỏng/API)
+- [x] Luồng Kiosk Mượn/Trả tự động (Frontend + Backend SSE)
+- [x] Cải tiến UI/UX Frontend theo định hướng "Library Editorial" (Thêm Book Cover, Sách tương tự, CSS Tokens)
+- [x] Tích hợp RAG Service (FastAPI)
+- [x] Giao diện Chatbot tư vấn sách
+
+- ### Phase 5: Advanced UI/UX & Polish (Hoàn tất)
+- [x] 1. Trang Duyệt Sách: Layout kiểu Apple Books (Hero Banner, Horizontal Carousels theo phân loại/mới nhất, hiệu ứng Hover)
+- [x] 2. Trang Chi tiết Sách: Glassmorphism, Skeleton Loading, Typography trích dẫn sang trọng
+- [x] 3. Quản lý Mượn/Trả: Giao diện Card-based (thẻ thư viện), Timeline/Progress Bar đếm ngược ngày hết hạn
+- [x] 4. Chatbot RAG: UI "Thư ký Thư viện", trả về Mini Book Cards trong giao diện chat, hiệu ứng typing
+- [x] 5. Global UI: Page Transitions (Fade-in), Glassmorphism cho header/sidebar
 
 ### Tuần 14: System Testing
 - ⬜ End-to-end testing toàn bộ flow
@@ -226,3 +240,12 @@
 | 2026-05-24 | Phase 5 hoàn tất: Fix Playwright strict mode + backend connection lỗi, all 13 tests pass, thêm e2e/README.md, update PROGRESS.md |
 | 2026-05-28 | Phase 2.5: Nâng cấp bộ phân loại ý định (Intent Classifier) lên mô hình ngữ nghĩa Calibrated SentenceTransformer (MiniLM) + SVM (LinearSVC). Tích hợp hiệu chuẩn xác suất (Platt Scaling) qua `CalibratedClassifierCV` giúp kiểm soát tốt độ tự tin (>0.75 cho BOOK_SEARCH và ~0.58 cho BORROW_STATUS), điều chỉnh threshold orchestrator về 0.5. Copy inject và khởi chạy an toàn trong Docker container, viết tài liệu chi tiết. |
 | 2026-05-30 | Chuẩn hóa CSDL tác giả sang quan hệ Many-to-Many (V13): Tạo bảng `authors` & `book_authors`, cập nhật JPA Entities, DTOs, Mappers (MapStruct) tương thích ngược. Cải tiến script `extract_books.py` ánh xạ `author_id` sang tên tác giả thực từ `goodreads_book_authors.json.gz`, giải quyết trùng lặp mã ISBN và mở rộng quy mô lên **15.000 đầu sách độc bản**. Đang chạy tiến trình seeding toàn bộ 15.000 sách và cập nhật chi tiết tài liệu [README_SEED_DATA.md](file:///d:/ant/scripts/README_SEED_DATA.md) về kiến trúc pipeline. |
+| 2026-06-02 | NFC Backend & SSE Integration: Hiện thực hóa thành công các APIs NFC (`POST /api/nfc/scan` bảo mật bằng API Key tĩnh, `GET /api/nfc/stream` cho Server-Sent Events, `POST /api/nfc/register-**` gán thẻ cho Sinh viên & Bản sao sách vật lý). Xây dựng bộ 14 unit test bao phủ toàn bộ các kịch bản của `NfcService` đạt coverage tối đa. Kiểm thử biên dịch (`mvn clean test`) thành công 100%. |
+| 2026-06-02 | Cải tiến UI/UX Frontend: Áp dụng phong cách "Library Editorial" (Thêm Book Cover, Sách tương tự, CSS Tokens với màu parchment và font Playfair Display). Chuyển đổi Layout trang Chi tiết Sách thành 2 cột với API `/api/books/{id}/similar` backend hỗ trợ. |
+| 2026-06-02 | Sửa lỗi build frontend: Chuyển các model/types import sang type-only import (`import type`) để tương thích với cấu hình `verbatimModuleSyntax` của TypeScript trong `tsconfig.json`. |
+| 2026-06-02 | Sửa lỗi container backend: Bổ sung lớp `JacksonConfig` để khởi tạo Bean `@Primary ObjectMapper`. Khắc phục triệt để lỗi `UnsatisfiedDependencyException` của `NfcService` khi chạy trong môi trường Spring Boot Container. |
+| 2026-06-02 | NFC firmware: Bổ sung header `X-API-KEY` khi ESP32 gửi `POST /api/nfc/scan`, khớp với cơ chế bảo vệ API key tĩnh ở Spring Boot. |
+| 2026-06-02 | Frontend UI/UX polish review fixes: Thêm server-side status filters cho `/borrows/my` và `/holds/my`, sửa My Borrows tabs để không filter sai theo page, bổ sung texture asset local, bỏ CTA carousel chưa có hành động và cập nhật API spec. |
+| 2026-06-02 | Sửa lỗi ảnh bìa sách: `BookSeedDto` nhận alias `cover_image_url`/`publish_year`, script seed xuất camelCase chuẩn API, `SeedImportService` backfill metadata thiếu khi gặp ISBN trùng và frontend dùng `BookCover` fallback khi URL ảnh lỗi. |
+| 2026-06-02 | Rebuild/start backend bằng Docker và chạy lại seed import 15.000 sách. Kết quả DB: 21.430 đầu sách, 15.000 sách có `cover_image_url`; các bản còn thiếu cover là dữ liệu cũ/không có ISBN để match backfill an toàn. |
+| 2026-06-02 | Seed import idempotency: Backend dedup ISBN-less seed rows by normalized title + author set, seed scripts report/filter null-ISBN duplicates, Docker backend rebuilt, cleanup old duplicate rows. DB final: 15.000 books, 15.000 with cover, 45.000 copies; repeat import returns Imported: 0. |

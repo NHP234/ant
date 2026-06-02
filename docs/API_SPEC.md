@@ -64,7 +64,9 @@
 |--------|----------|------|-------------|
 | GET | /books | Public | Danh sách sách (paginated, sorted) |
 | GET | /books/search?q=keyword | Public | Full-text search (PostgreSQL tsvector) |
+| GET | /books/category/{categoryId} | Public | Danh sách sách theo danh mục |
 | GET | /books/{id} | Public | Chi tiết sách |
+| GET | /books/{id}/similar | Public | Sách tương tự theo danh mục |
 | POST | /books | ADMIN/LIBRARIAN | Thêm sách mới (tự động tạo N book_copies) |
 | PUT | /books/{id} | ADMIN/LIBRARIAN | Cập nhật sách |
 | DELETE | /books/{id} | ADMIN | Xóa sách |
@@ -100,6 +102,12 @@
   }
 }
 ```
+
+### GET /books/category/{categoryId}?page=0&size=10
+Trả về `PageResponse<BookResponse>` cho các sách thuộc danh mục.
+
+### GET /books/{id}/similar?page=0&size=5
+Trả về `PageResponse<BookResponse>` cho các sách cùng danh mục, loại trừ sách hiện tại.
 
 ### POST /books
 ```json
@@ -162,9 +170,10 @@
 |--------|----------|------|-------------|
 | POST | /borrows | ADMIN/LIBRARIAN | Mượn sách tại quầy (direct borrow, auto-fulfill hold nếu có) |
 | PUT | /borrows/{id}/return?note= | LIBRARIAN/ADMIN | Trả sách |
-| GET | /borrows/my | User | Lịch sử mượn của user hiện tại |
+| GET | /borrows/my?statuses=BORROWING,OVERDUE | User | Lịch sử mượn của user hiện tại, có thể lọc theo status |
 | GET | /borrows | LIBRARIAN/ADMIN | Tất cả borrow records |
 | GET | /borrows/overdue | LIBRARIAN/ADMIN | Sách quá hạn |
+| GET | /borrows/active?studentId=20200001 | LIBRARIAN/ADMIN | Sách đang mượn/quá hạn của sinh viên theo mã sinh viên |
 
 ### POST /borrows
 ```json
@@ -195,6 +204,12 @@
 ```
 
 > **Lưu ý**: `username` hoặc `studentId` là bắt buộc (chỉ chọn 1). `copyId` optional — nếu có hold ACTIVE cho cùng đầu sách, hệ thống tự động fulfill hold.
+
+### GET /borrows/my?statuses=BORROWING,OVERDUE&page=0&size=20
+`statuses` là optional, dạng comma-separated. Nếu không truyền, API trả toàn bộ borrow records của user hiện tại.
+
+### GET /borrows/active?studentId=20200001
+Trả về `List<BorrowRecordResponse>` gồm các record `BORROWING` và `OVERDUE` của sinh viên, phục vụ kiosk/self-service return flow.
 
 ---
 
@@ -250,7 +265,7 @@
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | /holds | User | Đặt mượn (giữ chỗ 24h nếu còn copy AVAILABLE) |
-| GET | /holds/my | User | Danh sách hold của user hiện tại |
+| GET | /holds/my?statuses=ACTIVE | User | Danh sách hold của user hiện tại, có thể lọc theo status |
 | GET | /holds | LIBRARIAN/ADMIN | Danh sách tất cả hold |
 | GET | /holds/{id} | LIBRARIAN/ADMIN | Chi tiết hold |
 | PUT | /holds/{id}/confirm | LIBRARIAN/ADMIN | Xác nhận mượn (có thể đổi copy cùng đầu sách) |
@@ -284,6 +299,9 @@
   "message": "Hold created successfully"
 }
 ```
+
+### GET /holds/my?statuses=ACTIVE&page=0&size=10
+`statuses` là optional, dạng comma-separated (`ACTIVE,FULFILLED,EXPIRED,CANCELED`). Nếu không truyền, API trả toàn bộ holds của user hiện tại.
 
 ### PUT /holds/{id}/confirm
 ```json
@@ -476,6 +494,85 @@
     ]
   },
   "message": "Thành công"
+}
+```
+
+---
+
+## NFC Integration
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /nfc/stream | Public | Mở kết nối SSE Stream nhận sự kiện NFC real-time |
+| POST | /nfc/scan | Public | Nhận tín hiệu quét NFC từ ESP32 (API Key) |
+| POST | /nfc/register-user | ADMIN/LIBRARIAN | Gán thẻ NFC cho tài khoản sinh viên |
+| POST | /nfc/register-book-copy | ADMIN/LIBRARIAN | Gán thẻ NFC cho bản sao sách vật lý |
+
+### GET /nfc/stream
+```
+Response: Server-Sent Events (MediaType: text/event-stream)
+Sự kiện ban đầu:
+event: INIT
+data: SSE stream initialized successfully
+
+Sự kiện quét thẻ:
+event: nfc-scan
+data: {
+  "type": "USER",
+  "data": { "id": 1, "username": "student01", "fullName": "Nguyen Van A", "studentId": "20200001", "role": "STUDENT", "isActive": true }
+}
+Hoặc:
+data: {
+  "type": "BOOK_COPY",
+  "data": { "id": 45, "bookId": 12, "copyNumber": 1, "nfcTagUid": "AA:BB:CC", "status": "AVAILABLE" }
+}
+Hoặc:
+data: {
+  "type": "UNKNOWN",
+  "data": { "uid": "EE:FF:11:22" }
+}
+```
+
+### POST /nfc/scan
+```json
+// Header: X-API-KEY: ant-library-nfc-secret-key-2026
+// Request
+{ "uid": "04:A2:B3:C4" }
+
+// Response 200
+{
+  "success": true,
+  "data": {
+    "type": "USER",
+    "data": { "id": 1, "fullName": "Nguyen Van A", ... }
+  },
+  "message": "NFC tag scanned and broadcasted successfully"
+}
+```
+
+### POST /nfc/register-user
+```json
+// Request
+{ "userId": 1, "nfcCardUid": "04:A2:B3:C4" }
+
+// Response 200
+{
+  "success": true,
+  "data": { "id": 1, "username": "student01", "nfcCardUid": "04:A2:B3:C4", ... },
+  "message": "NFC Card bound to user successfully"
+}
+```
+
+### POST /nfc/register-book-copy
+```json
+// Request
+{ "copyId": 45, "nfcTagUid": "AA:BB:CC:DD" }
+
+// Response 200
+{
+  "success": true,
+  "data": { "id": 45, "bookId": 12, "nfcTagUid": "AA:BB:CC:DD", "status": "AVAILABLE" },
+  "message": "NFC Tag bound to book copy successfully"
 }
 ```
 

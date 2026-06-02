@@ -81,7 +81,11 @@ Khi nhận danh sách sách từ API, `SeedImportService` thực hiện xử lý
 
 ### 5. Xử lý trùng lặp và chuỗi trống ISBN
 *   Nếu chuỗi `isbn` gửi lên bị trống hoặc chỉ chứa khoảng trắng, hệ thống tự động chuyển thành `NULL` trước khi lưu (giúp tránh xung đột Unique Constraint vì PostgreSQL cho phép nhiều giá trị `NULL`).
-*   Nếu `isbn` hợp lệ đã tồn tại trong database, hệ thống sẽ từ chối ghi đè và ghi nhận `skipped` để giữ nguyên toàn vẹn dữ liệu gốc.
+*   Nếu `isbn` hợp lệ đã tồn tại trong database, hệ thống sẽ không tạo bản ghi mới. Thay vào đó, hệ thống backfill các metadata đang thiếu như `coverImageUrl`, `publishYear`, `publisher`, `description`, rồi bỏ qua thao tác tạo để giữ nguyên toàn vẹn dữ liệu gốc.
+
+### 6. Tương thích định dạng field seed
+*   API seed ưu tiên field camelCase (`coverImageUrl`, `publishYear`) để khớp DTO backend.
+*   Backend vẫn chấp nhận alias snake_case (`cover_image_url`, `publish_year`) để các file `seed_books.json` cũ có thể import/backfill mà không cần regenerate ngay.
 
 ---
 
@@ -105,4 +109,11 @@ Khi nhận danh sách sách từ API, `SeedImportService` thực hiện xử lý
     python .\scripts\import_books.py
     ```
     *Script sẽ tự động đăng nhập, gửi dữ liệu từng batch 200 cuốn và in tiến độ ra console.*
+---
 
+## 6. Import safety notes
+
+* As of 2026-06-02, `SeedImportService` is idempotent for seed rows without ISBN: when `isbn` is blank/null, the backend matches existing books by normalized `title` plus normalized author set before creating a new row.
+* Existing books matched during seed import are not recreated. The backend backfills missing metadata (`coverImageUrl`, `publishYear`, `publisher`, `description`) and skips creation.
+* `extract_books.py` also filters duplicate ISBN-less rows by normalized title/authors while generating `seed_books.json`.
+* `import_books.py` prints source stats for books with ISBN, books without ISBN, and duplicate title/author warnings so repeated imports are easier to audit.
