@@ -12,6 +12,7 @@ import com.example.demo.model.entity.BorrowRecord;
 import com.example.demo.model.entity.BorrowSlip;
 import com.example.demo.model.entity.User;
 import com.example.demo.model.enums.BorrowStatus;
+import com.example.demo.model.enums.BorrowSource;
 import com.example.demo.model.enums.CopyStatus;
 import com.example.demo.model.enums.HoldStatus;
 import com.example.demo.model.enums.Role;
@@ -31,6 +32,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -122,8 +124,70 @@ class BorrowServiceTest {
 
             assertThat(result.getId()).isEqualTo(1L);
             assertThat(result.getStatus()).isEqualTo("BORROWING");
+            ArgumentCaptor<BorrowSlip> slipCaptor = ArgumentCaptor.forClass(BorrowSlip.class);
+            verify(borrowSlipRepository).save(slipCaptor.capture());
+            assertThat(slipCaptor.getValue().getSource()).isEqualTo(BorrowSource.COUNTER);
             verify(bookCopyRepository).save(any(BookCopy.class));
             verify(notificationRepository).save(any());
+        }
+
+        @Test
+        @DisplayName("should keep counter source when copy id is provided without NFC source")
+        void borrowBook_copyIdDefaultsToCounterSource() {
+            borrowRequest.setCopyId(10L);
+            when(userRepository.findByUsername("librarian01")).thenReturn(Optional.of(librarianUser));
+            when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
+            when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
+            when(borrowRecordRepository.countBySlipUserIdAndStatusIn(1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+                    .thenReturn(0);
+            when(bookHoldRepository.countByUserIdAndStatusIn(1L, List.of(HoldStatus.ACTIVE)))
+                    .thenReturn(0L);
+            when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(1L, 1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+                    .thenReturn(false);
+            when(bookHoldRepository.findFirstByUserIdAndCopyBookIdAndStatusOrderByCreatedAtDesc(1L, 1L, HoldStatus.ACTIVE))
+                    .thenReturn(Optional.empty());
+            when(bookCopyRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(testCopy));
+            when(bookCopyRepository.save(any(BookCopy.class))).thenReturn(testCopy);
+            when(borrowSlipRepository.save(any(BorrowSlip.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(borrowRecordRepository.save(any(BorrowRecord.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(borrowRecordMapper.toResponse(any())).thenReturn(
+                    BorrowRecordResponse.builder().id(1L).status("BORROWING").bookTitle("Clean Code").build());
+
+            borrowService.borrowBook("librarian01", borrowRequest);
+
+            ArgumentCaptor<BorrowSlip> slipCaptor = ArgumentCaptor.forClass(BorrowSlip.class);
+            verify(borrowSlipRepository).save(slipCaptor.capture());
+            assertThat(slipCaptor.getValue().getSource()).isEqualTo(BorrowSource.COUNTER);
+        }
+
+        @Test
+        @DisplayName("should use NFC source when request is explicit")
+        void borrowBook_explicitNfcSource() {
+            borrowRequest.setCopyId(10L);
+            borrowRequest.setSource(BorrowSource.NFC);
+            when(userRepository.findByUsername("librarian01")).thenReturn(Optional.of(librarianUser));
+            when(userRepository.findByUsername("student01")).thenReturn(Optional.of(testUser));
+            when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
+            when(borrowRecordRepository.countBySlipUserIdAndStatusIn(1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+                    .thenReturn(0);
+            when(bookHoldRepository.countByUserIdAndStatusIn(1L, List.of(HoldStatus.ACTIVE)))
+                    .thenReturn(0L);
+            when(borrowRecordRepository.existsBySlipUserIdAndBookIdAndStatusIn(1L, 1L, List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE)))
+                    .thenReturn(false);
+            when(bookHoldRepository.findFirstByUserIdAndCopyBookIdAndStatusOrderByCreatedAtDesc(1L, 1L, HoldStatus.ACTIVE))
+                    .thenReturn(Optional.empty());
+            when(bookCopyRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(testCopy));
+            when(bookCopyRepository.save(any(BookCopy.class))).thenReturn(testCopy);
+            when(borrowSlipRepository.save(any(BorrowSlip.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(borrowRecordRepository.save(any(BorrowRecord.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(borrowRecordMapper.toResponse(any())).thenReturn(
+                    BorrowRecordResponse.builder().id(1L).status("BORROWING").bookTitle("Clean Code").build());
+
+            borrowService.borrowBook("librarian01", borrowRequest);
+
+            ArgumentCaptor<BorrowSlip> slipCaptor = ArgumentCaptor.forClass(BorrowSlip.class);
+            verify(borrowSlipRepository).save(slipCaptor.capture());
+            assertThat(slipCaptor.getValue().getSource()).isEqualTo(BorrowSource.NFC);
         }
 
         @Test

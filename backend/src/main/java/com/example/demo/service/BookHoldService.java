@@ -154,7 +154,7 @@ public class BookHoldService {
         borrowCopy.setStatus(CopyStatus.BORROWED);
         bookCopyRepository.save(borrowCopy);
 
-        BorrowSource source = (request != null && request.getCopyId() != null) ? BorrowSource.NFC : BorrowSource.COUNTER;
+        BorrowSource source = resolveBorrowSource(request);
         BorrowSlip slip = BorrowSlip.builder()
                 .user(hold.getUser())
                 .librarian(librarian)
@@ -298,6 +298,10 @@ public class BookHoldService {
     private User findUserOrThrow(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
+    }
+
+    private BorrowSource resolveBorrowSource(HoldConfirmRequest request) {
+        return request == null || request.getSource() == null ? BorrowSource.COUNTER : request.getSource();
     }
 
     private void sendNotification(User user, String title, String message, NotificationType type) {

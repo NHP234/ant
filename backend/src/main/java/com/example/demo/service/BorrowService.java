@@ -62,11 +62,11 @@ public class BorrowService {
         LocalDateTime now = LocalDateTime.now();
         BookHold activeHold = findValidActiveHold(borrower.getId(), book.getId(), now);
         if (activeHold != null) {
-            return fulfillHold(activeHold, librarian, request.getCopyId(), now);
+            return fulfillHold(activeHold, librarian, request.getCopyId(), resolveBorrowSource(request), now);
         }
 
         BookCopy copy = resolveCopyForBorrow(book, request.getCopyId());
-        BorrowRecord record = createBorrowRecord(borrower, librarian, copy, now, request.getCopyId() != null);
+        BorrowRecord record = createBorrowRecord(borrower, librarian, copy, now, resolveBorrowSource(request));
 
         sendNotification(borrower, "Mượn sách thành công",
                 String.format("Bạn đã mượn \"%s\" (bản #%d). Hạn trả: %s",
@@ -162,13 +162,13 @@ public class BorrowService {
         }
     }
 
-    private BorrowRecordResponse fulfillHold(BookHold hold, User librarian, Long copyId, LocalDateTime now) {
+    private BorrowRecordResponse fulfillHold(BookHold hold, User librarian, Long copyId, BorrowSource source, LocalDateTime now) {
         if (hold.getStatus() != HoldStatus.ACTIVE) {
             throw new IllegalArgumentException("Hold is not active");
         }
 
         BookCopy borrowCopy = resolveCopyForHold(hold, copyId);
-        BorrowRecord record = createBorrowRecord(hold.getUser(), librarian, borrowCopy, now, copyId != null);
+        BorrowRecord record = createBorrowRecord(hold.getUser(), librarian, borrowCopy, now, source);
 
         hold.setStatus(HoldStatus.FULFILLED);
         hold.setFulfilledAt(now);
@@ -242,7 +242,7 @@ public class BorrowService {
         return activeHold;
     }
 
-    private BorrowRecord createBorrowRecord(User borrower, User librarian, BookCopy copy, LocalDateTime now, boolean isNfc) {
+    private BorrowRecord createBorrowRecord(User borrower, User librarian, BookCopy copy, LocalDateTime now, BorrowSource source) {
         copy.setStatus(CopyStatus.BORROWED);
         bookCopyRepository.save(copy);
 
@@ -251,7 +251,7 @@ public class BorrowService {
                 .librarian(librarian)
                 .borrowDate(now)
                 .dueDate(now.plusDays(defaultDueDays))
-            .source(isNfc ? BorrowSource.NFC : BorrowSource.COUNTER)
+                .source(source)
                 .build();
         slip = borrowSlipRepository.save(slip);
 
@@ -331,6 +331,10 @@ public class BorrowService {
         }
         String trimmed = value.trim();
         return trimmed.isBlank() ? null : trimmed;
+    }
+
+    private BorrowSource resolveBorrowSource(BorrowRequest request) {
+        return request.getSource() == null ? BorrowSource.COUNTER : request.getSource();
     }
 
     private void sendNotification(User user, String title, String message, NotificationType type) {

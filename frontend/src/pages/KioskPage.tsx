@@ -301,7 +301,8 @@ export default function KioskPage() {
         await borrowApi.borrow({
           bookId: copy.bookId,
           copyId: copy.id,
-          studentId: currentUser.studentId
+          studentId: currentUser.studentId,
+          source: 'NFC'
         })
       }
       setKioskState('SUCCESS')

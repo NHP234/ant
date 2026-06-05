@@ -178,7 +178,7 @@ Trả về `PageResponse<BookResponse>` cho các sách cùng danh mục, loại 
 ### POST /borrows
 ```json
 // Request
-{ "bookId": 15, "username": "student01", "copyId": 123 }
+{ "bookId": 15, "username": "student01", "copyId": 123, "source": "COUNTER" }
 
 // Response 201
 {
@@ -203,7 +203,7 @@ Trả về `PageResponse<BookResponse>` cho các sách cùng danh mục, loại 
 }
 ```
 
-> **Lưu ý**: `username` hoặc `studentId` là bắt buộc (chỉ chọn 1). `copyId` optional — nếu có hold ACTIVE cho cùng đầu sách, hệ thống tự động fulfill hold.
+> **Lưu ý**: `username` hoặc `studentId` là bắt buộc (chỉ chọn 1). `copyId` optional — nếu có hold ACTIVE cho cùng đầu sách, hệ thống tự động fulfill hold. `source` optional (`COUNTER` hoặc `NFC`), mặc định là `COUNTER`.
 
 ### GET /borrows/my?statuses=BORROWING,OVERDUE&page=0&size=20
 `statuses` là optional, dạng comma-separated. Nếu không truyền, API trả toàn bộ borrow records của user hiện tại.
@@ -305,12 +305,14 @@ Trả về `List<BorrowRecordResponse>` gồm các record `BORROWING` và `OVERD
 
 ### PUT /holds/{id}/confirm
 ```json
-// Request (optional copyId if scanning NFC)
-{ "copyId": 123 }
+// Request (optional)
+{ "copyId": 123, "source": "COUNTER" }
 
 // Response 200
 { "success": true, "data": { "id": 10, "bookTitle": "Clean Code", "status": "FULFILLED", "copyId": 3, "copyNumber": 1 }, "message": "Hold confirmed" }
 ```
+
+> **Lưu ý**: `source` optional (`COUNTER` hoặc `NFC`), mặc định là `COUNTER`.
 
 ### PUT /holds/{id}/cancel
 ```json

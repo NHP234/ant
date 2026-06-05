@@ -2,6 +2,7 @@ import api from './axios'
 import type { PageResponse } from './books'
 
 export type BorrowStatus = 'BORROWING' | 'RETURNED' | 'OVERDUE'
+export type BorrowSource = 'COUNTER' | 'NFC'
 
 export interface BorrowRecord {
   id: number
@@ -26,6 +27,7 @@ export interface BorrowRequest {
   username?: string
   studentId?: string
   copyId?: number
+  source?: BorrowSource
 }
 
 export const borrowApi = {

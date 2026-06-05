@@ -1,5 +1,6 @@
 import api from './axios'
 import type { PageResponse } from './books'
+import type { BorrowSource } from './borrows'
 
 export type HoldStatus = 'ACTIVE' | 'FULFILLED' | 'EXPIRED' | 'CANCELED'
 
@@ -29,6 +30,7 @@ export interface HoldCreateRequest {
 
 export interface HoldConfirmRequest {
   copyId?: number
+  source?: BorrowSource
 }
 
 export interface HoldCancelRequest {

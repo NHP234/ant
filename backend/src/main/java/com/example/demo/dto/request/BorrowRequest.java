@@ -3,6 +3,7 @@ package com.example.demo.dto.request;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
+import com.example.demo.model.enums.BorrowSource;
 
 @Getter
 @Setter
@@ -16,4 +17,6 @@ public class BorrowRequest {
     private String studentId;
 
     private Long copyId;
+
+    private BorrowSource source;
 }
