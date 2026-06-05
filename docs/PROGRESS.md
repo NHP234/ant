@@ -196,6 +196,13 @@
 - [x] 4. Chatbot RAG: UI "Thư ký Thư viện", trả về Mini Book Cards trong giao diện chat, hiệu ứng typing
 - [x] 5. Global UI: Page Transitions (Fade-in), Glassmorphism cho header/sidebar
 
+#### Bổ sung bắt buộc theo REQUIREMENTS.md
+- ✅ Frontend: Bổ sung form "Mượn trực tiếp tại quầy" cho LIBRARIAN/ADMIN khi Kiosk NFC không hoạt động, gọi `POST /api/borrows` với `bookId` + `username` hoặc `studentId` + `copyId` tùy chọn.
+- ✅ Frontend: Trên trang Quản lý Mượn/Trả, hỗ trợ thủ thư tìm/định danh sinh viên bằng username hoặc MSSV trước khi tạo lượt mượn trực tiếp.
+- ✅ Frontend: Hỗ trợ chọn sách/bản sao khả dụng cho luồng mượn trực tiếp tại quầy, ưu tiên cho phép nhập/chọn `copyId` khi có NFC tag hoặc mã bản sao.
+- ✅ Frontend: Hiển thị lỗi nghiệp vụ từ backend cho luồng mượn trực tiếp tại quầy: quá giới hạn mượn, đang mượn/hold trùng đầu sách, hết copy AVAILABLE.
+- ✅ Frontend: Sau khi tạo mượn trực tiếp thành công, refresh danh sách phiếu mượn và hiển thị nguồn mượn `COUNTER`; nếu sinh viên có hold ACTIVE cùng đầu sách thì hệ thống auto-fulfill theo backend.
+
 ### Tuần 14: System Testing
 - ⬜ End-to-end testing toàn bộ flow
 - ⬜ Performance testing cơ bản
@@ -249,3 +256,5 @@
 | 2026-06-02 | Sửa lỗi ảnh bìa sách: `BookSeedDto` nhận alias `cover_image_url`/`publish_year`, script seed xuất camelCase chuẩn API, `SeedImportService` backfill metadata thiếu khi gặp ISBN trùng và frontend dùng `BookCover` fallback khi URL ảnh lỗi. |
 | 2026-06-02 | Rebuild/start backend bằng Docker và chạy lại seed import 15.000 sách. Kết quả DB: 21.430 đầu sách, 15.000 sách có `cover_image_url`; các bản còn thiếu cover là dữ liệu cũ/không có ISBN để match backfill an toàn. |
 | 2026-06-02 | Seed import idempotency: Backend dedup ISBN-less seed rows by normalized title + author set, seed scripts report/filter null-ISBN duplicates, Docker backend rebuilt, cleanup old duplicate rows. DB final: 15.000 books, 15.000 with cover, 45.000 copies; repeat import returns Imported: 0. |
+| 2026-06-04 | Hoàn thiện checklist REQUIREMENTS.md cho mượn trực tiếp tại quầy: thêm form admin `DirectBorrowForm`, định danh sinh viên bằng username/MSSV, tìm/chọn sách và copy AVAILABLE hoặc nhập copyId, hiển thị lỗi nghiệp vụ backend, refresh borrow slips sau success và chuẩn hóa `BorrowRequest.source` để direct counter borrow luôn hiển thị `COUNTER`. |
+| 2026-06-05 | Thêm và chạy Playwright E2E cho luồng mượn trực tiếp tại quầy: tạo student/book qua API, thao tác form admin, xác nhận borrow slip nguồn `COUNTER` và kiểm tra lỗi backend khi sinh viên mượn trùng đầu sách. Đồng bộ `source` optional cho confirm hold để đổi copy tại quầy mặc định vẫn là `COUNTER`. |

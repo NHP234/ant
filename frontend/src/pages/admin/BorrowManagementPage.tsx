@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import DirectBorrowForm from './components/DirectBorrowForm'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
   BORROWING: 'default',
@@ -138,6 +139,8 @@ export default function BorrowManagementPage() {
         <h2 className="text-2xl font-bold tracking-tight">Quản lý mượn trả</h2>
         <p className="text-muted-foreground">Theo dõi phiếu mượn và tình trạng trả sách</p>
       </div>
+
+      <DirectBorrowForm />
 
       <div className="rounded-md border">
         <Table>
