@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import AdminLayout from '@/layouts/AdminLayout'
+import StaffLayout from '@/layouts/StaffLayout'
 import StudentLayout from '@/layouts/StudentLayout'
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
@@ -26,14 +26,20 @@ function PrivateRoute() {
   return user ? <Outlet /> : <Navigate to="/login" replace />
 }
 
-function AdminRoute() {
-  const { isAdmin, isLibrarian } = useAuth()
-  return isAdmin || isLibrarian ? <Outlet /> : <Navigate to="/" replace />
+function RoleRoute({ allowedRoles }: { allowedRoles: string[] }) {
+  const { user, isLoading, isLibrarian } = useAuth()
+
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (!user) return <Navigate to="/login" replace />
+  if (allowedRoles.includes(user.role)) return <Outlet />
+
+  return <Navigate to={isLibrarian ? '/librarian/dashboard' : '/'} replace />
 }
 
 function RootRedirect() {
   const { isAdmin, isLibrarian } = useAuth()
-  if (isAdmin || isLibrarian) return <Navigate to="/admin/dashboard" replace />
+  if (isAdmin) return <Navigate to="/admin/dashboard" replace />
+  if (isLibrarian) return <Navigate to="/librarian/dashboard" replace />
   return <Navigate to="/browse" replace />
 }
 
@@ -48,8 +54,8 @@ export default function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<RootRedirect />} />
 
-          <Route element={<AdminRoute />}>
-            <Route element={<AdminLayout />}>
+          <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>
+            <Route element={<StaffLayout />}>
               <Route path="/admin/dashboard" element={<DashboardPage />} />
               <Route path="/admin/books" element={<BookManagementPage />} />
               <Route path="/admin/borrows" element={<BorrowManagementPage />} />
@@ -58,6 +64,16 @@ export default function AppRouter() {
               <Route path="/admin/categories" element={<CategoryManagementPage />} />
               <Route path="/admin/profile" element={<ProfilePage />} />
               <Route path="/admin/audit-logs" element={<AuditLogViewerPage />} />
+            </Route>
+          </Route>
+
+          <Route element={<RoleRoute allowedRoles={['LIBRARIAN']} />}>
+            <Route element={<StaffLayout />}>
+              <Route path="/librarian/dashboard" element={<DashboardPage />} />
+              <Route path="/librarian/books" element={<BookManagementPage />} />
+              <Route path="/librarian/borrows" element={<BorrowManagementPage />} />
+              <Route path="/librarian/holds" element={<HoldManagementPage />} />
+              <Route path="/librarian/profile" element={<ProfilePage />} />
             </Route>
           </Route>
 

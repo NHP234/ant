@@ -20,6 +20,9 @@ const navItems = [
 
 function SidebarContent() {
   const { isAdmin, isLibrarian } = useAuth()
+  const staffHref = isAdmin ? '/admin/dashboard' : '/librarian/dashboard'
+  const staffLabel = isAdmin ? 'Trang quản trị' : 'Bàn thủ thư'
+
   return (
     <div className="flex flex-col h-full bg-card/60 backdrop-blur-xl">
       <div className="p-6 pb-4">
@@ -58,11 +61,11 @@ function SidebarContent() {
           <div className="px-4"><Separator className="bg-border/50" /></div>
           <div className="p-4">
             <NavLink
-              to="/admin/dashboard"
+              to={staffHref}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all"
             >
               <ExternalLink className="h-4 w-4" />
-              Trang quản trị
+              {staffLabel}
             </NavLink>
           </div>
         </>

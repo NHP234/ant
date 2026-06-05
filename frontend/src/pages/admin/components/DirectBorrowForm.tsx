@@ -6,6 +6,7 @@ import { borrowApi } from '@/api/borrows'
 import { bookApi, bookCopyApi } from '@/api/books'
 import type { Book, BookCopy } from '@/api/books'
 import { userApi } from '@/api/users'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -48,6 +49,7 @@ function describeCopy(copy: BookCopy) {
 
 export default function DirectBorrowForm() {
   const queryClient = useQueryClient()
+  const { isAdmin } = useAuth()
   const [identifierMode, setIdentifierMode] = useState<IdentifierMode>('studentId')
   const [identifier, setIdentifier] = useState('')
   const [bookSearch, setBookSearch] = useState('')
@@ -59,6 +61,7 @@ export default function DirectBorrowForm() {
   const usersQuery = useQuery({
     queryKey: ['admin', 'users', 'direct-borrow-identify'],
     queryFn: () => userApi.getAll(0, 200),
+    enabled: isAdmin,
     staleTime: 60_000,
   })
 

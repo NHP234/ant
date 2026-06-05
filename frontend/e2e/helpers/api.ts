@@ -1,7 +1,8 @@
-import { API_BASE, ADMIN } from '../fixtures/test-data'
+import type { APIRequestContext } from '@playwright/test'
+import { API_BASE } from '../fixtures/test-data'
 
 export async function apiLogin(
-  request: any,
+  request: APIRequestContext,
   username: string,
   password: string,
 ) {
@@ -13,7 +14,7 @@ export async function apiLogin(
 }
 
 export async function apiRegister(
-  request: any,
+  request: APIRequestContext,
   data: {
     username: string
     password: string
@@ -27,7 +28,7 @@ export async function apiRegister(
 }
 
 export async function apiCreateBook(
-  request: any,
+  request: APIRequestContext,
   token: string,
   data: {
     title: string
@@ -44,7 +45,7 @@ export async function apiCreateBook(
 }
 
 export async function apiCreateCategory(
-  request: any,
+  request: APIRequestContext,
   token: string,
   name: string,
 ) {
@@ -55,8 +56,27 @@ export async function apiCreateCategory(
   return res.json()
 }
 
+export async function apiCreateUser(
+  request: APIRequestContext,
+  token: string,
+  data: {
+    username: string
+    password: string
+    email: string
+    fullName: string
+    studentId?: string
+    role: 'ADMIN' | 'LIBRARIAN' | 'STUDENT'
+  },
+) {
+  const res = await request.post(`${API_BASE}/users`, {
+    data,
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return res.json()
+}
+
 export async function apiCreateHold(
-  request: any,
+  request: APIRequestContext,
   token: string,
   bookId: number,
 ) {
@@ -67,13 +87,13 @@ export async function apiCreateHold(
   return res.json()
 }
 
-export async function apiGetBooks(request: any) {
+export async function apiGetBooks(request: APIRequestContext) {
   const res = await request.get(`${API_BASE}/books?size=50`)
   return res.json()
 }
 
 export async function apiGetHolds(
-  request: any,
+  request: APIRequestContext,
   token: string,
 ) {
   const res = await request.get(`${API_BASE}/holds`, {
@@ -83,7 +103,7 @@ export async function apiGetHolds(
 }
 
 export async function apiConfirmHold(
-  request: any,
+  request: APIRequestContext,
   token: string,
   holdId: number,
 ) {

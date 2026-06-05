@@ -8,9 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner'
 import BookFormDialog from './components/BookFormDialog'
 import CopiesDialog from './components/CopiesDialog'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function BookManagementPage() {
   const queryClient = useQueryClient()
+  const { isAdmin } = useAuth()
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -41,11 +43,6 @@ export default function BookManagementPage() {
     setDialogOpen(true)
   }
 
-  const openCreate = () => {
-    setEditingBook(null)
-    setDialogOpen(true)
-  }
-
   const openCopies = (bookId: number) => {
     setCopyBookId(bookId)
     setCopyDialogOpen(true)
@@ -68,6 +65,7 @@ export default function BookManagementPage() {
 
       <div className="flex gap-2">
         <Input
+          data-testid="book-management-search"
           placeholder="Tìm kiếm sách..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(0) }}
@@ -113,14 +111,17 @@ export default function BookManagementPage() {
                       Bản sao
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => openEdit(book)}>Sửa</Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      onClick={() => { if (confirm('Xóa sách này?')) deleteMutation.mutate(book.id) }}
-                    >
-                      Xóa
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        data-testid={`delete-book-${book.id}`}
+                        onClick={() => { if (confirm('Xóa sách này?')) deleteMutation.mutate(book.id) }}
+                      >
+                        Xóa
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

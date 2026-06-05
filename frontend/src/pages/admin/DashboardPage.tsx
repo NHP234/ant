@@ -7,18 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-
-const statusLabels: Record<string, string> = {
-  BORROWING: 'Đang mượn',
-  RETURNED: 'Đã trả',
-  OVERDUE: 'Quá hạn',
-}
-
-const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
-  BORROWING: 'default',
-  RETURNED: 'secondary',
-  OVERDUE: 'destructive',
-}
+import { useAuth } from '@/hooks/useAuth'
 
 const holdStatusLabels: Record<string, string> = {
   ACTIVE: 'Đang chờ',
@@ -39,6 +28,9 @@ function formatDate(date: string) {
 }
 
 export default function DashboardPage() {
+  const { isAdmin } = useAuth()
+  const staffBasePath = isAdmin ? '/admin' : '/librarian'
+
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ['dashboard', 'stats'],
     queryFn: () => dashboardApi.getStats(),
@@ -70,7 +62,9 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">Tổng quan hệ thống thư viện</p>
+        <p className="text-muted-foreground">
+          {isAdmin ? 'Tổng quan hệ thống thư viện' : 'Tổng quan vận hành thư viện'}
+        </p>
       </div>
 
       {statsLoading ? (
@@ -103,7 +97,7 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Holds đang chờ</CardTitle>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/admin/holds">Xem tất cả</Link>
+              <Link to={`${staffBasePath}/holds`}>Xem tất cả</Link>
             </Button>
           </CardHeader>
           <CardContent>
