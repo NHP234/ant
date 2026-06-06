@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import DirectBorrowForm from './components/DirectBorrowForm'
+import PageHeader from '@/components/shared/PageHeader'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
   BORROWING: 'default',
@@ -135,10 +136,10 @@ export default function BorrowManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Quản lý mượn trả</h2>
-        <p className="text-muted-foreground">Theo dõi phiếu mượn và tình trạng trả sách</p>
-      </div>
+      <PageHeader
+        title="Quản lý mượn trả"
+        description="Theo dõi phiếu mượn và tình trạng trả sách"
+      />
 
       <DirectBorrowForm />
 
@@ -171,13 +172,13 @@ export default function BorrowManagementPage() {
       {slips && slips.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-            ← Trước
+            Trước
           </Button>
           <span className="text-sm text-muted-foreground">
             Trang {page + 1} / {slips.totalPages}
           </span>
           <Button variant="outline" size="sm" disabled={page >= slips.totalPages - 1} onClick={() => setPage(p => p + 1)}>
-            Sau →
+            Sau
           </Button>
         </div>
       )}

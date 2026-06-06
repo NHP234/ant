@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Pagination from '@/components/shared/Pagination'
+import PageHeader from '@/components/shared/PageHeader'
 
 const actionColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   CREATE: 'default',
@@ -30,10 +31,10 @@ export default function AuditLogViewerPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Nhật ký hoạt động</h2>
-        <p className="text-muted-foreground">Theo dõi tất cả thao tác trong hệ thống</p>
-      </div>
+      <PageHeader
+        title="Nhật ký hoạt động"
+        description="Theo dõi tất cả thao tác trong hệ thống"
+      />
 
       <div className="rounded-md border">
         <Table>

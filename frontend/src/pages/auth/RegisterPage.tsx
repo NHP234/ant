@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Library } from 'lucide-react'
 
 export default function RegisterPage() {
   const { register } = useAuth()
@@ -35,51 +36,61 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Đăng ký tài khoản</CardTitle>
-          <CardDescription>Tạo tài khoản sinh viên mới</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
-                {error}
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
+      <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex flex-col items-center mb-8">
+          <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
+            <Library className="h-7 w-7 text-primary-foreground" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Awaken Ant</h1>
+          <p className="text-sm text-muted-foreground mt-1">Tạo tài khoản mới</p>
+        </div>
+
+        <Card className="border-border/50 shadow-xl rounded-2xl">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="text-xl">Đăng ký</CardTitle>
+            <CardDescription>Điền thông tin để tạo tài khoản sinh viên</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-lg">
+                  {error}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Họ và tên</Label>
+                <Input id="fullName" name="fullName" required autoFocus className="rounded-lg" />
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Họ và tên</Label>
-              <Input id="fullName" name="fullName" required autoFocus />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="username">Tên đăng nhập</Label>
-              <Input id="username" name="username" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="studentId">Mã sinh viên</Label>
-              <Input id="studentId" name="studentId" placeholder="Không bắt buộc" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Mật khẩu</Label>
-              <Input id="password" name="password" type="password" required minLength={6} />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Đang xử lý...' : 'Đăng ký'}
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Đã có tài khoản?{' '}
-              <Link to="/login" className="text-primary underline">
-                Đăng nhập
-              </Link>
-            </p>
-          </form>
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                <Label htmlFor="username">Tên đăng nhập</Label>
+                <Input id="username" name="username" required className="rounded-lg" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" name="email" type="email" required className="rounded-lg" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="studentId">Mã sinh viên</Label>
+                <Input id="studentId" name="studentId" placeholder="Không bắt buộc" className="rounded-lg" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Mật khẩu</Label>
+                <Input id="password" name="password" type="password" required minLength={6} className="rounded-lg" />
+              </div>
+              <Button type="submit" className="w-full rounded-lg h-11" disabled={loading}>
+                {loading ? 'Đang xử lý...' : 'Đăng ký'}
+              </Button>
+              <p className="text-center text-sm text-muted-foreground pt-2">
+                Đã có tài khoản?{' '}
+                <Link to="/login" className="text-primary font-medium hover:underline">
+                  Đăng nhập
+                </Link>
+              </p>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

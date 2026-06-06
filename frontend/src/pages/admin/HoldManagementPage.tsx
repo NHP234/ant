@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import PageHeader from '@/components/shared/PageHeader'
 
 const statusLabels: Record<string, string> = {
   ACTIVE: 'Đang chờ',
@@ -101,10 +102,10 @@ export default function HoldManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Quản lý đặt trước</h2>
-        <p className="text-muted-foreground">Xác nhận hoặc hủy yêu cầu đặt mượn sách</p>
-      </div>
+      <PageHeader
+        title="Quản lý đặt trước"
+        description="Xác nhận hoặc hủy yêu cầu đặt mượn sách"
+      />
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v)}>
         <TabsList>
@@ -146,13 +147,13 @@ export default function HoldManagementPage() {
       {holds && holds.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-            ← Trước
+            Trước
           </Button>
           <span className="text-sm text-muted-foreground">
             Trang {page + 1} / {holds.totalPages}
           </span>
           <Button variant="outline" size="sm" disabled={page >= holds.totalPages - 1} onClick={() => setPage(p => p + 1)}>
-            Sau →
+            Sau
           </Button>
         </div>
       )}

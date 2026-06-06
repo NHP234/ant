@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
+import PageHeader from '@/components/shared/PageHeader'
 
 export default function UserManagementPage() {
   const queryClient = useQueryClient()
@@ -60,55 +61,55 @@ export default function UserManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Quản lý người dùng</h2>
-          <p className="text-muted-foreground">{users?.totalElements ?? 0} người dùng</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>+ Tạo người dùng</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Tạo người dùng mới</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreateSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Họ và tên *</Label>
-                <Input id="fullName" name="fullName" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="username">Tên đăng nhập *</Label>
-                <Input id="username" name="username" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input id="email" name="email" type="email" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Mật khẩu *</Label>
-                <Input id="password" name="password" type="password" required minLength={6} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="studentId">Mã sinh viên</Label>
-                <Input id="studentId" name="studentId" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Quyền *</Label>
-                <select name="role" required className="w-full rounded-md border bg-transparent px-3 py-2 text-sm">
-                  <option value="STUDENT">Sinh viên</option>
-                  <option value="LIBRARIAN">Thủ thư</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
-              </div>
-              <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                Tạo người dùng
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <PageHeader
+        title="Quản lý người dùng"
+        description={`${users?.totalElements ?? 0} người dùng`}
+        actions={
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>Thêm người dùng</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Tạo người dùng mới</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Họ và tên *</Label>
+                  <Input id="fullName" name="fullName" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Tên đăng nhập *</Label>
+                  <Input id="username" name="username" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input id="email" name="email" type="email" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Mật khẩu *</Label>
+                  <Input id="password" name="password" type="password" required minLength={6} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="studentId">Mã sinh viên</Label>
+                  <Input id="studentId" name="studentId" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Quyền *</Label>
+                  <select name="role" required className="w-full rounded-md border bg-transparent px-3 py-2 text-sm">
+                    <option value="STUDENT">Sinh viên</option>
+                    <option value="LIBRARIAN">Thủ thư</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </div>
+                <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+                  Tạo người dùng
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       <div className="rounded-md border">
         <Table>
@@ -160,13 +161,13 @@ export default function UserManagementPage() {
       {users && users.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-            ← Trước
+            Trước
           </Button>
           <span className="text-sm text-muted-foreground">
             Trang {page + 1} / {users.totalPages}
           </span>
           <Button variant="outline" size="sm" disabled={page >= users.totalPages - 1} onClick={() => setPage(p => p + 1)}>
-            Sau →
+            Sau
           </Button>
         </div>
       )}

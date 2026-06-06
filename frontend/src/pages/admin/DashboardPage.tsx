@@ -8,6 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
+import PageHeader from '@/components/shared/PageHeader'
+import { BookOpen, Users, BookMarked, AlertTriangle, Tags } from 'lucide-react'
+import type { ComponentType } from 'react'
 
 const holdStatusLabels: Record<string, string> = {
   ACTIVE: 'Đang chờ',
@@ -25,6 +28,12 @@ const holdStatusColors: Record<string, 'default' | 'secondary' | 'destructive' |
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('vi-VN')
+}
+
+interface StatCardDef {
+  title: string
+  value: string | number
+  icon: ComponentType<{ className?: string }>
 }
 
 export default function DashboardPage() {
@@ -50,22 +59,20 @@ export default function DashboardPage() {
   const pendingHolds = holdsData?.data?.data?.content?.filter(h => h.status === 'ACTIVE') ?? []
   const recentSlips = slipsData?.data?.data?.content ?? []
 
-  const cards = [
-    { title: 'Tổng số sách', value: stats?.totalBooks ?? '-', icon: '📚' },
-    { title: 'Người dùng', value: stats?.totalUsers ?? '-', icon: '👥' },
-    { title: 'Đang mượn', value: stats?.activeBorrows ?? '-', icon: '📖' },
-    { title: 'Quá hạn', value: stats?.overdueBooks ?? '-', icon: '⚠️' },
-    { title: 'Danh mục', value: stats?.totalCategories ?? '-', icon: '🏷️' },
+  const cards: StatCardDef[] = [
+    { title: 'Tổng số sách', value: stats?.totalBooks ?? '-', icon: BookOpen },
+    { title: 'Người dùng', value: stats?.totalUsers ?? '-', icon: Users },
+    { title: 'Đang mượn', value: stats?.activeBorrows ?? '-', icon: BookMarked },
+    { title: 'Quá hạn', value: stats?.overdueBooks ?? '-', icon: AlertTriangle },
+    { title: 'Danh mục', value: stats?.totalCategories ?? '-', icon: Tags },
   ]
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">
-          {isAdmin ? 'Tổng quan hệ thống thư viện' : 'Tổng quan vận hành thư viện'}
-        </p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description={isAdmin ? 'Tổng quan hệ thống thư viện' : 'Tổng quan vận hành thư viện'}
+      />
 
       {statsLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
@@ -78,17 +85,20 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {cards.map((card) => (
-            <Card key={card.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                <span className="text-xl">{card.icon}</span>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{card.value}</div>
-              </CardContent>
-            </Card>
-          ))}
+          {cards.map((card) => {
+            const Icon = card.icon
+            return (
+              <Card key={card.title}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                  <Icon className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{card.value}</div>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       )}
 

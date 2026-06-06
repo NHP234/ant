@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
+import PageHeader from '@/components/shared/PageHeader'
 
 export default function CategoryManagementPage() {
   const queryClient = useQueryClient()
@@ -78,41 +79,41 @@ export default function CategoryManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Quản lý danh mục</h2>
-          <p className="text-muted-foreground">{categories.length} danh mục sách</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreate}>+ Thêm danh mục</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingCategory ? 'Sửa danh mục' : 'Thêm danh mục mới'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Tên danh mục *</Label>
-                <Input id="name" name="name" required defaultValue={editingCategory?.name ?? ''} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Mô tả</Label>
-                <textarea
-                  id="description"
-                  name="description"
-                  rows={3}
-                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                  defaultValue={editingCategory?.description ?? ''}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
-                {editingCategory ? 'Cập nhật' : 'Thêm danh mục'}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <PageHeader
+        title="Quản lý danh mục"
+        description={`${categories.length} danh mục sách`}
+        actions={
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreate}>Thêm danh mục</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingCategory ? 'Sửa danh mục' : 'Thêm danh mục mới'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Tên danh mục *</Label>
+                  <Input id="name" name="name" required defaultValue={editingCategory?.name ?? ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Mô tả</Label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    rows={3}
+                    className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                    defaultValue={editingCategory?.description ?? ''}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
+                  {editingCategory ? 'Cập nhật' : 'Thêm danh mục'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       <div className="rounded-md border">
         <Table>

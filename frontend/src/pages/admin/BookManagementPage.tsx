@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import BookFormDialog from './components/BookFormDialog'
 import CopiesDialog from './components/CopiesDialog'
 import { useAuth } from '@/hooks/useAuth'
+import PageHeader from '@/components/shared/PageHeader'
 
 export default function BookManagementPage() {
   const queryClient = useQueryClient()
@@ -50,18 +51,18 @@ export default function BookManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Quản lý sách</h2>
-          <p className="text-muted-foreground">{books?.totalElements ?? 0} cuốn sách trong hệ thống</p>
-        </div>
-        <BookFormDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          editingBook={editingBook}
-          onEditingChange={setEditingBook}
-        />
-      </div>
+      <PageHeader
+        title="Quản lý sách"
+        description={`${books?.totalElements ?? 0} cuốn sách trong hệ thống`}
+        actions={
+          <BookFormDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            editingBook={editingBook}
+            onEditingChange={setEditingBook}
+          />
+        }
+      />
 
       <div className="flex gap-2">
         <Input
@@ -133,13 +134,13 @@ export default function BookManagementPage() {
       {books && books.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-            ← Trước
+            Trước
           </Button>
           <span className="text-sm text-muted-foreground">
             Trang {page + 1} / {books.totalPages}
           </span>
           <Button variant="outline" size="sm" disabled={page >= books.totalPages - 1} onClick={() => setPage(p => p + 1)}>
-            Sau →
+            Sau
           </Button>
         </div>
       )}

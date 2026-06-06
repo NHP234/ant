@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { userApi } from '@/api/users'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import PageHeader from '@/components/shared/PageHeader'
 
 export default function ProfilePage() {
   const { data, isLoading } = useQuery({
@@ -35,10 +36,10 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Thông tin cá nhân</h2>
-        <p className="text-muted-foreground">Xem thông tin tài khoản của bạn</p>
-      </div>
+      <PageHeader
+        title="Thông tin cá nhân"
+        description="Xem thông tin tài khoản của bạn"
+      />
 
       <Card>
         <CardHeader>
