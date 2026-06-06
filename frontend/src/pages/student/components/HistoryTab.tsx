@@ -19,7 +19,6 @@ function HistoryCard({ record }: { record: BorrowRecord }) {
   return (
     <Card className="overflow-hidden border-border/50 hover:border-border/80 transition-all bg-card/50">
       <div className="flex gap-4 p-4">
-        {/* Cover Thumbnail */}
         <div className="w-16 sm:w-20 aspect-[2/3] bg-muted shrink-0 relative rounded-sm overflow-hidden opacity-80 grayscale-[30%]">
           <BookCover
             src={record.bookCoverImageUrl}
@@ -29,16 +28,15 @@ function HistoryCard({ record }: { record: BorrowRecord }) {
           />
         </div>
         
-        {/* Content */}
         <div className="flex-1 flex flex-col justify-center">
           <div className="flex justify-between items-start gap-2">
             <div>
               <Link to={`/books/${record.bookId}`} className="hover:underline decoration-primary">
-                <h3 className="font-heading font-medium text-base line-clamp-1">{record.bookTitle}</h3>
+                <h3 className="font-medium text-base line-clamp-1">{record.bookTitle}</h3>
               </Link>
               <p className="text-muted-foreground text-xs mt-0.5">{record.bookAuthor}</p>
             </div>
-            <Badge variant="secondary" className="bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-300 font-normal shrink-0">
+            <Badge variant="secondary" className="font-normal shrink-0">
               Đã trả sách
             </Badge>
           </div>
@@ -50,7 +48,7 @@ function HistoryCard({ record }: { record: BorrowRecord }) {
             </div>
             <div className="flex flex-col">
               <span className="uppercase text-[10px] tracking-wider mb-0.5">Ngày trả</span>
-              <span className="flex items-center gap-1 font-medium text-stone-600 dark:text-stone-300">
+              <span className="flex items-center gap-1 font-medium text-foreground/70">
                 <CalendarCheck className="w-3.5 h-3.5" />
                 {record.returnDate ? formatDate(record.returnDate) : '-'}
               </span>
@@ -80,8 +78,8 @@ export default function HistoryTab() {
   )
   if (!returned.length) return (
     <div className="text-center py-16 text-muted-foreground">
-      <div className="bg-stone-100 dark:bg-stone-900/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-        <CalendarCheck className="w-10 h-10 text-stone-300" />
+      <div className="bg-muted w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+        <CalendarCheck className="w-10 h-10 text-muted-foreground/40" />
       </div>
       <p>Bạn chưa có lịch sử trả sách nào.</p>
     </div>

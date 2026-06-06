@@ -8,15 +8,14 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import BookCover from '@/components/shared/BookCover'
+import PageHeader from '@/components/shared/PageHeader'
 import { Search } from 'lucide-react'
-
-// --- CÁC COMPONENT PHỤ TRỢ (SUB-COMPONENTS) ---
 
 function BookCard({ book }: { book: Book }) {
   return (
     <Link to={`/books/${book.id}`} className="block h-full group">
       <Card className="h-full border-0 shadow-none bg-transparent flex flex-col group">
-        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-md bg-stone-100 shadow-sm transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1">
+        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-md bg-muted shadow-sm transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1">
           <BookCover
             src={book.coverImageUrl}
             title={book.title}
@@ -25,12 +24,12 @@ function BookCard({ book }: { book: Book }) {
           />
           {book.availableCopies === 0 && (
             <div className="absolute top-2 right-2">
-              <Badge variant="destructive" className="shadow-sm bg-red-600/90 hover:bg-red-600">Hết</Badge>
+              <Badge variant="destructive" className="shadow-sm">Hết</Badge>
             </div>
           )}
         </div>
         <div className="pt-3 flex flex-col flex-grow">
-          <h3 className="font-heading font-semibold text-base leading-tight line-clamp-2 text-foreground mb-1 group-hover:text-primary transition-colors">{book.title}</h3>
+          <h3 className="font-semibold text-base leading-tight line-clamp-2 text-foreground mb-1 group-hover:text-primary transition-colors">{book.title}</h3>
           <p className="text-sm text-muted-foreground truncate">{book.author}</p>
         </div>
       </Card>
@@ -58,12 +57,12 @@ function BookCarousel({ title, books, isLoading }: { title: string, books?: Book
   return (
     <section className="py-4">
       <div className="flex items-center justify-between mb-4 px-1">
-        <h2 className="text-2xl font-heading font-bold">{title}</h2>
+        <h2 className="text-xl font-bold">{title}</h2>
       </div>
       {isLoading ? (
         <BookCarouselSkeleton />
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar">
           {books?.map((book) => (
             <div key={book.id} className="flex-none w-[150px] sm:w-[180px] md:w-[200px] snap-start">
               <BookCard book={book} />
@@ -81,10 +80,8 @@ function CategoryCarouselSection({ category }: { category: Category }) {
     queryFn: () => bookApi.getByCategory(category.id, 0, 10),
     staleTime: 5 * 60 * 1000,
   })
-  return <BookCarousel title={`Sách ${category.name}`} books={data?.data?.data?.content} isLoading={isLoading} />
+  return <BookCarousel title={category.name} books={data?.data?.data?.content} isLoading={isLoading} />
 }
-
-// --- TRANG CHÍNH (MAIN PAGE) ---
 
 export default function BookCatalogPage() {
   const [page, setPage] = useState(0)
@@ -92,21 +89,18 @@ export default function BookCatalogPage() {
   const [searchInput, setSearchInput] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // Fetch New Arrivals for Homepage
   const { data: latestData, isLoading: latestLoading } = useQuery({
     queryKey: ['books', 'latest'],
     queryFn: () => bookApi.getAll(0, 10),
     staleTime: 5 * 60 * 1000,
   })
 
-  // Fetch Categories for Homepage Sections
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoryApi.getAll(),
-    staleTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 60 * 60 * 1000,
   })
 
-  // Fetch Search Results (only if search is active)
   const { data: searchData, isLoading: searchLoading } = useQuery({
     queryKey: ['books', 'search', page, search],
     queryFn: () => bookApi.search(search, page, 12),
@@ -125,31 +119,28 @@ export default function BookCatalogPage() {
   const latestBooks = latestData?.data?.data?.content || []
   const featuredBook = latestBooks.length > 0 ? latestBooks[0] : null
   const carouselBooks = latestBooks.slice(1)
-  const categories = categoriesData?.data?.data?.slice(0, 4) || [] // Show top 4 categories
+  const categories = categoriesData?.data?.data?.slice(0, 4) || []
   const searchResults = searchData?.data?.data
+
+  const searchBar = (
+    <div className="relative w-full sm:w-96">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <Input
+        placeholder="Tìm kiếm sách, tác giả..."
+        value={searchInput}
+        onChange={(e) => handleSearchInput(e.target.value)}
+        className="pl-9 bg-card border-border/60 shadow-sm rounded-full"
+      />
+    </div>
+  )
 
   return (
     <div className="space-y-8 pb-10">
-      {/* Header & Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-4xl font-heading font-bold tracking-tight text-primary-900 dark:text-primary-100">Khám Phá</h2>
-        </div>
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Tìm kiếm sách, tác giả..."
-            value={searchInput}
-            onChange={(e) => handleSearchInput(e.target.value)}
-            className="pl-9 bg-card border-border/60 shadow-sm rounded-full"
-          />
-        </div>
-      </div>
+      <PageHeader title="Khám phá" actions={searchBar} />
 
       {search ? (
-        /* --- TÌM KIẾM SÁCH (GRID VIEW) --- */
         <div className="space-y-6 animate-in fade-in duration-500">
-          <h3 className="text-xl font-heading font-semibold">Kết quả tìm kiếm cho "{search}"</h3>
+          <h3 className="text-lg font-semibold">Kết quả tìm kiếm cho "{search}"</h3>
           {searchLoading ? (
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                {Array.from({ length: 12 }).map((_, i) => (
@@ -174,55 +165,54 @@ export default function BookCatalogPage() {
           {searchResults && searchResults.totalPages > 1 && (
             <div className="flex items-center justify-center gap-4 pt-8">
               <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-                ← Trước
+                Trước
               </Button>
               <span className="text-sm font-medium text-muted-foreground">
                 Trang {page + 1} / {searchResults.totalPages}
               </span>
               <Button variant="outline" size="sm" disabled={page >= searchResults.totalPages - 1} onClick={() => setPage(p => p + 1)}>
-                Sau →
+                Sau
               </Button>
             </div>
           )}
         </div>
       ) : (
-        /* --- HOMEPAGE CATALOG (APPLE BOOKS STYLE) --- */
-        <div className="space-y-10 animate-in fade-in duration-700">
+        <div className="space-y-10 animate-in fade-in duration-500">
           
           {/* Hero Banner */}
           {latestLoading ? (
              <div className="w-full h-[400px] bg-muted animate-pulse rounded-2xl" />
           ) : featuredBook && (
-            <section className="relative overflow-hidden rounded-3xl bg-stone-900 text-stone-50 shadow-2xl">
+            <section className="relative overflow-hidden rounded-2xl bg-foreground text-background shadow-2xl">
               {featuredBook.coverImageUrl && (
                  <div 
-                   className="absolute inset-0 opacity-20 blur-2xl scale-110 bg-cover bg-center" 
-                   style={{ backgroundImage: `url(${featuredBook.coverImageUrl})` }} 
-                 />
+                    className="absolute inset-0 opacity-20 blur-2xl scale-110 bg-cover bg-center" 
+                    style={{ backgroundImage: `url(${featuredBook.coverImageUrl})` }} 
+                  />
               )}
               <div className="relative z-10 grid md:grid-cols-2 gap-8 items-center p-8 md:p-12">
-                <div className="space-y-6 order-2 md:order-1">
-                  <Badge variant="outline" className="border-stone-500 text-stone-300 uppercase tracking-widest font-semibold bg-stone-900/50 backdrop-blur-sm">
-                    Sách Nổi Bật
+                <div className="space-y-5 order-2 md:order-1">
+                  <Badge variant="outline" className="border-muted-foreground/40 text-muted-foreground uppercase tracking-widest font-semibold text-[11px]">
+                    Nổi bật
                   </Badge>
                   <div>
-                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold leading-tight mb-2">{featuredBook.title}</h2>
-                    <p className="text-xl text-stone-400 font-serif italic">{featuredBook.author}</p>
+                    <h2 className="text-3xl md:text-4xl font-bold leading-tight mb-2">{featuredBook.title}</h2>
+                    <p className="text-lg text-muted-foreground">{featuredBook.author}</p>
                   </div>
-                  <p className="text-stone-300 line-clamp-3 md:line-clamp-4 leading-relaxed max-w-lg">
-                    {featuredBook.description || "Một tác phẩm đáng chú ý đang chờ bạn khám phá trong thư viện. Đặt mượn ngay hôm nay để không bỏ lỡ."}
+                  <p className="text-muted-foreground line-clamp-3 leading-relaxed max-w-lg">
+                    {featuredBook.description || "Một tác phẩm đáng chú ý đang chờ bạn khám phá trong thư viện."}
                   </p>
-                  <Button size="lg" asChild className="rounded-full bg-stone-100 text-stone-900 hover:bg-white hover:scale-105 transition-transform shadow-xl">
-                    <Link to={`/books/${featuredBook.id}`}>Khám phá ngay</Link>
+                  <Button size="lg" asChild className="rounded-full shadow-lg">
+                    <Link to={`/books/${featuredBook.id}`}>Xem chi tiết</Link>
                   </Button>
                 </div>
                 <div className="order-1 md:order-2 flex justify-center md:justify-end">
-                  <div className="w-48 md:w-64 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl transform md:rotate-2 hover:rotate-0 transition-transform duration-500 border border-stone-700/50">
+                  <div className="w-48 md:w-56 aspect-[2/3] rounded-lg overflow-hidden shadow-2xl border border-border/20">
                     <BookCover
                       src={featuredBook.coverImageUrl}
                       title={featuredBook.title}
                       loading="eager"
-                      fallbackClassName="bg-stone-800 text-lg"
+                      fallbackClassName="text-lg"
                     />
                   </div>
                 </div>
@@ -230,14 +220,11 @@ export default function BookCatalogPage() {
             </section>
           )}
 
-          {/* New Arrivals Carousel */}
-          <BookCarousel title="Mới Bổ Sung" books={carouselBooks} isLoading={latestLoading} />
+          <BookCarousel title="Mới bổ sung" books={carouselBooks} isLoading={latestLoading} />
 
-          {/* Dynamic Category Carousels */}
           {categories.map(category => (
             <CategoryCarouselSection key={category.id} category={category} />
           ))}
-
         </div>
       )}
     </div>

@@ -42,19 +42,17 @@ function HoldCard({ hold, onCancel, isCanceling }: { hold: Hold, onCancel: (id: 
   const hoursRemaining = isActive ? getHoursRemaining(hold.expiresAt) : 0
   const isWarning = isActive && hoursRemaining <= 6
 
-  // Giả sử hold kéo dài 24h
   const totalHours = 24
   const hoursPassed = isActive ? (totalHours - hoursRemaining) : totalHours
   const progressPercent = isActive ? Math.min(100, Math.max(0, (hoursPassed / totalHours) * 100)) : 100
 
-  let progressColor = "bg-emerald-500"
-  if (isWarning) progressColor = "bg-amber-500"
-  if (isExpired) progressColor = "bg-red-500"
+  let progressColor = "bg-success"
+  if (isWarning) progressColor = "bg-warning"
+  if (isExpired) progressColor = "bg-destructive"
 
   return (
     <Card className="overflow-hidden border-border/50 hover:shadow-md transition-all">
       <div className="flex flex-col sm:flex-row">
-        {/* Cover */}
         <div className="sm:w-32 md:w-40 aspect-[2/3] sm:aspect-auto bg-muted shrink-0 relative opacity-90">
           <BookCover
             src={hold.bookCoverImageUrl}
@@ -64,17 +62,16 @@ function HoldCard({ hold, onCancel, isCanceling }: { hold: Hold, onCancel: (id: 
           />
         </div>
         
-        {/* Content */}
         <div className="flex-1 flex flex-col p-5">
           <div className="flex justify-between items-start gap-4">
             <div>
               <Link to={`/books/${hold.bookId}`} className="hover:underline decoration-primary underline-offset-2">
-                <h3 className="font-heading font-semibold text-lg line-clamp-1">{hold.bookTitle}</h3>
+                <h3 className="font-semibold text-lg line-clamp-1">{hold.bookTitle}</h3>
               </Link>
               <p className="text-muted-foreground text-sm mt-1">{hold.bookAuthor}</p>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <Badge variant={holdStatusColors[hold.status]} className={isActive ? 'bg-indigo-600' : ''}>
+              <Badge variant={holdStatusColors[hold.status]}>
                 {holdStatusLabels[hold.status]}
               </Badge>
               {isActive && (
@@ -88,31 +85,30 @@ function HoldCard({ hold, onCancel, isCanceling }: { hold: Hold, onCancel: (id: 
           <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
             <div>
               <div className="text-muted-foreground mb-1 text-[11px] uppercase tracking-wider">Thời gian đặt</div>
-              <div className="font-medium flex items-center gap-1.5 text-stone-600 dark:text-stone-300">
-                <Calendar className="w-3.5 h-3.5" />
+              <div className="font-medium flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground/60" />
                 {formatDateTime(hold.reservedAt)}
               </div>
             </div>
             <div>
               <div className="text-muted-foreground mb-1 text-[11px] uppercase tracking-wider">Hết hạn giữ sách</div>
-              <div className={`font-medium flex items-center gap-1.5 ${isWarning ? 'text-amber-600' : isActive ? 'text-stone-600 dark:text-stone-300' : ''}`}>
-                <Clock className="w-3.5 h-3.5" />
+              <div className={`font-medium flex items-center gap-1.5 ${isWarning ? 'text-warning' : ''}`}>
+                <Clock className="w-3.5 h-3.5 text-muted-foreground/60" />
                 {formatDateTime(hold.expiresAt)}
               </div>
             </div>
           </div>
 
-          {/* Progress Bar (Only for Active holds) */}
           {isActive && (
             <div className="mt-auto pt-6">
               <div className="flex justify-between items-end mb-2">
                 <span className="text-xs font-medium text-muted-foreground">Thời gian chờ nhận sách</span>
-                <span className={`text-sm font-bold flex items-center gap-1 ${isWarning ? 'text-amber-600' : 'text-emerald-600'}`}>
+                <span className={`text-sm font-bold flex items-center gap-1 ${isWarning ? 'text-warning' : 'text-success'}`}>
                   {isWarning && <AlertCircle className="w-4 h-4" />}
                   Còn {hoursRemaining} giờ
                 </span>
               </div>
-              <div className="h-1.5 w-full bg-stone-200 dark:bg-stone-800 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                 <div 
                   className={`h-full ${progressColor} transition-all duration-1000`} 
                   style={{ width: `${progressPercent}%` }}
@@ -121,7 +117,6 @@ function HoldCard({ hold, onCancel, isCanceling }: { hold: Hold, onCancel: (id: 
             </div>
           )}
 
-          {/* Messages for other statuses */}
           {!isActive && (
             <div className="mt-auto pt-6 text-sm text-muted-foreground italic">
               {hold.status === 'FULFILLED' && `Đã nhận sách vào lúc ${formatDateTime(hold.fulfilledAt!)}.`}
@@ -162,8 +157,8 @@ export default function HoldsTab() {
   )
   if (!holds?.content?.length) return (
     <div className="text-center py-16 text-muted-foreground">
-      <div className="bg-stone-100 dark:bg-stone-900/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Clock className="w-10 h-10 text-stone-300" />
+      <div className="bg-muted w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+        <Clock className="w-10 h-10 text-muted-foreground/40" />
       </div>
       <p>Bạn chưa đặt mượn cuốn sách nào.</p>
     </div>
@@ -184,9 +179,9 @@ export default function HoldsTab() {
 
       {holds.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
-          <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>← Trước</Button>
+          <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Trước</Button>
           <span className="text-sm text-muted-foreground">Trang {page + 1} / {holds.totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= holds.totalPages - 1} onClick={() => setPage(p => p + 1)}>Sau →</Button>
+          <Button variant="outline" size="sm" disabled={page >= holds.totalPages - 1} onClick={() => setPage(p => p + 1)}>Sau</Button>
         </div>
       )}
     </div>

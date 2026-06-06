@@ -4,7 +4,9 @@ import { notificationApi } from '@/api/notifications'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import PageHeader from '@/components/shared/PageHeader'
 import { toast } from 'sonner'
+import { BellOff } from 'lucide-react'
 
 export default function NotificationsPage() {
   const queryClient = useQueryClient()
@@ -35,15 +37,15 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Thông báo</h2>
-          <p className="text-muted-foreground">Thông báo từ hệ thống thư viện</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => markAllMutation.mutate()}>
-          Đánh dấu tất cả đã đọc
-        </Button>
-      </div>
+      <PageHeader
+        title="Thông báo"
+        description="Thông báo từ hệ thống thư viện"
+        actions={
+          <Button variant="outline" size="sm" onClick={() => markAllMutation.mutate()}>
+            Đánh dấu tất cả đã đọc
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <div className="space-y-3">
@@ -57,7 +59,12 @@ export default function NotificationsPage() {
           ))}
         </div>
       ) : !notifications?.content?.length ? (
-        <div className="text-center py-12 text-muted-foreground">Không có thông báo</div>
+        <div className="text-center py-16 text-muted-foreground">
+          <div className="bg-muted w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <BellOff className="w-10 h-10 text-muted-foreground/40" />
+          </div>
+          <p>Không có thông báo nào.</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {notifications.content.map((n) => (
@@ -88,13 +95,13 @@ export default function NotificationsPage() {
       {notifications && notifications.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-            ← Trước
+            Trước
           </Button>
           <span className="text-sm text-muted-foreground">
             Trang {page + 1} / {notifications.totalPages}
           </span>
           <Button variant="outline" size="sm" disabled={page >= notifications.totalPages - 1} onClick={() => setPage(p => p + 1)}>
-            Sau →
+            Sau
           </Button>
         </div>
       )}

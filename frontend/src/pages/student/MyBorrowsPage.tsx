@@ -1,4 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import PageHeader from '@/components/shared/PageHeader'
 import HoldsTab from './components/HoldsTab'
 import BorrowingTab from './components/BorrowingTab'
 import HistoryTab from './components/HistoryTab'
@@ -6,10 +7,10 @@ import HistoryTab from './components/HistoryTab'
 export default function MyBorrowsPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Sách đã mượn</h2>
-        <p className="text-muted-foreground">Quản lý sách đã mượn, đặt trước và lịch sử</p>
-      </div>
+      <PageHeader
+        title="Tủ sách của tôi"
+        description="Quản lý sách đặt trước, đang mượn và lịch sử"
+      />
 
       <Tabs defaultValue="holds">
         <TabsList>
