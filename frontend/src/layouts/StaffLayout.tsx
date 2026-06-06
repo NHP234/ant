@@ -71,7 +71,7 @@ function SidebarContent({ role }: { role: string | undefined }) {
   return (
     <div className="flex h-full flex-col bg-card/70 backdrop-blur-xl">
       <div className="p-6 pb-4">
-        <div className="mb-1 flex items-center gap-2 font-heading text-primary">
+        <div className="mb-1 flex items-center gap-2 text-primary">
           <Library className="h-6 w-6" />
           <h1 className="text-xl font-bold tracking-tight">Awaken Ant</h1>
         </div>
@@ -151,8 +151,6 @@ export default function StaffLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <div className="pointer-events-none absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay" />
-
       <aside className="relative z-20 hidden border-r border-border/50 bg-card/40 md:flex md:w-64 md:flex-col">
         <SidebarContent role={user?.role} />
       </aside>
@@ -215,7 +213,7 @@ export default function StaffLayout() {
 
         <main className="relative flex-1 overflow-y-auto overflow-x-hidden">
           <div className="h-full w-full p-4 pb-20 md:p-8">
-            <div key={location.pathname} className="animate-in fade-in slide-in-from-bottom-4 h-full duration-500">
+            <div key={location.pathname} className="animate-in fade-in h-full duration-500">
               <Outlet />
             </div>
           </div>

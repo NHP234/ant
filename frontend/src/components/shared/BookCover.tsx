@@ -25,7 +25,7 @@ export default function BookCover({
   const usableSrc = src && failedSrc !== src ? src : null
 
   return (
-    <div className={cn('w-full h-full bg-stone-100 dark:bg-stone-900/50', className)}>
+    <div className={cn('w-full h-full bg-muted', className)}>
       {usableSrc ? (
         <img
           src={usableSrc}
@@ -38,7 +38,7 @@ export default function BookCover({
       ) : (
         <div className={cn('w-full h-full flex flex-col items-center justify-center p-4 text-center', fallbackClassName)}>
           {showIcon && <BookOpen className="w-8 h-8 text-muted-foreground/40 mb-2" />}
-          <span className="font-heading font-medium text-muted-foreground line-clamp-3">{title}</span>
+          <span className="font-medium text-muted-foreground line-clamp-3">{title}</span>
         </div>
       )}
     </div>
