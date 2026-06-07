@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { bookApi, categoryApi } from '@/api/books'
@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import BookCover from '@/components/shared/BookCover'
 import PageHeader from '@/components/shared/PageHeader'
-import { Search } from 'lucide-react'
+import { useCarouselScroll } from '@/hooks/useCarouselScroll'
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
 
 function BookCard({ book }: { book: Book }) {
   return (
@@ -52,17 +53,55 @@ function BookCarouselSkeleton() {
 }
 
 function BookCarousel({ title, books, isLoading }: { title: string, books?: Book[], isLoading?: boolean }) {
+  const { scrollRef, canScrollLeft, canScrollRight, scroll, checkScroll } = useCarouselScroll()
+
+  // Re-check scroll bounds when books data changes
+  useEffect(() => {
+    if (books && books.length > 0) {
+      // Small delay to let DOM render new items
+      const t = setTimeout(checkScroll, 100)
+      return () => clearTimeout(t)
+    }
+  }, [books, checkScroll])
+
   if (!isLoading && (!books || books.length === 0)) return null;
 
   return (
     <section className="py-4">
       <div className="flex items-center justify-between mb-4 px-1">
         <h2 className="text-xl font-bold">{title}</h2>
+        {!isLoading && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full border-border/60 disabled:opacity-0 transition-opacity"
+              onClick={() => scroll('left')}
+              disabled={!canScrollLeft}
+              aria-label="Cuộn sang trái"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full border-border/60 disabled:opacity-0 transition-opacity"
+              onClick={() => scroll('right')}
+              disabled={!canScrollRight}
+              aria-label="Cuộn sang phải"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
       {isLoading ? (
         <BookCarouselSkeleton />
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar">
+        <div
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar"
+        >
           {books?.map((book) => (
             <div key={book.id} className="flex-none w-[150px] sm:w-[180px] md:w-[200px] snap-start">
               <BookCard book={book} />

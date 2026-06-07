@@ -1,0 +1,40 @@
+import { useState, useRef, useCallback, useEffect } from 'react'
+
+/**
+ * Hook for horizontal scroll carousel with arrow navigation.
+ * Provides scroll ref, scroll direction state, and scroll function.
+ */
+export function useCarouselScroll() {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 4)
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4)
+  }, [])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    checkScroll()
+    el.addEventListener('scroll', checkScroll, { passive: true })
+    const ro = new ResizeObserver(checkScroll)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', checkScroll)
+      ro.disconnect()
+    }
+  }, [checkScroll])
+
+  const scroll = useCallback((direction: 'left' | 'right') => {
+    const el = scrollRef.current
+    if (!el) return
+    const amount = el.clientWidth * 0.75
+    el.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' })
+  }, [])
+
+  return { scrollRef, canScrollLeft, canScrollRight, scroll, checkScroll }
+}

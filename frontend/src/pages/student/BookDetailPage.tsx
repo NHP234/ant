@@ -1,4 +1,5 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { AxiosError } from 'axios'
 import { bookApi } from '@/api/books'
@@ -9,8 +10,9 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import BookCover from '@/components/shared/BookCover'
+import { useCarouselScroll } from '@/hooks/useCarouselScroll'
 import { toast } from 'sonner'
-import { ChevronLeft, BookOpen, Hash, Building2, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, BookOpen, Hash, Building2, Calendar } from 'lucide-react'
 
 function BookDetailSkeleton() {
   return (
@@ -53,6 +55,58 @@ function SimilarBookCard({ book }: { book: Book }) {
     </Link>
   )
 }
+
+function SimilarBooksCarousel({ books }: { books: Book[] }) {
+  const { scrollRef, canScrollLeft, canScrollRight, scroll, checkScroll } = useCarouselScroll()
+
+  useEffect(() => {
+    if (books.length > 0) {
+      const t = setTimeout(checkScroll, 100)
+      return () => clearTimeout(t)
+    }
+  }, [books, checkScroll])
+
+  return (
+    <div className="pt-16 mt-16 border-t border-border/40">
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-2xl font-bold">Sách tương tự</h2>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-full border-border/60 disabled:opacity-0 transition-opacity"
+            onClick={() => scroll('left')}
+            disabled={!canScrollLeft}
+            aria-label="Cuộn sang trái"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-full border-border/60 disabled:opacity-0 transition-opacity"
+            onClick={() => scroll('right')}
+            disabled={!canScrollRight}
+            aria-label="Cuộn sang phải"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      <div
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto pb-8 snap-x snap-mandatory hide-scrollbar"
+      >
+        {books.map((sb) => (
+          <div key={sb.id} className="flex-none w-[140px] sm:w-[160px] md:w-[180px] snap-start">
+            <SimilarBookCard book={sb} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 
 export default function BookDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -215,16 +269,7 @@ export default function BookDetailPage() {
 
         {/* Similar Books */}
         {!similarLoading && similarBooks.length > 0 && (
-          <div className="pt-16 mt-16 border-t border-border/40">
-            <h2 className="text-2xl font-bold mb-8">Sách tương tự</h2>
-            <div className="flex gap-4 overflow-x-auto pb-8 snap-x snap-mandatory hide-scrollbar">
-              {similarBooks.map((sb) => (
-                <div key={sb.id} className="flex-none w-[140px] sm:w-[160px] md:w-[180px] snap-start">
-                  <SimilarBookCard book={sb} />
-                </div>
-              ))}
-            </div>
-          </div>
+          <SimilarBooksCarousel books={similarBooks} />
         )}
       </div>
     </div>
