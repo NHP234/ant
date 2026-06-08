@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { bookApi, categoryApi } from '@/api/books'
-import type { Book, Category } from '@/api/books'
+import type { Book } from '@/api/books'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,9 @@ import BookCover from '@/components/shared/BookCover'
 import PageHeader from '@/components/shared/PageHeader'
 import { useCarouselScroll } from '@/hooks/useCarouselScroll'
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+
+const CATEGORY_SCAN_LIMIT = 24
+const CATEGORY_SECTION_LIMIT = 6
 
 function BookCard({ book }: { book: Book }) {
   return (
@@ -113,15 +116,6 @@ function BookCarousel({ title, books, isLoading }: { title: string, books?: Book
   )
 }
 
-function CategoryCarouselSection({ category }: { category: Category }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['books', 'category', category.id],
-    queryFn: () => bookApi.getByCategory(category.id, 0, 10),
-    staleTime: 5 * 60 * 1000,
-  })
-  return <BookCarousel title={category.name} books={data?.data?.data?.content} isLoading={isLoading} />
-}
-
 export default function BookCatalogPage() {
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
@@ -158,8 +152,24 @@ export default function BookCatalogPage() {
   const latestBooks = latestData?.data?.data?.content || []
   const featuredBook = latestBooks.length > 0 ? latestBooks[0] : null
   const carouselBooks = latestBooks.slice(1)
-  const categories = categoriesData?.data?.data?.slice(0, 4) || []
+  const categoryCandidates = categoriesData?.data?.data?.slice(0, CATEGORY_SCAN_LIMIT) || []
+  const categoryBookQueries = useQueries({
+    queries: categoryCandidates.map((category) => ({
+      queryKey: ['books', 'category', category.id],
+      queryFn: () => bookApi.getByCategory(category.id, 0, 10),
+      staleTime: 5 * 60 * 1000,
+      enabled: !search,
+    })),
+  })
   const searchResults = searchData?.data?.data
+  const categorySections = categoryCandidates
+    .map((category, index) => ({
+      category,
+      books: categoryBookQueries[index]?.data?.data?.data?.content,
+      isLoading: categoryBookQueries[index]?.isLoading,
+    }))
+    .filter((section) => section.isLoading || (section.books?.length ?? 0) > 0)
+    .slice(0, CATEGORY_SECTION_LIMIT)
 
   const searchBar = (
     <div className="relative w-full sm:w-96">
@@ -261,8 +271,8 @@ export default function BookCatalogPage() {
 
           <BookCarousel title="Mới bổ sung" books={carouselBooks} isLoading={latestLoading} />
 
-          {categories.map(category => (
-            <CategoryCarouselSection key={category.id} category={category} />
+          {categorySections.map(({ category, books, isLoading }) => (
+            <BookCarousel key={category.id} title={category.name} books={books} isLoading={isLoading} />
           ))}
         </div>
       )}
