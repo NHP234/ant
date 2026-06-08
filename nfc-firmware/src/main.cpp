@@ -14,6 +14,9 @@ const char* api_key = "ant-library-nfc-secret-key-2026"; // Khớp với nfc.api
 
 // --- Cấu hình chân SPI cho RC522 ---
 // SDA/SS Pin
+#define SCK_PIN 18
+#define MISO_PIN 19
+#define MOSI_PIN 23
 #define SS_PIN 5
 // RST Pin
 #define RST_PIN 22
@@ -33,7 +36,7 @@ void setup() {
   Serial.println("\nĐã kết nối Wi-Fi! IP: " + WiFi.localIP().toString());
 
   // 2. Khởi tạo SPI và RC522
-  SPI.begin();
+  SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
   rfid.PCD_Init();
   Serial.println("RC522 sẵn sàng. Vui lòng quẹt thẻ...");
 }
