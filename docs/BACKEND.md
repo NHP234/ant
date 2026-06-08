@@ -232,7 +232,12 @@ dashboardStats       | 5min   | Auto TTL expiry
 book                 | 30min  | @CacheEvict on create/update/delete
 categories           | 24h    | @CacheEvict on create/update/delete
 ```
-> Redis serializer: `GenericJackson2JsonRedisSerializer` + custom `ObjectMapper` (JavaTimeModule, NON_FINAL type info)
+Redis cache serialization:
+- `categories`: typed Jackson serializer for `List<CategoryResponse>`
+- `book`: typed Jackson serializer for `BookResponse`
+- `dashboardStats`: typed Jackson serializer for `DashboardStatsResponse`
+- Key prefix: `library:v2:` to avoid reading stale Redis values written with older serializer formats
+- `CacheErrorHandler` treats Redis read/write/evict failures as non-critical: log, evict corrupted keys when possible, and fall back to source data
 
 ## API Response Format
 

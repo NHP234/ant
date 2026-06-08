@@ -47,6 +47,13 @@ _(Chưa có issue nào)_
 - **Nguyên nhân**: `extract_books.py` sinh field snake_case (`cover_image_url`, `publish_year`) nhưng backend `BookSeedDto` chỉ nhận camelCase (`coverImageUrl`, `publishYear`), khiến `cover_image_url` trong DB bị `null` sau import qua `/api/admin/seed`.
 - **Giải pháp**: Thêm `@JsonAlias` cho `BookSeedDto`, đổi script extract sang camelCase cho seed mới, thêm fallback ảnh bìa ở frontend, và cho `SeedImportService` backfill metadata thiếu khi re-run import với ISBN đã tồn tại.
 
+### [BUG-004] Redis cache format cũ làm `/api/categories` trả 500
+- **Loại**: Bug
+- **Ngày tạo**: 2026-06-08
+- **Resolved**: 2026-06-08
+- **Nguyên nhân**: Redis key legacy `categories::all` được ghi bằng serializer generic/type metadata cũ. Backend mới có thể deserialize lỗi value này cho đến khi key hết TTL 24 giờ.
+- **Giải pháp**: Đổi `CacheConfig` sang typed Jackson serializer cho `List<CategoryResponse>`, `BookResponse`, và `DashboardStatsResponse`; thêm prefix `library:v2:` để không đọc nhầm key format cũ; giữ `CacheErrorHandler` để cache failure không làm request hợp lệ trả 500.
+
 ### [ENH-001] Schema Refactor V9: book_copies + borrow_slips
 - **Loại**: Enhancement
 - **Ngày tạo**: 2026-05-15

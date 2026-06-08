@@ -84,6 +84,11 @@
 - Spring Cache abstraction hỗ trợ tốt
 - Có thể mở rộng dùng cho session store, rate limiting nếu cần
 
+**Update 2026-06-08**:
+- Cache values use typed Jackson serializers per cache instead of one generic polymorphic serializer.
+- Cache keys use prefix `library:v2:` so deployments do not read stale values written with older serializer formats.
+- Cache errors are non-critical: the app logs them and falls back to database/service data.
+
 ---
 
 ## ADR-005: Dùng MapStruct thay vì manual mapping
