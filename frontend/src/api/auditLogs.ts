@@ -3,7 +3,9 @@ import type { PageResponse } from './books'
 
 export interface AuditLog {
   id: number
-  user: { id: number; username: string; fullName: string } | null
+  userId: number | null
+  username: string | null
+  userFullName: string | null
   action: string
   entityType: string
   entityId: number

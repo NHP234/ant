@@ -203,6 +203,11 @@
 - ✅ Frontend: Hiển thị lỗi nghiệp vụ từ backend cho luồng mượn trực tiếp tại quầy: quá giới hạn mượn, đang mượn/hold trùng đầu sách, hết copy AVAILABLE.
 - ✅ Frontend: Sau khi tạo mượn trực tiếp thành công, refresh danh sách phiếu mượn và hiển thị nguồn mượn `COUNTER`; nếu sinh viên có hold ACTIVE cùng đầu sách thì hệ thống auto-fulfill theo backend.
 
+#### Chuẩn hóa kiến trúc backend
+- ✅ Tách truy vấn audit log khỏi controller sang `AuditLogService`, ánh xạ entity sang `AuditLogResponse` bằng MapStruct và đồng bộ kiểu dữ liệu frontend.
+- ✅ Tách truy vấn phiếu mượn khỏi `BorrowSlipController` sang `BorrowSlipService`; controller chỉ xử lý HTTP, phân quyền và chuyển tiếp tham số.
+- ✅ Bổ sung unit tests cho `AuditLogService` và `BorrowSlipService`, bảo đảm controller không truy cập trực tiếp repository hoặc expose JPA entity.
+
 ### Tuần 14: System Testing
 - ⬜ End-to-end testing toàn bộ flow
 - ⬜ Performance testing cơ bản
@@ -263,3 +268,4 @@
 | 2026-06-07 | Sửa carousel theo danh mục ở trang Khám phá: xử lý trường hợp các category đầu không có sách bằng cách scan nhiều category hơn, chỉ render tối đa 6 carousel có dữ liệu; đổi Redis cache sang typed Jackson serializer theo từng DTO và prefix `library:v2:` để tránh đọc nhầm cache format cũ, giữ `CacheErrorHandler` làm fallback an toàn. Verification: targeted ESLint, `npm run build`, `mvn test`, Docker rebuild backend/frontend và Playwright smoke `/browse` đều pass. |
 | 2026-06-08 | NFC firmware: khai báo explicit các chân SPI RC522 (`SCK=18`, `MISO=19`, `MOSI=23`, `SS=5`, `RST=22`) và gọi `SPI.begin(...)` với đầy đủ pin để người dùng đấu dây dễ kiểm tra. Verification: chưa chạy `pio run` vì PlatformIO CLI chưa có trong PATH. |
 | 2026-06-10 | Bổ sung workflow gán NFC tag trên giao diện quản lý bản sao cho ADMIN/LIBRARIAN: nút Gán/Đổi tag, trạng thái kết nối/chờ quét SSE, chỉ nhận tag `UNKNOWN`, xác nhận trước khi gọi `/api/nfc/register-book-copy`, hỗ trợ quét lại/hủy/kết nối lại; sửa dialog responsive để panel quét và bảng thao tác không tràn mép. Thêm Playwright mock EventSource ở viewport hẹp, không ghi dữ liệu sách/tag vào DB. Verification: targeted ESLint, `npm run build`, Playwright NFC spec và Docker smoke SSE pass. |
+| 2026-06-10 | Chuẩn hóa phân lớp backend cho audit log và borrow slip: controller không còn truy cập repository/JPA entity trực tiếp; bổ sung service, `AuditLogResponse`, MapStruct mapper, unit tests và đồng bộ contract audit log ở frontend/API spec. Verification: backend 53 tests pass, frontend production build pass. |

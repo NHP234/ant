@@ -56,7 +56,7 @@ export default function AuditLogViewerPage() {
               logs.content.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell className="text-sm whitespace-nowrap">{formatDate(log.createdAt)}</TableCell>
-                  <TableCell className="font-medium">{log.user?.username ?? 'System'}</TableCell>
+                  <TableCell className="font-medium">{log.username ?? 'System'}</TableCell>
                   <TableCell>
                     <Badge variant={actionColors[log.action] ?? 'outline'}>
                       {log.action}

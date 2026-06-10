@@ -580,6 +580,45 @@ data: {
 
 ---
 
+## Audit Logs
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /audit-logs?page=0&size=20 | ADMIN | Danh sách audit log, sắp xếp mới nhất trước |
+
+### GET /audit-logs?page=0&size=20
+```json
+// Response 200
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 1,
+        "userId": 2,
+        "username": "admin",
+        "userFullName": "Library Administrator",
+        "action": "BORROW",
+        "entityType": "BorrowRecord",
+        "entityId": 15,
+        "details": "Created counter borrow",
+        "ipAddress": "127.0.0.1",
+        "createdAt": "2026-06-10T10:00:00"
+      }
+    ],
+    "page": 0,
+    "size": 20,
+    "totalElements": 1,
+    "totalPages": 1,
+    "last": true
+  }
+}
+```
+
+`userId`, `username` và `userFullName` có thể là `null` đối với tác vụ tự động của hệ thống.
+
+---
+
 ## Error Response Format
 
 ```json
