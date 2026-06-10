@@ -12,6 +12,15 @@ export interface NfcRegisterBookCopyRequest {
   nfcTagUid: string
 }
 
+export interface NfcScanEvent {
+  type: 'USER' | 'BOOK_COPY' | 'UNKNOWN'
+  data: {
+    uid?: string
+    id?: number
+    nfcTagUid?: string | null
+  }
+}
+
 export const nfcApi = {
   registerUser: (data: NfcRegisterUserRequest) =>
     api.post<{ data: User }>('/nfc/register-user', data),
