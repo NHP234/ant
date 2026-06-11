@@ -8,6 +8,7 @@ import com.example.demo.dto.response.HoldResponse;
 import com.example.demo.dto.response.PageResponse;
 import com.example.demo.model.enums.HoldStatus;
 import com.example.demo.service.BookHoldService;
+import com.example.demo.service.BorrowService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
 public class BookHoldController {
 
     private final BookHoldService bookHoldService;
+    private final BorrowService borrowService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<HoldResponse>> createHold(
@@ -75,7 +77,7 @@ public class BookHoldController {
             @PathVariable Long id,
             @RequestBody(required = false) HoldConfirmRequest request,
             Authentication authentication) {
-        HoldResponse hold = bookHoldService.confirmHold(id, request, authentication.getName());
+        HoldResponse hold = borrowService.confirmHold(id, request, authentication.getName());
         return ResponseEntity.ok(ApiResponse.ok(hold, "Hold confirmed"));
     }
 

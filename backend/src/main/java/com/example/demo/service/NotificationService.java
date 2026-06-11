@@ -6,6 +6,7 @@ import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.NotificationMapper;
 import com.example.demo.model.entity.Notification;
 import com.example.demo.model.entity.User;
+import com.example.demo.model.enums.NotificationType;
 import com.example.demo.repository.NotificationRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,20 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final NotificationMapper notificationMapper;
+
+    @Transactional
+    public Notification createNotification(
+            User user,
+            NotificationType type,
+            String title,
+            String message) {
+        return notificationRepository.save(Notification.builder()
+                .user(user)
+                .type(type)
+                .title(title)
+                .message(message)
+                .build());
+    }
 
     public PageResponse<NotificationResponse> getMyNotifications(String username, Pageable pageable) {
         User user = findUserOrThrow(username);
