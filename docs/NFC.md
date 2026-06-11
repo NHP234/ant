@@ -81,6 +81,25 @@ Kiosk là một màn hình (tablet hoặc màn hình phụ) luôn mở ở trang
      - Gửi HTTP POST request đến `http://<SERVER_IP>:8080/api/nfc/scan` với payload JSON: `{"uid": "04:A2:B3:C4"}`.
      - Xử lý debounce: Tránh việc 1 thẻ quẹt gửi request liên tục (delay 2-3s sau mỗi lần đọc thành công).
 
+### Cấu hình firmware cục bộ
+
+Thông tin Wi-Fi, địa chỉ backend và API key không được lưu trong Git. Khi setup firmware lần đầu:
+
+```powershell
+Copy-Item include/secrets.example.h include/secrets.h
+```
+
+Sau đó sửa `include/secrets.h`:
+
+```cpp
+constexpr char WIFI_SSID[] = "YOUR_WIFI_SSID";
+constexpr char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";
+constexpr char API_URL[] = "http://YOUR_COMPUTER_LAN_IP:8080/api/nfc/scan";
+constexpr char API_KEY[] = "YOUR_NFC_API_KEY";
+```
+
+`include/secrets.h` đã nằm trong `.gitignore`; chỉ `include/secrets.example.h` được commit làm template.
+
 ### Phase 2: Backend (Spring Boot)
 1. **Database Schema**: 
    - Đảm bảo bảng `users` có cột `nfc_card_uid` (VARCHAR, UNIQUE, NULLABLE).

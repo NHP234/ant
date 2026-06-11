@@ -3,14 +3,7 @@
 #include <HTTPClient.h>
 #include <SPI.h>
 #include <MFRC522.h>
-
-// --- Cấu hình Wi-Fi ---
-const char* ssid = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
-
-// --- Cấu hình API Backend ---
-const char* api_url = "http://192.168.x.x:8080/api/nfc/scan"; // Đổi thành IP LAN của máy tính chạy backend
-const char* api_key = "ant-library-nfc-secret-key-2026"; // Khớp với nfc.api-key trong Spring Boot
+#include "secrets.h"
 
 // --- Cấu hình chân SPI cho RC522 ---
 // SDA/SS Pin
@@ -28,7 +21,7 @@ void setup() {
   
   // 1. Kết nối Wi-Fi
   Serial.println("\nĐang kết nối Wi-Fi...");
-  WiFi.begin(ssid, password);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -66,9 +59,9 @@ void loop() {
   // Gửi API
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
-    http.begin(api_url);
+    http.begin(API_URL);
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("X-API-KEY", api_key);
+    http.addHeader("X-API-KEY", API_KEY);
 
     String jsonPayload = "{\"uid\":\"" + uid + "\"}";
     Serial.println("Đang gửi data: " + jsonPayload);
