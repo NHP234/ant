@@ -139,6 +139,14 @@ frontend/src/
 4. Hệ thống tự động tạo BorrowSlip + BorrowRecord
 5. Nếu 24h không đến → Hold auto-expire → ban 7 ngày
 
+### Batch Borrow Flow (Counter + Kiosk)
+1. Form tại quầy giữ nguyên sinh viên trong lúc thủ thư tìm và thêm tối đa 5 đầu sách vào danh sách chờ.
+2. Frontend chặn trùng đầu sách, cho phép chọn/nhập `copyId` hoặc để backend tự chọn copy `AVAILABLE`.
+3. Nút xác nhận gửi đúng một `POST /api/borrow-slips` với toàn bộ `items`, thay vì tạo một phiếu cho từng cuốn.
+4. Nếu API lỗi, danh sách chờ vẫn được giữ để thủ thư sửa và thử lại; chỉ reset và refresh danh sách phiếu sau khi thành công.
+5. Kiosk gom toàn bộ `scannedBorrowCopies` rồi gửi một request với `source = NFC`; mỗi item luôn có `bookId` và `copyId`.
+6. EventSource của kiosk gọi NFC handler mới nhất qua ref để không giữ state cũ khi giao diện chuyển từ quẹt sinh viên sang quẹt sách.
+
 ## Security Rules
 
 - **Client-side role guard chỉ là UX**: Server `@PreAuthorize` là source of truth
@@ -163,6 +171,7 @@ frontend/src/
 Frontend đã được nâng cấp toàn diện và khớp 100% với Backend V9-V12:
 - ✅ Tích hợp Hold API + UI hoàn chỉnh (đặt giữ sách 24h, hủy hold).
 - ✅ Tích hợp Borrow Slip API + UI quản lý phiếu mượn gộp.
+- ✅ Form tại quầy và Kiosk tạo một phiếu mượn atomic cho nhiều sách.
 - ✅ Khớp chuẩn xác Book DTO field names (`totalCopies` / `availableCopies`).
 - ✅ Sửa Auth response interface khớp chuẩn JwtResponse.
 - ✅ Cập nhật Branding toàn hệ thống thành "Awaken Ant Library".

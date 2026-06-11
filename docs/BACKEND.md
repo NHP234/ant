@@ -40,9 +40,12 @@ com.example.demo/
 │   ├── AuthService.java
 │   ├── BookService.java              # + auto-create BookCopies & async RAG trigger
 │   ├── CategoryService.java
-│   ├── BorrowService.java            # + BorrowSlip + BookCopy status mgmt
+│   ├── BorrowService.java            # Borrow/return + confirm hold + batch slip
+│   ├── BorrowPolicyService.java      # Borrow/hold limits and duplicate rules
+│   ├── BookHoldLifecycleService.java # Hold transitions, locking and expiry
+│   ├── BookHoldService.java          # Create/cancel/query hold orchestration
 │   ├── UserService.java
-│   ├── NotificationService.java
+│   ├── NotificationService.java      # Query/read state + transactional creation
 │   ├── DashboardService.java
 │   └── SeedImportService.java        # Batch seed data importer (ADMIN)
 ├── repository/
@@ -174,6 +177,7 @@ public class GlobalExceptionHandler {
    - ADMIN/LIBRARIAN: POST/PUT /api/books/**
    - ADMIN only: DELETE /api/books/**, CRUD /api/categories/**, CRUD /api/users/**, POST /api/admin/seed (batch seed data)
    - ADMIN/LIBRARIAN: POST /api/borrows
+   - ADMIN/LIBRARIAN: POST /api/borrow-slips
    - Authenticated: GET /api/borrows/my, POST /api/chat (gửi câu hỏi cho AI Chatbot proxy)
    - ADMIN/LIBRARIAN: PUT /api/borrows/{id}/return, GET /api/borrows, GET /api/borrows/overdue
 ```
@@ -185,20 +189,22 @@ public class GlobalExceptionHandler {
 
 2. BookHoldService.createHold():
    a. Check hold ban window (no-show)
-   b. Check borrow limit (active borrows + holds <= 5)
-   c. Check not already borrowing/holding this book
-   d. Find AVAILABLE copy (SELECT FOR UPDATE → pessimistic lock)
-   e. Set copy.status = RESERVED
-   f. Create BookHold { user, copy, reservedAt, expiresAt=now+24h, status=ACTIVE }
-   g. Send notification
+   b. Expire stale hold for the same book before selecting a copy
+   c. BorrowPolicyService checks active borrows + unexpired holds <= 5
+   d. Check not already borrowing/holding this book
+   e. Find AVAILABLE copy (SELECT FOR UPDATE → pessimistic lock)
+   f. Set copy.status = RESERVED
+   g. Create BookHold { user, copy, reservedAt, expiresAt=now+24h, status=ACTIVE }
+   h. NotificationService persists the notification in the same transaction
 
 3. Confirm borrow: PUT /api/holds/{id}/confirm
-   a. Librarian can confirm manually or with NFC copyId
-   b. If copyId provided and same book, swap reserved copy → requested copy
-   c. Set copy.status = BORROWED
-   d. Create BorrowSlip { user, librarian, borrowDate, dueDate, source }
-   e. Create BorrowRecord { copy, slip, status=BORROWING }
-   f. Mark hold FULFILLED + send notification
+   a. BorrowService owns this workflow because it creates BorrowSlip/BorrowRecord
+   b. Lock in order User → BookHold → BookCopy
+   c. If expiresAt <= now, persist EXPIRED/release copy/apply ban, then return HOLD_EXPIRED
+   d. If copyId provided and same book, swap reserved copy → requested copy
+   e. Set copy.status = BORROWED and create BorrowSlip + BorrowRecord
+   f. BookHoldLifecycleService marks hold FULFILLED
+   g. NotificationService persists the notification in the same transaction
 
 4. Direct borrow at counter (no hold): POST /api/borrows
    a. Librarian provides borrower identifier (username or studentId)
@@ -206,21 +212,34 @@ public class GlobalExceptionHandler {
    c. If borrower has active hold for the same book, auto-fulfill it
    d. Otherwise, pick any AVAILABLE copy and proceed with borrow
 
-5. Return: PUT /api/borrows/{id}/return
-   a. Set record.status = RETURNED, record.returnDate = now
+5. Batch borrow at counter/kiosk: POST /api/borrow-slips
+   a. Resolve exactly one borrower identifier and lock the borrower row
+   b. Validate the full item list before creating the slip
+   c. Lock active holds and copies in stable book/copy order
+   d. BorrowPolicyService calculates active borrows + unexpired holds + new direct items
+      (items fulfilling an existing hold are not counted twice)
+   e. Create exactly one BorrowSlip and one BorrowRecord per item
+   f. Update copies to BORROWED, fulfill matching holds and create notifications
+   g. Any failure rolls back the whole transaction
+   h. POST /api/borrows wraps one item around the same core workflow for compatibility
+
+6. Return: PUT /api/borrows/{id}/return
+   a. Lock BorrowRecord, then set status = RETURNED and returnDate = now
    b. Set copy.status = AVAILABLE
    c. Send notification
 
-6. Overdue check (@Scheduled daily 00:00):
-   a. Find records WHERE status=BORROWING AND slip.dueDate < NOW()
+7. Overdue check (@Scheduled daily 00:00):
+   a. Lock records WHERE status=BORROWING AND slip.dueDate < NOW()
    b. Set record.status = OVERDUE
    c. Send notification
 
-7. Hold expiry (@Scheduled every 30 min):
-   a. Find holds WHERE status=ACTIVE AND expiresAt < NOW()
-   b. Set hold.status = EXPIRED, release copy to AVAILABLE
-   c. Set user.holdBanUntil = now + 7 days
-   d. Send notification
+8. Hold expiry (@Scheduled every 30 min):
+   a. Find hold IDs WHERE status=ACTIVE AND expiresAt <= NOW(), ordered by ID
+   b. Process each ID in a separate transaction
+   c. Re-lock User → BookHold → BookCopy and re-check status/expiry
+   d. Set hold.status = EXPIRED, release copy to AVAILABLE
+   e. Set user.holdBanUntil = now + 7 days and send notifications
+   f. Failure on one hold is logged without rolling back the other holds
 ```
 
 ## Caching Strategy

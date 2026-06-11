@@ -217,9 +217,34 @@ Trả về `List<BorrowRecordResponse>` gồm các record `BORROWING` và `OVERD
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
+| POST | /borrow-slips | LIBRARIAN/ADMIN | Tạo một phiếu mượn gồm nhiều sách trong một transaction |
 | GET | /borrow-slips/my | User | Phiếu mượn của user hiện tại |
 | GET | /borrow-slips | LIBRARIAN/ADMIN | Tất cả phiếu mượn |
 | GET | /borrow-slips/{id} | User | Chi tiết phiếu mượn (kèm danh sách records) |
+
+### POST /borrow-slips
+```json
+// Request
+{
+  "studentId": "20201234",
+  "source": "COUNTER",
+  "items": [
+    { "bookId": 15, "copyId": 123 },
+    { "bookId": 22 }
+  ]
+}
+```
+
+Response `201 Created` là `BorrowSlipResponse` như phần chi tiết bên dưới và chứa toàn bộ `records` vừa tạo.
+
+Quy tắc:
+- Phải truyền đúng một trong `username` hoặc `studentId`.
+- `items` không được rỗng, không được trùng `bookId` hoặc `copyId`, và không vượt giới hạn mượn cấu hình (mặc định 5).
+- Với `source = NFC`, mọi item bắt buộc có `copyId`; `COUNTER` có thể để backend tự chọn bản sao `AVAILABLE`.
+- Nếu sinh viên có hold `ACTIVE` của đầu sách tương ứng, hold được fulfill trong cùng phiếu và không bị tính hai lần vào giới hạn.
+- Giao dịch atomic: chỉ cần một item không hợp lệ/không khả dụng thì không tạo slip/record nào và không đổi trạng thái copy/hold.
+
+`POST /borrows` vẫn được giữ để tương thích với client mượn một cuốn; endpoint này dùng chung workflow và tiếp tục trả `BorrowRecordResponse`.
 
 ### GET /borrow-slips/{id}
 ```json
@@ -313,6 +338,20 @@ Trả về `List<BorrowRecordResponse>` gồm các record `BORROWING` và `OVERD
 ```
 
 > **Lưu ý**: `source` optional (`COUNTER` hoặc `NFC`), mặc định là `COUNTER`.
+
+Nếu hold đã hết hạn tại thời điểm xác nhận (`expiresAt <= now`), backend vẫn lưu trạng thái `EXPIRED`, trả copy về `AVAILABLE`, áp dụng thời gian cấm đặt trước và trả:
+
+```json
+{
+  "success": false,
+  "status": 400,
+  "error": "HOLD_EXPIRED",
+  "message": "Hold with id 10 has expired",
+  "path": "/api/holds/10/confirm"
+}
+```
+
+Hold `ACTIVE` đã hết hạn không được tính vào giới hạn mượn/đặt trước. Các luồng tạo, xác nhận, hủy và scheduler sử dụng cùng lifecycle và thứ tự khóa `User → BookHold → BookCopy`.
 
 ### PUT /holds/{id}/cancel
 ```json
@@ -640,6 +679,7 @@ data: {
 | RESOURCE_NOT_FOUND | 404 | Không tìm thấy resource |
 | BOOK_NOT_AVAILABLE | 400 | Sách hết, không thể mượn |
 | BORROW_LIMIT_EXCEEDED | 400 | Đã mượn tối đa số sách |
+| HOLD_EXPIRED | 400 | Hold đã hết hạn; trạng thái hết hạn và việc giải phóng copy vẫn được lưu |
 | VALIDATION_ERROR | 400 | Input không hợp lệ (@Valid thất bại) |
 | BAD_REQUEST | 400 | Request không hợp lệ |
 | INTERNAL_ERROR | 500 | Lỗi server không xác định |

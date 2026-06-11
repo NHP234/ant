@@ -51,8 +51,10 @@ Kiosk là một màn hình (tablet hoặc màn hình phụ) luôn mở ở trang
 3. Kiosk chuyển sang màn hình chứa profile sinh viên và 2 lựa chọn: **[Mượn Sách]** - **[Trả Sách]**.
 4. Sinh viên bấm (hoặc chạm trên màn hình cảm ứng) vào nút **[Mượn Sách]**. Kiosk hiện: "Vui lòng quẹt lần lượt các sách bạn muốn mượn".
 5. Sinh viên quẹt sách 1, sách 2 -> Kiosk nhận event từ Backend và liệt kê các sách lên màn hình.
-6. Kết thúc phiên: Sinh viên bấm nút **[Hoàn Tất]** (hoặc hệ thống tự **Timeout** sau 30 giây không thao tác).
-7. Kiosk gọi API xác nhận mượn, hệ thống sinh `borrow_records`, báo thành công và Kiosk reset về màn hình chờ ban đầu.
+6. Sinh viên bấm nút **[Hoàn Tất]** để xác nhận. Nếu timeout sau 30 giây không thao tác, Kiosk hủy phiên và quay về màn hình chờ.
+7. Kiosk gửi một `POST /api/borrow-slips` với `source = NFC` và toàn bộ `{ bookId, copyId }` đã quét.
+8. Backend tạo đúng một `borrow_slip` chứa nhiều `borrow_records` trong một transaction. Một cuốn lỗi thì toàn bộ giao dịch rollback.
+9. Nếu API lỗi, Kiosk giữ danh sách đã quét để người dùng thử lại; thành công mới reset về màn hình chờ.
 
 ### Flow trả sách tự động
 1. Tương tự, sau khi quẹt thẻ, sinh viên chọn **[Trả Sách]**.

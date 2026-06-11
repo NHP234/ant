@@ -208,6 +208,22 @@
 - ✅ Tách truy vấn phiếu mượn khỏi `BorrowSlipController` sang `BorrowSlipService`; controller chỉ xử lý HTTP, phân quyền và chuyển tiếp tham số.
 - ✅ Bổ sung unit tests cho `AuditLogService` và `BorrowSlipService`, bảo đảm controller không truy cập trực tiếp repository hoặc expose JPA entity.
 
+#### Gộp nhiều sách vào một phiếu mượn
+- ✅ Backend: Thêm `POST /api/borrow-slips` cho ADMIN/LIBRARIAN, tạo một `BorrowSlip` chứa nhiều `BorrowRecord` trong transaction atomic.
+- ✅ Backend: Dùng chung core workflow với `POST /api/borrows`, khóa borrower/hold/copy bằng pessimistic lock và xử lý theo thứ tự ổn định.
+- ✅ Backend: Validate đúng một borrower identifier, danh sách không rỗng/không trùng, NFC bắt buộc `copyId`, giới hạn mượn không tính trùng hold được fulfill.
+- ✅ Frontend: Form tại quầy dùng danh sách chờ tối đa 5 sách, gửi một request batch và giữ danh sách khi lỗi.
+- ✅ Frontend: Kiosk gửi toàn bộ sách đã quét trong một request NFC; sửa stale closure của SSE handler khi chuyển trạng thái.
+- ✅ Test: Unit/controller tests, integration test PostgreSQL có rollback, và Playwright mock API cho form tại quầy + kiosk đều pass.
+- ✅ Tài liệu: Cập nhật API_SPEC, BACKEND, FRONTEND, NFC và ghi nhận batch return partial-success trong ISSUES.
+
+#### Refactor nghiệp vụ mượn và đặt trước
+- ✅ Tách `BorrowPolicyService` để dùng chung giới hạn mượn/hold, loại hold đã hết hạn khỏi phép tính và không cộng hai lần item fulfill hold.
+- ✅ Tách `BookHoldLifecycleService` để quản lý expire/fulfill/cancel, release copy, no-show ban và thứ tự khóa `User → BookHold → BookCopy`.
+- ✅ Chuyển confirm hold sang `BorrowService`, dùng chung helper tạo slip/record; hold hết hạn vẫn commit trạng thái trước khi trả `HOLD_EXPIRED`.
+- ✅ Chuyển tạo notification qua `NotificationService`, inject `Clock`, khóa return/overdue để tránh cập nhật hoặc thông báo trùng.
+- ✅ Bổ sung unit tests cho policy/lifecycle/hold service, controller test mã lỗi và integration test PostgreSQL có rollback.
+
 ### Tuần 14: System Testing
 - ⬜ End-to-end testing toàn bộ flow
 - ⬜ Performance testing cơ bản
@@ -269,4 +285,6 @@
 | 2026-06-08 | NFC firmware: khai báo explicit các chân SPI RC522 (`SCK=18`, `MISO=19`, `MOSI=23`, `SS=5`, `RST=22`) và gọi `SPI.begin(...)` với đầy đủ pin để người dùng đấu dây dễ kiểm tra. Verification: chưa chạy `pio run` vì PlatformIO CLI chưa có trong PATH. |
 | 2026-06-10 | Bổ sung workflow gán NFC tag trên giao diện quản lý bản sao cho ADMIN/LIBRARIAN: nút Gán/Đổi tag, trạng thái kết nối/chờ quét SSE, chỉ nhận tag `UNKNOWN`, xác nhận trước khi gọi `/api/nfc/register-book-copy`, hỗ trợ quét lại/hủy/kết nối lại; sửa dialog responsive để panel quét và bảng thao tác không tràn mép. Thêm Playwright mock EventSource ở viewport hẹp, không ghi dữ liệu sách/tag vào DB. Verification: targeted ESLint, `npm run build`, Playwright NFC spec và Docker smoke SSE pass. |
 | 2026-06-11 | Refactor cấu hình NFC firmware: chuyển Wi-Fi, URL backend và API key khỏi `main.cpp` sang `include/secrets.h` local được Git ignore; thêm `secrets.example.h` làm template và tài liệu setup. Verification: PlatformIO `run` cho `esp32dev` thành công. |
+| 2026-06-11 | Gộp nhiều sách vào một phiếu mượn: thêm `POST /api/borrow-slips` atomic, dùng chung workflow với API một cuốn, khóa borrower/hold/copy, cập nhật form tại quầy và kiosk gửi batch; bổ sung unit/controller/integration rollback/Playwright mock tests và tài liệu liên quan. |
+| 2026-06-11 | Refactor mượn/đặt trước: tách policy và hold lifecycle, gom tạo notification vào `NotificationService`, chuyển confirm hold sang `BorrowService`, chuẩn hóa `Clock` và pessimistic lock cho expire/return/overdue. Sửa lỗi hold hết hạn bị rollback khi confirm và loại hold hết hạn khỏi giới hạn. Verification: 79 test thường và 3 integration test PostgreSQL pass. |
 | 2026-06-10 | Chuẩn hóa phân lớp backend cho audit log và borrow slip: controller không còn truy cập repository/JPA entity trực tiếp; bổ sung service, `AuditLogResponse`, MapStruct mapper, unit tests và đồng bộ contract audit log ở frontend/API spec. Verification: backend 53 tests pass, frontend production build pass. |

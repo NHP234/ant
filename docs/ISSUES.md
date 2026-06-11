@@ -17,7 +17,12 @@
 
 ## Open Issues
 
-_(Chưa có issue nào)_
+### [ENH-002] Batch trả nhiều sách chưa atomic
+- **Loại**: Enhancement
+- **Trạng thái**: Open
+- **Ngày tạo**: 2026-06-11
+- **Mô tả**: Kiosk hiện trả nhiều cuốn bằng cách gọi tuần tự `PUT /api/borrows/{id}/return`. Nếu một request giữa danh sách thất bại, các cuốn trước đó đã được trả thành công và giao dịch có thể partial success.
+- **Giải pháp đề xuất**: Bổ sung endpoint batch return chạy trong một transaction, validate toàn bộ record/copy trước khi cập nhật và trả kết quả theo một phiếu giao dịch.
 
 ---
 
