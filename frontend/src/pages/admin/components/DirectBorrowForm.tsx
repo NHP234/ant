@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AxiosError } from 'axios'
-import { borrowApi } from '@/api/borrows'
+import { borrowSlipApi } from '@/api/borrowSlips'
 import { bookApi, bookCopyApi } from '@/api/books'
 import type { Book, BookCopy } from '@/api/books'
 import { userApi } from '@/api/users'
@@ -19,7 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { AlertCircle, BookOpen, CheckCircle2, Copy, Loader2, Search, UserCheck } from 'lucide-react'
+import {
+  AlertCircle,
+  BookOpen,
+  CheckCircle2,
+  Copy,
+  ListPlus,
+  Loader2,
+  Search,
+  Trash2,
+  UserCheck,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 type IdentifierMode = 'studentId' | 'username'
@@ -30,6 +40,13 @@ interface ApiErrorResponse {
 }
 
 const AUTO_COPY = 'AUTO'
+const MAX_BORROW_ITEMS = 5
+
+interface PendingBorrowItem {
+  book: Book
+  copyId?: number
+  copyLabel: string
+}
 
 function normalize(value: string) {
   return value.trim().toLowerCase()
@@ -56,6 +73,7 @@ export default function DirectBorrowForm() {
   const [selectedBookId, setSelectedBookId] = useState('')
   const [selectedCopyId, setSelectedCopyId] = useState(AUTO_COPY)
   const [manualCopyId, setManualCopyId] = useState('')
+  const [pendingItems, setPendingItems] = useState<PendingBorrowItem[]>([])
   const [formError, setFormError] = useState('')
 
   const usersQuery = useQuery({
@@ -116,23 +134,24 @@ export default function DirectBorrowForm() {
   }, [books, selectedBookId])
 
   const borrowMutation = useMutation({
-    mutationFn: () => {
-      const copyId = resolveCopyId()
-      return borrowApi.borrow({
-        bookId: Number(selectedBookId),
+    mutationFn: () =>
+      borrowSlipApi.create({
         ...(identifierMode === 'username' ? { username: identifier.trim() } : { studentId: identifier.trim() }),
-        ...(copyId ? { copyId } : {}),
         source: 'COUNTER',
-      })
-    },
+        items: pendingItems.map(item => ({
+          bookId: item.book.id,
+          ...(item.copyId ? { copyId: item.copyId } : {}),
+        })),
+      }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'borrow-slips'] })
-      toast.success('Tạo lượt mượn tại quầy thành công')
+      toast.success(`Đã tạo phiếu mượn gồm ${pendingItems.length} cuốn`)
       setIdentifier('')
       setBookSearch('')
       setSelectedBookId('')
       setSelectedCopyId(AUTO_COPY)
       setManualCopyId('')
+      setPendingItems([])
       setFormError('')
     },
     onError: (error) => {
@@ -157,7 +176,7 @@ export default function DirectBorrowForm() {
     return undefined
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleAddItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFormError('')
 
@@ -171,14 +190,57 @@ export default function DirectBorrowForm() {
       return
     }
 
-    try {
-      resolveCopyId()
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Copy ID không hợp lệ.')
+    if (pendingItems.length >= MAX_BORROW_ITEMS) {
+      setFormError(`Mỗi phiếu chỉ được mượn tối đa ${MAX_BORROW_ITEMS} cuốn.`)
       return
     }
 
+    if (pendingItems.some(item => item.book.id === Number(selectedBookId))) {
+      setFormError('Đầu sách này đã có trong phiếu mượn.')
+      return
+    }
+
+    try {
+      const copyId = resolveCopyId()
+      const selectedCopy = availableCopies.find(copy => copy.id === copyId)
+      if (!selectedBook) {
+        setFormError('Không tìm thấy thông tin sách đã chọn.')
+        return
+      }
+      setPendingItems(items => [
+        ...items,
+        {
+          book: selectedBook,
+          copyId,
+          copyLabel: selectedCopy ? describeCopy(selectedCopy) : copyId ? `Copy ID ${copyId}` : 'Tự chọn bản sao khả dụng',
+        },
+      ])
+      setBookSearch('')
+      setSelectedBookId('')
+      setSelectedCopyId(AUTO_COPY)
+      setManualCopyId('')
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Copy ID không hợp lệ.')
+    }
+  }
+
+  function handleConfirmBorrow() {
+    setFormError('')
+    if (!identifier.trim()) {
+      setFormError('Vui lòng nhập username hoặc MSSV của sinh viên.')
+      return
+    }
+    if (pendingItems.length === 0) {
+      setFormError('Vui lòng thêm ít nhất một cuốn sách vào phiếu.')
+      return
+    }
     borrowMutation.mutate()
+  }
+
+  function handleChangeBorrower() {
+    setIdentifier('')
+    setPendingItems([])
+    setFormError('')
   }
 
   function chooseBook(book: Book) {
@@ -189,7 +251,14 @@ export default function DirectBorrowForm() {
   }
 
   const isPending = borrowMutation.isPending
-  const canSubmit = Boolean(identifier.trim() && selectedBookId && !isPending)
+  const canAddItem = Boolean(
+    identifier.trim()
+    && selectedBookId
+    && pendingItems.length < MAX_BORROW_ITEMS
+    && !isPending
+  )
+  const canConfirm = Boolean(identifier.trim() && pendingItems.length > 0 && !isPending)
+  const borrowerLocked = pendingItems.length > 0
 
   return (
     <Card className="border-border/60 bg-card/70">
@@ -207,7 +276,7 @@ export default function DirectBorrowForm() {
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleAddItem} className="space-y-5">
           <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr_1fr]">
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
@@ -215,7 +284,14 @@ export default function DirectBorrowForm() {
                 Định danh sinh viên
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-2">
-                <Select value={identifierMode} onValueChange={(value) => setIdentifierMode(value as IdentifierMode)}>
+                <Select
+                  value={identifierMode}
+                  onValueChange={(value) => {
+                    setIdentifierMode(value as IdentifierMode)
+                    setIdentifier('')
+                  }}
+                  disabled={isPending || borrowerLocked}
+                >
                   <SelectTrigger className="w-full" aria-label="Kiểu định danh sinh viên">
                     <SelectValue />
                   </SelectTrigger>
@@ -230,7 +306,7 @@ export default function DirectBorrowForm() {
                   onChange={(event) => setIdentifier(event.target.value)}
                   placeholder={identifierMode === 'studentId' ? 'VD: 20200001' : 'VD: student01'}
                   aria-label="Thông tin định danh sinh viên"
-                  disabled={isPending}
+                  disabled={isPending || borrowerLocked}
                 />
               </div>
 
@@ -246,6 +322,11 @@ export default function DirectBorrowForm() {
                       <p className="text-muted-foreground">
                         {exactUser.username} {exactUser.studentId ? `- MSSV ${exactUser.studentId}` : ''}
                       </p>
+                      {borrowerLocked && (
+                        <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={handleChangeBorrower}>
+                          Đổi sinh viên và xóa phiếu đang chọn
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -393,12 +474,62 @@ export default function DirectBorrowForm() {
             <p className="text-xs text-muted-foreground">
               Nếu sinh viên có hold ACTIVE cùng đầu sách, backend sẽ tự động fulfill hold đó.
             </p>
-            <Button type="submit" disabled={!canSubmit} className="sm:w-auto" data-testid="direct-borrow-submit">
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Tạo lượt mượn tại quầy
+            <Button type="submit" disabled={!canAddItem} variant="outline" className="sm:w-auto" data-testid="direct-borrow-add-item">
+              <ListPlus className="mr-2 h-4 w-4" />
+              Thêm vào phiếu
             </Button>
           </div>
         </form>
+
+        <div className="mt-6 space-y-4 border-t pt-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-semibold">Sách trong phiếu</h3>
+              <p className="text-xs text-muted-foreground">
+                {pendingItems.length}/{MAX_BORROW_ITEMS} cuốn, cùng ngày mượn và hạn trả.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={handleConfirmBorrow}
+              disabled={!canConfirm}
+              data-testid="direct-borrow-submit"
+            >
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Xác nhận mượn {pendingItems.length > 0 ? `${pendingItems.length} cuốn` : ''}
+            </Button>
+          </div>
+
+          {pendingItems.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+              Chưa có sách nào trong phiếu.
+            </div>
+          ) : (
+            <div className="divide-y rounded-lg border">
+              {pendingItems.map((item, index) => (
+                <div key={item.book.id} className="flex items-center gap-3 p-3" data-testid={`direct-borrow-pending-${item.book.id}`}>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-sm font-semibold">
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{item.book.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">{item.copyLabel}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Xóa ${item.book.title} khỏi phiếu`}
+                    disabled={isPending}
+                    onClick={() => setPendingItems(items => items.filter(candidate => candidate.book.id !== item.book.id))}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

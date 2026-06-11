@@ -2,6 +2,18 @@ import api from './axios'
 import type { PageResponse } from './books'
 import type { BorrowRecord } from './borrows'
 
+export interface BorrowSlipItemRequest {
+  bookId: number
+  copyId?: number
+}
+
+export interface BorrowSlipCreateRequest {
+  username?: string
+  studentId?: string
+  source?: 'COUNTER' | 'NFC'
+  items: BorrowSlipItemRequest[]
+}
+
 export interface BorrowSlip {
   id: number
   userId: number
@@ -16,6 +28,9 @@ export interface BorrowSlip {
 }
 
 export const borrowSlipApi = {
+  create: (data: BorrowSlipCreateRequest) =>
+    api.post<{ data: BorrowSlip }>('/borrow-slips', data),
+
   getMySlips: (page = 0, size = 10) =>
     api.get<{ data: PageResponse<BorrowSlip> }>('/borrow-slips/my', { params: { page, size } }),
 

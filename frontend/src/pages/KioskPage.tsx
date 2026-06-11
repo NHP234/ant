@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useEffectEvent, useRef } from 'react'
+import type { AxiosError } from 'axios'
 import { useAuth } from '@/hooks/useAuth'
 import { nfcApi } from '@/api/nfc'
 import { borrowApi, type BorrowRecord } from '@/api/borrows'
+import { borrowSlipApi } from '@/api/borrowSlips'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,6 +38,24 @@ interface BookCopyData {
   conditionNote?: string
 }
 
+interface NfcScanEvent {
+  type: string
+  data: unknown
+}
+
+interface ApiErrorResponse {
+  message?: string
+}
+
+type AudioContextWindow = Window & {
+  webkitAudioContext?: typeof AudioContext
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const axiosError = error as AxiosError<ApiErrorResponse>
+  return axiosError.response?.data?.message || fallback
+}
+
 export default function KioskPage() {
   const { user, login, logout } = useAuth()
   
@@ -54,9 +74,6 @@ export default function KioskPage() {
   // Dữ liệu người dùng đang quẹt thẻ giao dịch
   const [currentUser, setCurrentUser] = useState<UserData | null>(null)
   
-  // Chế độ mượn hay trả
-  const [kioskMode, setKioskMode] = useState<'BORROW' | 'RETURN' | null>(null)
-
   // Danh sách sách đang quét chờ mượn
   const [scannedBorrowCopies, setScannedBorrowCopies] = useState<BookCopyData[]>([])
 
@@ -79,13 +96,17 @@ export default function KioskPage() {
   const [countdown, setCountdown] = useState(30)
 
   const sseRef = useRef<EventSource | null>(null)
-  const timeoutRef = useRef<any>(null)
-  const toastTimeoutRef = useRef<any>(null)
+  const timeoutRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // --- Giả lập âm thanh Bíp bíp bằng Web Audio API để tăng tính chân thực ---
   const playBeep = (type: 'success' | 'warn' | 'error') => {
     try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const AudioContextClass = window.AudioContext
+        || (window as AudioContextWindow).webkitAudioContext
+      if (!AudioContextClass) return
+
+      const audioCtx = new AudioContextClass()
       const oscillator = audioCtx.createOscillator()
       const gainNode = audioCtx.createGain()
 
@@ -140,8 +161,8 @@ export default function KioskPage() {
     try {
       await login({ username: activationUsername, password: activationPassword })
       showToast('Kích hoạt trạm tự phục vụ thành công!', 'success')
-    } catch (err: any) {
-      setActivationError(err.response?.data?.message || 'Tài khoản không hợp lệ hoặc thiếu quyền hạn.')
+    } catch (error: unknown) {
+      setActivationError(getApiErrorMessage(error, 'Tài khoản không hợp lệ hoặc thiếu quyền hạn.'))
       playBeep('error')
     } finally {
       setIsActivating(false)
@@ -153,7 +174,6 @@ export default function KioskPage() {
     setCountdown(30)
     setKioskState('WAITING_FOR_USER')
     setCurrentUser(null)
-    setKioskMode(null)
     setScannedBorrowCopies([])
     setScannedReturnIds([])
     setActiveUserBorrows([])
@@ -161,11 +181,10 @@ export default function KioskPage() {
   }
 
   // --- Xử lý sự kiện nhận được từ cổng SSE NFC ---
-  const handleNfcScanEvent = (eventData: any) => {
+  const handleNfcScanEvent = useEffectEvent((eventData: NfcScanEvent) => {
     setCountdown(30) // Reset bộ đếm ngược 30 giây khi có tương tác NFC
 
     const { type, data } = eventData
-    logNfcEvent(type, data)
 
     // Kịch bản 1: Kiosk đang ở màn hình chờ (WAITING_FOR_USER)
     if (kioskState === 'WAITING_FOR_USER') {
@@ -212,6 +231,17 @@ export default function KioskPage() {
           return
         }
 
+        const isSameBookAdded = scannedBorrowCopies.some(c => c.bookId === copy.bookId)
+        if (isSameBookAdded) {
+          showToast('Không thể mượn hai bản sao của cùng một đầu sách trong một phiếu.', 'warning')
+          return
+        }
+
+        if (scannedBorrowCopies.length >= 5) {
+          showToast('Mỗi phiếu chỉ được mượn tối đa 5 cuốn.', 'warning')
+          return
+        }
+
         // Kiểm tra xem status có khả dụng không
         if (copy.status !== 'AVAILABLE') {
           showToast(`Sách bản sao #${copy.copyNumber} không ở trạng thái sẵn sàng để mượn (Status: ${copy.status}).`, 'error')
@@ -253,17 +283,11 @@ export default function KioskPage() {
         showToast('Tag NFC này không phải tag sách đang mượn.', 'error')
       }
     }
-  }
-
-  // Debug log Helper
-  const logNfcEvent = (type: string, data: any) => {
-    console.log(`NFC Event - Type: ${type}`, data)
-  }
+  })
 
   // --- Bắt đầu luồng Mượn Sách ---
   const handleSelectBorrow = () => {
     setCountdown(30)
-    setKioskMode('BORROW')
     setKioskState('SCANNING_BORROW')
     playBeep('success')
   }
@@ -273,7 +297,6 @@ export default function KioskPage() {
     if (!currentUser) return
     
     setCountdown(30)
-    setKioskMode('RETURN')
     setKioskState('PROCESSING')
     playBeep('success')
 
@@ -281,7 +304,7 @@ export default function KioskPage() {
       const res = await borrowApi.getActiveBorrows(currentUser.studentId)
       setActiveUserBorrows(res.data.data)
       setKioskState('SCANNING_RETURN')
-    } catch (err: any) {
+    } catch {
       setTransactionError('Không thể lấy danh sách sách đang mượn của bạn.')
       setKioskState('ERROR')
       playBeep('error')
@@ -296,19 +319,18 @@ export default function KioskPage() {
     playBeep('success')
 
     try {
-      // Thực hiện mượn từng cuốn sách
-      for (const copy of scannedBorrowCopies) {
-        await borrowApi.borrow({
+      await borrowSlipApi.create({
+        studentId: currentUser.studentId,
+        source: 'NFC',
+        items: scannedBorrowCopies.map(copy => ({
           bookId: copy.bookId,
           copyId: copy.id,
-          studentId: currentUser.studentId,
-          source: 'NFC'
-        })
-      }
+        })),
+      })
       setKioskState('SUCCESS')
       playBeep('success')
-    } catch (err: any) {
-      setTransactionError(err.response?.data?.message || 'Quá trình mượn sách thất bại.')
+    } catch (error: unknown) {
+      setTransactionError(getApiErrorMessage(error, 'Quá trình mượn sách thất bại.'))
       setKioskState('ERROR')
       playBeep('error')
     }
@@ -328,70 +350,72 @@ export default function KioskPage() {
       }
       setKioskState('SUCCESS')
       playBeep('success')
-    } catch (err: any) {
-      setTransactionError(err.response?.data?.message || 'Quá trình trả sách thất bại.')
+    } catch (error: unknown) {
+      setTransactionError(getApiErrorMessage(error, 'Quá trình trả sách thất bại.'))
       setKioskState('ERROR')
       playBeep('error')
     }
   }
 
-  // --- Thiết lập kết nối EventSource SSE & Auto-reconnect ---
-  const connectSSE = () => {
-    if (sseRef.current) {
-      sseRef.current.close()
-    }
-
-    setSseStatus('CONNECTING')
-    const streamUrl = nfcApi.getStreamUrl()
-    
-    const source = new EventSource(streamUrl)
-    sseRef.current = source
-
-    source.onopen = () => {
-      setSseStatus('CONNECTED')
-      console.log('NFC SSE Stream đã kết nối thành công!')
-    }
-
-    // Nhận tín hiệu quét NFC
-    source.addEventListener('nfc-scan', (event: MessageEvent) => {
-      try {
-        const eventData = JSON.parse(event.data)
-        handleNfcScanEvent(eventData)
-      } catch (err) {
-        console.error('Lỗi parse JSON NFC event:', err)
-      }
-    })
-
-    source.onerror = () => {
-      setSseStatus('DISCONNECTED')
-      console.warn('NFC SSE Stream mất kết nối. Đang thử kết nối lại sau 5 giây...')
-      source.close()
-
-      // Tự động kết nối lại sau 5 giây
-      setTimeout(() => {
-        if (isActivated) connectSSE()
-      }, 5000)
-    }
-  }
-
   // --- Hook quản lý kết nối và ngắt kết nối SSE khi mount/unmount ---
   useEffect(() => {
-    if (isActivated) {
-      connectSSE()
-    } else {
+    if (!isActivated) {
       if (sseRef.current) {
         sseRef.current.close()
         sseRef.current = null
       }
-      setSseStatus('DISCONNECTED')
+      return
     }
 
-    return () => {
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
+    let disposed = false
+
+    const connectSSE = () => {
       if (sseRef.current) {
         sseRef.current.close()
       }
+
+      setSseStatus('CONNECTING')
+      const source = new EventSource(nfcApi.getStreamUrl())
+      sseRef.current = source
+
+      source.onopen = () => {
+        setSseStatus('CONNECTED')
+      }
+
+      source.addEventListener('nfc-scan', (event: MessageEvent) => {
+        try {
+          handleNfcScanEvent(JSON.parse(event.data) as NfcScanEvent)
+        } catch (error) {
+          console.error('Lỗi parse JSON NFC event:', error)
+        }
+      })
+
+      source.onerror = () => {
+        setSseStatus('DISCONNECTED')
+        source.close()
+        if (!disposed) {
+          reconnectTimeout = setTimeout(connectSSE, 5000)
+        }
+      }
+    }
+
+    connectSSE()
+
+    return () => {
+      disposed = true
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      if (sseRef.current) {
+        sseRef.current.close()
+        sseRef.current = null
+      }
     }
   }, [isActivated])
+
+  const handleSessionTimeout = useEffectEvent(() => {
+    handleResetKiosk()
+    showToast('Phiên giao dịch đã tự động kết thúc do hết thời gian chờ.', 'warning')
+  })
 
   // --- Hook quản lý đếm ngược Timeout 30 giây ---
   useEffect(() => {
@@ -400,14 +424,10 @@ export default function KioskPage() {
       return
     }
 
-    setCountdown(30)
-
     timeoutRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          // Khi hết giờ, tự động hủy và reset về màn chờ
-          handleResetKiosk()
-          showToast('Phiên giao dịch đã tự động kết thúc do hết thời gian chờ.', 'warning')
+          handleSessionTimeout()
           return 30
         }
         return prev - 1
@@ -420,11 +440,15 @@ export default function KioskPage() {
   }, [kioskState, isActivated])
 
   // Tự động reset màn hình thành công/lỗi sau 5 giây
+  const handleResultTimeout = useEffectEvent(() => {
+    handleResetKiosk()
+  })
+
   useEffect(() => {
-    let successTimer: any
+    let successTimer: ReturnType<typeof setTimeout> | null = null
     if (kioskState === 'SUCCESS' || kioskState === 'ERROR') {
       successTimer = setTimeout(() => {
-        handleResetKiosk()
+        handleResultTimeout()
       }, 5000)
     }
     return () => {
@@ -639,7 +663,9 @@ export default function KioskPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Lựa chọn MƯỢN SÁCH */}
-              <div 
+              <button
+                type="button"
+                data-testid="kiosk-select-borrow"
                 onClick={handleSelectBorrow}
                 className="group cursor-pointer bg-white border border-[#E1DEC9] rounded-2xl p-8 shadow-sm hover:shadow-lg hover:border-[#968F71] transition-all duration-300 flex flex-col items-center text-center space-y-6"
               >
@@ -650,10 +676,12 @@ export default function KioskPage() {
                   <h3 className="font-serif text-3xl font-extrabold text-[#1A1F26]">Mượn Sách</h3>
                   <p className="text-[#6E6855] font-medium">Đăng ký mượn mới các sách bạn mong muốn tại quầy tự phục vụ.</p>
                 </div>
-              </div>
+              </button>
 
               {/* Lựa chọn TRẢ SÁCH */}
-              <div 
+              <button
+                type="button"
+                data-testid="kiosk-select-return"
                 onClick={handleSelectReturn}
                 className="group cursor-pointer bg-white border border-[#E1DEC9] rounded-2xl p-8 shadow-sm hover:shadow-lg hover:border-[#968F71] transition-all duration-300 flex flex-col items-center text-center space-y-6"
               >
@@ -664,7 +692,7 @@ export default function KioskPage() {
                   <h3 className="font-serif text-3xl font-extrabold text-[#1A1F26]">Trả Sách</h3>
                   <p className="text-[#6E6855] font-medium">Trả lại sách đã mượn bằng cách quét nhận dạng tag dán trên bìa sách.</p>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
         )}

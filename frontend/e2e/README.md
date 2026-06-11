@@ -67,6 +67,18 @@ Test full end-to-end: **Hold → Confirm → Borrow → Return**
 |------|-------|------|
 | student sees notification count and marks as read | Xem + đánh dấu đã đọc | Login → `/notifications` → click "Đã đọc" |
 
+### 6. `specs/direct-borrow.spec.ts` — Counter Batch Borrow (Mock API)
+
+- Kiểm tra thủ thư thêm nhiều sách và gửi đúng một `POST /api/borrow-slips`.
+- Kiểm tra danh sách chờ vẫn còn khi backend trả lỗi.
+- Toàn bộ API được mock bằng Playwright, không tạo user/book/borrow trong database.
+
+### 7. `specs/kiosk-borrow-batch.spec.ts` — NFC Batch Borrow (Mock SSE/API)
+
+- Dùng `FakeEventSource` để mô phỏng quẹt thẻ sinh viên và nhiều tag sách.
+- Kiểm tra Kiosk gửi một payload `source = NFC` chứa toàn bộ `bookId`/`copyId`.
+- Không cần phần cứng NFC và không ghi dữ liệu vào database.
+
 ---
 
 ## Helper API (`helpers/api.ts`)
