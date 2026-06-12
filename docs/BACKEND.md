@@ -40,7 +40,9 @@ com.example.demo/
 │   ├── AuthService.java
 │   ├── BookService.java              # + auto-create BookCopies & async RAG trigger
 │   ├── CategoryService.java
-│   ├── BorrowService.java            # Borrow/return + confirm hold + batch slip
+│   ├── BorrowService.java            # Borrow facade + return/query/overdue
+│   ├── BorrowSlipCreationService.java # Atomic slip creation + confirm hold
+│   ├── BorrowSlipService.java        # Borrow slip read queries
 │   ├── BorrowPolicyService.java      # Borrow/hold limits and duplicate rules
 │   ├── BookHoldLifecycleService.java # Hold transitions, locking and expiry
 │   ├── BookHoldService.java          # Create/cancel/query hold orchestration
@@ -198,7 +200,7 @@ public class GlobalExceptionHandler {
    h. NotificationService persists the notification in the same transaction
 
 3. Confirm borrow: PUT /api/holds/{id}/confirm
-   a. BorrowService owns this workflow because it creates BorrowSlip/BorrowRecord
+   a. BorrowSlipCreationService owns this workflow because it creates BorrowSlip/BorrowRecord
    b. Lock in order User → BookHold → BookCopy
    c. If expiresAt <= now, persist EXPIRED/release copy/apply ban, then return HOLD_EXPIRED
    d. If copyId provided and same book, swap reserved copy → requested copy
@@ -312,6 +314,7 @@ Redis cache serialization:
   - Python RAG service khi nhận tín hiệu sẽ tự động đọc lại các sách mới/sửa đổi từ Postgres và đồng bộ hóa tức thì vào ChromaDB.
 
 ## Notes
+- `BorrowService` giữ vai trò facade cho controller để API và audit annotation không thay đổi. Service này chuyển toàn bộ tạo phiếu, validate batch, chọn copy và fulfill hold sang `BorrowSlipCreationService`; `BorrowSlipService` chỉ phụ trách truy vấn.
 - Admin account tự động tạo qua DataInitializer (username/password từ application.yml)
 - Due date mặc định 14 ngày, max borrows 5, configurable trong application.yml
 - Full-text search: tsvector + GIN index, Vietnamese text config, unaccent, weighted ranking (title > author > description)

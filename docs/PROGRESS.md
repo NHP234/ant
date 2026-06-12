@@ -220,9 +220,10 @@
 #### Refactor nghiệp vụ mượn và đặt trước
 - ✅ Tách `BorrowPolicyService` để dùng chung giới hạn mượn/hold, loại hold đã hết hạn khỏi phép tính và không cộng hai lần item fulfill hold.
 - ✅ Tách `BookHoldLifecycleService` để quản lý expire/fulfill/cancel, release copy, no-show ban và thứ tự khóa `User → BookHold → BookCopy`.
-- ✅ Chuyển confirm hold sang `BorrowService`, dùng chung helper tạo slip/record; hold hết hạn vẫn commit trạng thái trước khi trả `HOLD_EXPIRED`.
+- ✅ Chuyển confirm hold khỏi `BookHoldService` sang luồng mượn; `BorrowService` expose API và delegate workflow tạo slip/record cho `BorrowSlipCreationService`, hold hết hạn vẫn commit trạng thái trước khi trả `HOLD_EXPIRED`.
 - ✅ Chuyển tạo notification qua `NotificationService`, inject `Clock`, khóa return/overdue để tránh cập nhật hoặc thông báo trùng.
 - ✅ Bổ sung unit tests cho policy/lifecycle/hold service, controller test mã lỗi và integration test PostgreSQL có rollback.
+- ✅ Tách `BorrowSlipCreationService` sở hữu workflow tạo phiếu đơn/batch và confirm hold; giữ `BorrowService` làm facade cho API/audit cùng các luồng return/query/overdue, đồng thời tách unit test theo đúng trách nhiệm. Verification: 82 test thường pass; integration test PostgreSQL chưa chạy được vì `localhost:5432` không mở.
 
 ### Tuần 14: System Testing
 - ⬜ End-to-end testing toàn bộ flow
