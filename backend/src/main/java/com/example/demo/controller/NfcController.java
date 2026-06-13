@@ -6,7 +6,8 @@ import com.example.demo.dto.request.NfcScanRequest;
 import com.example.demo.dto.response.ApiResponse;
 import com.example.demo.dto.response.BookCopyResponse;
 import com.example.demo.dto.response.NfcScanResponse;
-import com.example.demo.dto.response.UserResponse;
+import com.example.demo.dto.response.NfcStudentResponse;
+import com.example.demo.dto.response.PageResponse;
 import com.example.demo.service.NfcService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +15,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -67,12 +71,22 @@ public class NfcController {
      * API đăng ký thẻ NFC cho User sinh viên.
      * Yêu cầu quyền ADMIN hoặc LIBRARIAN.
      */
+    @GetMapping("/students")
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
+    @Operation(summary = "Tìm sinh viên để cấp thẻ NFC (Yêu cầu Admin/Librarian)")
+    public ResponseEntity<ApiResponse<PageResponse<NfcStudentResponse>>> searchStudents(
+            @RequestParam(defaultValue = "") String query,
+            @PageableDefault(size = 10, sort = "fullName", direction = Sort.Direction.ASC) Pageable pageable) {
+        PageResponse<NfcStudentResponse> response = nfcService.searchStudents(query, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
     @PostMapping("/register-user")
     @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     @Operation(summary = "Gán thẻ NFC cho tài khoản sinh viên (Yêu cầu Admin/Librarian)")
-    public ResponseEntity<ApiResponse<UserResponse>> registerUser(
+    public ResponseEntity<ApiResponse<NfcStudentResponse>> registerUser(
             @Valid @RequestBody NfcRegisterUserRequest request) {
-        UserResponse response = nfcService.registerUser(request);
+        NfcStudentResponse response = nfcService.registerUser(request);
         return ResponseEntity.ok(ApiResponse.ok(response, "NFC Card bound to user successfully"));
     }
 

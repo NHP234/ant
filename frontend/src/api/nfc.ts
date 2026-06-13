@@ -1,6 +1,14 @@
 import api from './axios'
-import type { User } from './users'
-import type { BookCopy } from './books'
+import type { BookCopy, PageResponse } from './books'
+
+export interface NfcStudent {
+  id: number
+  username: string
+  fullName: string
+  studentId: string | null
+  isActive: boolean
+  nfcCardUid: string | null
+}
 
 export interface NfcRegisterUserRequest {
   userId: number
@@ -22,8 +30,13 @@ export interface NfcScanEvent {
 }
 
 export const nfcApi = {
+  getStudents: (query = '', page = 0, size = 10) =>
+    api.get<{ data: PageResponse<NfcStudent> }>('/nfc/students', {
+      params: { query, page, size },
+    }),
+
   registerUser: (data: NfcRegisterUserRequest) =>
-    api.post<{ data: User }>('/nfc/register-user', data),
+    api.post<{ data: NfcStudent }>('/nfc/register-user', data),
 
   registerBookCopy: (data: NfcRegisterBookCopyRequest) =>
     api.post<{ data: BookCopy }>('/nfc/register-book-copy', data),

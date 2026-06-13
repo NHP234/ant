@@ -8,11 +8,14 @@ import com.example.demo.mapper.BookCopyMapper;
 import com.example.demo.mapper.UserMapper;
 import com.example.demo.model.entity.BookCopy;
 import com.example.demo.model.entity.User;
+import com.example.demo.model.enums.Role;
 import com.example.demo.repository.BookCopyRepository;
 import com.example.demo.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -166,16 +169,20 @@ public class NfcService {
      * Đảm bảo tính Idempotent và chống trùng UID.
      */
     @Transactional
-    public UserResponse registerUser(NfcRegisterUserRequest request) {
-        User user = userRepository.findById(request.getUserId())
+    public NfcStudentResponse registerUser(NfcRegisterUserRequest request) {
+        User user = userRepository.findByIdForUpdate(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getUserId()));
+
+        if (user.getRole() != Role.STUDENT) {
+            throw new IllegalArgumentException("NFC cards can only be assigned to student accounts");
+        }
 
         String cleanUid = request.getNfcCardUid().trim().toUpperCase();
 
         // Check xem thẻ đã thuộc về chính User này chưa (Idempotent check)
         if (cleanUid.equals(user.getNfcCardUid())) {
             log.info("Idempotent check: UID {} đã được đăng ký cho User ID {}", cleanUid, user.getId());
-            return userMapper.toResponse(user);
+            return toNfcStudentResponse(user);
         }
 
         // Chống race condition & Đảm bảo tính UNIQUE: Kiểm tra xem UID có thuộc về User hay BookCopy khác không
@@ -185,7 +192,17 @@ public class NfcService {
         User savedUser = userRepository.save(user);
         log.info("Đăng ký thành công NFC card UID {} cho User ID {}", cleanUid, user.getId());
 
-        return userMapper.toResponse(savedUser);
+        return toNfcStudentResponse(savedUser);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<NfcStudentResponse> searchStudents(String query, Pageable pageable) {
+        String normalizedQuery = query == null ? "" : query.trim();
+        Page<User> page = userRepository.searchByRole(Role.STUDENT, normalizedQuery, pageable);
+        List<NfcStudentResponse> content = page.getContent().stream()
+                .map(this::toNfcStudentResponse)
+                .toList();
+        return PageResponse.from(page, content);
     }
 
     /**
@@ -228,5 +245,16 @@ public class NfcService {
         if (otherCopy.isPresent()) {
             throw new IllegalArgumentException("NFC UID '" + uid + "' is already bound to book copy ID: " + otherCopy.get().getId());
         }
+    }
+
+    private NfcStudentResponse toNfcStudentResponse(User user) {
+        return NfcStudentResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .fullName(user.getFullName())
+                .studentId(user.getStudentId())
+                .isActive(user.getIsActive())
+                .nfcCardUid(user.getNfcCardUid())
+                .build();
     }
 }

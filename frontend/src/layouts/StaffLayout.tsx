@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   Library,
   Menu,
+  ScanLine,
   ScrollText,
   Tags,
   User,
@@ -39,6 +40,7 @@ const operationItems = (basePath: '/admin' | '/librarian'): StaffNavItem[] => [
   { path: `${basePath}/books`, label: 'Quản lý sách', icon: BookOpen },
   { path: `${basePath}/borrows`, label: 'Mượn / Trả', icon: ArrowLeftRight },
   { path: `${basePath}/holds`, label: 'Đặt trước', icon: Clock },
+  { path: `${basePath}/nfc-cards`, label: 'Cấp thẻ NFC', icon: ScanLine },
 ]
 
 const adminNavGroups: StaffNavGroup[] = [

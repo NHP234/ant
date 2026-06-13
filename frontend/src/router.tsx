@@ -12,6 +12,7 @@ import UserManagementPage from '@/pages/admin/UserManagementPage'
 import CategoryManagementPage from '@/pages/admin/CategoryManagementPage'
 import ProfilePage from '@/pages/admin/ProfilePage'
 import AuditLogViewerPage from '@/pages/admin/AuditLogViewerPage'
+import NfcCardManagementPage from '@/pages/admin/NfcCardManagementPage'
 import BookCatalogPage from '@/pages/student/BookCatalogPage'
 import BookDetailPage from '@/pages/student/BookDetailPage'
 import MyBorrowsPage from '@/pages/student/MyBorrowsPage'
@@ -60,6 +61,7 @@ export default function AppRouter() {
               <Route path="/admin/books" element={<BookManagementPage />} />
               <Route path="/admin/borrows" element={<BorrowManagementPage />} />
               <Route path="/admin/holds" element={<HoldManagementPage />} />
+              <Route path="/admin/nfc-cards" element={<NfcCardManagementPage />} />
               <Route path="/admin/users" element={<UserManagementPage />} />
               <Route path="/admin/categories" element={<CategoryManagementPage />} />
               <Route path="/admin/profile" element={<ProfilePage />} />
@@ -73,6 +75,7 @@ export default function AppRouter() {
               <Route path="/librarian/books" element={<BookManagementPage />} />
               <Route path="/librarian/borrows" element={<BorrowManagementPage />} />
               <Route path="/librarian/holds" element={<HoldManagementPage />} />
+              <Route path="/librarian/nfc-cards" element={<NfcCardManagementPage />} />
               <Route path="/librarian/profile" element={<ProfilePage />} />
             </Route>
           </Route>

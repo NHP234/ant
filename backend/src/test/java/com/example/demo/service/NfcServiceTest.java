@@ -22,7 +22,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -164,15 +167,15 @@ class NfcServiceTest {
         void registerUser_success() {
             NfcRegisterUserRequest request = new NfcRegisterUserRequest(1L, "04:A2:B3:C4");
 
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.findByNfcCardUid("04:A2:B3:C4")).thenReturn(Optional.empty());
             when(bookCopyRepository.findByNfcTagUid("04:A2:B3:C4")).thenReturn(Optional.empty());
             when(userRepository.save(any(User.class))).thenReturn(testUser);
-            when(userMapper.toResponse(any(User.class))).thenReturn(testUserResponse);
 
-            UserResponse result = nfcService.registerUser(request);
+            NfcStudentResponse result = nfcService.registerUser(request);
 
             assertThat(result).isNotNull();
+            assertThat(result.getNfcCardUid()).isEqualTo("04:A2:B3:C4");
             verify(userRepository).save(testUser);
             assertThat(testUser.getNfcCardUid()).isEqualTo("04:A2:B3:C4");
         }
@@ -183,12 +186,12 @@ class NfcServiceTest {
             testUser.setNfcCardUid("04:A2:B3:C4");
             NfcRegisterUserRequest request = new NfcRegisterUserRequest(1L, "04:A2:B3:C4");
 
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-            when(userMapper.toResponse(testUser)).thenReturn(testUserResponse);
+            when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(testUser));
 
-            UserResponse result = nfcService.registerUser(request);
+            NfcStudentResponse result = nfcService.registerUser(request);
 
             assertThat(result).isNotNull();
+            assertThat(result.getNfcCardUid()).isEqualTo("04:A2:B3:C4");
             verify(userRepository, never()).save(any());
         }
 
@@ -196,7 +199,7 @@ class NfcServiceTest {
         @DisplayName("should throw error if user not found")
         void registerUser_userNotFound() {
             NfcRegisterUserRequest request = new NfcRegisterUserRequest(99L, "04:A2:B3:C4");
-            when(userRepository.findById(99L)).thenReturn(Optional.empty());
+            when(userRepository.findByIdForUpdate(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> nfcService.registerUser(request))
                     .isInstanceOf(ResourceNotFoundException.class);
@@ -209,7 +212,7 @@ class NfcServiceTest {
 
             User anotherUser = User.builder().id(2L).fullName("Another").nfcCardUid("04:A2:B3:C4").build();
 
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.findByNfcCardUid("04:A2:B3:C4")).thenReturn(Optional.of(anotherUser));
 
             assertThatThrownBy(() -> nfcService.registerUser(request))
@@ -222,13 +225,47 @@ class NfcServiceTest {
         void registerUser_duplicateBookCopyUid() {
             NfcRegisterUserRequest request = new NfcRegisterUserRequest(1L, "04:A2:B3:C4");
 
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.findByNfcCardUid("04:A2:B3:C4")).thenReturn(Optional.empty());
             when(bookCopyRepository.findByNfcTagUid("04:A2:B3:C4")).thenReturn(Optional.of(testBookCopy));
 
             assertThatThrownBy(() -> nfcService.registerUser(request))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("already bound to book copy ID");
+        }
+
+        @Test
+        @DisplayName("should reject NFC assignment for non-student accounts")
+        void registerUser_nonStudent() {
+            testUser.setRole(Role.LIBRARIAN);
+            NfcRegisterUserRequest request = new NfcRegisterUserRequest(1L, "04:A2:B3:C4");
+            when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(testUser));
+
+            assertThatThrownBy(() -> nfcService.registerUser(request))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("student accounts");
+
+            verify(userRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("searchStudents Tests")
+    class SearchStudentsTests {
+
+        @Test
+        @DisplayName("should return paged student NFC assignment data")
+        void searchStudents_success() {
+            testUser.setNfcCardUid("04:A2:B3:C4");
+            PageRequest pageable = PageRequest.of(0, 10);
+            when(userRepository.searchByRole(Role.STUDENT, "20200001", pageable))
+                    .thenReturn(new PageImpl<>(List.of(testUser), pageable, 1));
+
+            PageResponse<NfcStudentResponse> result = nfcService.searchStudents(" 20200001 ", pageable);
+
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().getFirst().getStudentId()).isEqualTo("20200001");
+            assertThat(result.getContent().getFirst().getNfcCardUid()).isEqualTo("04:A2:B3:C4");
         }
     }
 
