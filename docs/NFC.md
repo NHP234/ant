@@ -64,11 +64,13 @@ Kiosk là một màn hình (tablet hoặc màn hình phụ) luôn mở ở trang
 
 ### Flow đăng ký thẻ/tag (Dành cho Admin/Librarian)
 1. Kiosk chỉ dùng để mượn/trả. Việc gán thẻ vẫn làm trên giao diện Quản trị.
-2. Admin/Librarian vào trang quản lý sách, mở danh sách bản sao và bấm **Gán tag** hoặc **Đổi tag** tại bản sao cần cấu hình.
-3. Frontend mở SSE `/api/nfc/stream` và hiển thị trạng thái chờ quét.
-4. Quẹt một tag chưa đăng ký vào RC522. ESP32 gửi UID tới `/api/nfc/scan`, backend broadcast event `UNKNOWN` về frontend.
-5. Frontend hiển thị UID để thủ thư xác nhận, sau đó gọi `POST /api/nfc/register-book-copy` và cập nhật danh sách bản sao.
-6. Nếu UID đã thuộc user hoặc bản sao khác, frontend cảnh báo và tiếp tục chờ một tag chưa đăng ký.
+2. Với thẻ sinh viên, Admin/Librarian mở trang **Cấp thẻ NFC**, tìm sinh viên qua `GET /api/nfc/students`, sau đó bấm **Gán thẻ** hoặc **Đổi thẻ**.
+3. Với tag sách, Admin/Librarian vào trang quản lý sách, mở danh sách bản sao và bấm **Gán tag** hoặc **Đổi tag** tại bản sao cần cấu hình.
+4. Frontend mở SSE `/api/nfc/stream` và hiển thị trạng thái chờ quét.
+5. Quẹt một thẻ/tag chưa đăng ký vào RC522. ESP32 gửi UID tới `/api/nfc/scan`, backend broadcast event `UNKNOWN` về frontend.
+6. Frontend hiển thị UID để nhân viên xác nhận, sau đó gọi `POST /api/nfc/register-user` hoặc `POST /api/nfc/register-book-copy`.
+7. Backend chỉ cho gán thẻ người dùng vào tài khoản `STUDENT`; LIBRARIAN không được mở API quản trị toàn bộ user.
+8. Nếu UID đã thuộc sinh viên hoặc bản sao khác, frontend cảnh báo và tiếp tục chờ một UID chưa đăng ký.
 
 ## Kế hoạch Triển khai Chi tiết
 

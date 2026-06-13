@@ -85,7 +85,15 @@ frontend/src/
 /admin/books                # Book management (ADMIN/LIBRARIAN)
 /admin/borrows              # Borrow slip management (ADMIN/LIBRARIAN)
 /admin/holds                # Hold management (ADMIN/LIBRARIAN)
+/admin/nfc-cards            # Student NFC card assignment (ADMIN)
 /admin/users                # User management (ADMIN only)
+
+/librarian/dashboard        # Librarian dashboard
+/librarian/books            # Book and copy management
+/librarian/borrows          # Borrow/return operations
+/librarian/holds            # Hold management
+/librarian/nfc-cards        # Student NFC card assignment
+/librarian/profile          # Librarian profile
 
 # Student routes (any authenticated user)
 /browse                     # Book catalog with search
@@ -111,6 +119,7 @@ frontend/src/
 | `DashboardStats` | `DashboardStatsResponse.java` | `api/dashboard.ts` |
 | `Notification` | `NotificationResponse.java` | `api/notifications.ts` |
 | `User` | `UserResponse.java` | `api/users.ts` |
+| `NfcStudent` | `NfcStudentResponse.java` | `api/nfc.ts` |
 
 ## Key Implementation Notes
 
@@ -146,6 +155,12 @@ frontend/src/
 4. Nếu API lỗi, danh sách chờ vẫn được giữ để thủ thư sửa và thử lại; chỉ reset và refresh danh sách phiếu sau khi thành công.
 5. Kiosk gom toàn bộ `scannedBorrowCopies` rồi gửi một request với `source = NFC`; mỗi item luôn có `bookId` và `copyId`.
 6. EventSource của kiosk gọi NFC handler mới nhất qua ref để không giữ state cũ khi giao diện chuyển từ quẹt sinh viên sang quẹt sách.
+
+### Student NFC Card Assignment
+1. ADMIN/LIBRARIAN mở route `/admin/nfc-cards` hoặc `/librarian/nfc-cards`.
+2. Trang tìm sinh viên qua API NFC chuyên biệt, không sử dụng API quản trị `/users`.
+3. Khi chọn **Gán thẻ** hoặc **Đổi thẻ**, frontend mở SSE và chỉ nhận event `UNKNOWN`.
+4. Nhân viên xác nhận UID trước khi gọi `POST /nfc/register-user`; thành công mới đóng phiên quét và refresh danh sách.
 
 ## Security Rules
 

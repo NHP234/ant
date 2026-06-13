@@ -180,7 +180,9 @@
 - ✅ Thiết kế & hiện thực hóa NFC database schema (users.nfc_card_uid và book_copies.nfc_tag_uid)
 - ✅ REST API: POST /api/nfc/scan nhận dạng và phát sóng sự kiện quẹt thẻ (X-API-KEY secure)
 - ✅ REST API: đăng ký/gán thẻ NFC cho User và Book Copy (idempotent, unique check)
+- ✅ REST API tra cứu sinh viên tối thiểu cho nghiệp vụ NFC, dùng chung cho ADMIN/LIBRARIAN mà không mở quyền quản trị user
 - ✅ Real-time Stream: SSE (Server-Sent Events) endpoint GET /api/nfc/stream đẩy sự kiện quẹt thẻ tới Kiosk
+- ✅ Giao diện Cấp thẻ NFC cho sinh viên: tìm kiếm, chờ quét SSE, xác nhận gán/đổi thẻ ở cả admin và librarian workspace
 - ✅ Viết bộ 14 unit tests cho NfcService đạt coverage tối đa
 - ### Phase 4: Kiosk & RAG Chatbot (Đang tiến hành)
 - [x] Tích hợp phần cứng NFC (Mô phỏng/API)
@@ -289,3 +291,4 @@
 | 2026-06-11 | Gộp nhiều sách vào một phiếu mượn: thêm `POST /api/borrow-slips` atomic, dùng chung workflow với API một cuốn, khóa borrower/hold/copy, cập nhật form tại quầy và kiosk gửi batch; bổ sung unit/controller/integration rollback/Playwright mock tests và tài liệu liên quan. |
 | 2026-06-11 | Refactor mượn/đặt trước: tách policy và hold lifecycle, gom tạo notification vào `NotificationService`, chuyển confirm hold sang `BorrowService`, chuẩn hóa `Clock` và pessimistic lock cho expire/return/overdue. Sửa lỗi hold hết hạn bị rollback khi confirm và loại hold hết hạn khỏi giới hạn. Verification: 79 test thường và 3 integration test PostgreSQL pass. |
 | 2026-06-10 | Chuẩn hóa phân lớp backend cho audit log và borrow slip: controller không còn truy cập repository/JPA entity trực tiếp; bổ sung service, `AuditLogResponse`, MapStruct mapper, unit tests và đồng bộ contract audit log ở frontend/API spec. Verification: backend 53 tests pass, frontend production build pass. |
+| 2026-06-13 | Bổ sung cấp thẻ NFC sinh viên theo đúng phân quyền: thêm `GET /api/nfc/students` trả DTO tối thiểu cho ADMIN/LIBRARIAN, chỉ cho gán thẻ vào tài khoản STUDENT, thêm route `/admin/nfc-cards` và `/librarian/nfc-cards`, luồng chờ quét SSE/xác nhận gán hoặc đổi thẻ, cùng unit/controller/Playwright mock tests không ghi tag vào DB. |

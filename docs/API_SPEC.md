@@ -546,6 +546,7 @@ Hold `ACTIVE` đã hết hạn không được tính vào giới hạn mượn/�
 |--------|----------|------|-------------|
 | GET | /nfc/stream | Public | Mở kết nối SSE Stream nhận sự kiện NFC real-time |
 | POST | /nfc/scan | Public | Nhận tín hiệu quét NFC từ ESP32 (API Key) |
+| GET | /nfc/students | ADMIN/LIBRARIAN | Tìm sinh viên theo MSSV, họ tên hoặc username để cấp thẻ |
 | POST | /nfc/register-user | ADMIN/LIBRARIAN | Gán thẻ NFC cho tài khoản sinh viên |
 | POST | /nfc/register-book-copy | ADMIN/LIBRARIAN | Gán thẻ NFC cho bản sao sách vật lý |
 
@@ -591,6 +592,34 @@ data: {
 }
 ```
 
+### GET /nfc/students
+```json
+// Query: ?query=20201234&page=0&size=10
+// Response 200
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 1,
+        "username": "student01",
+        "fullName": "Nguyen Van A",
+        "studentId": "20201234",
+        "isActive": true,
+        "nfcCardUid": null
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "totalElements": 1,
+    "totalPages": 1,
+    "last": true
+  }
+}
+```
+
+Endpoint chỉ trả dữ liệu tối thiểu phục vụ cấp thẻ, không cấp cho LIBRARIAN quyền truy cập API quản trị `/users`.
+
 ### POST /nfc/register-user
 ```json
 // Request
@@ -616,6 +645,8 @@ data: {
   "message": "NFC Tag bound to book copy successfully"
 }
 ```
+
+Chỉ tài khoản có role `STUDENT` được gán thẻ. UID được chuẩn hóa uppercase, phải duy nhất giữa sinh viên và bản sao sách.
 
 ---
 
