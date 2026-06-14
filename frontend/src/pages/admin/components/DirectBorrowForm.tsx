@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { AxiosError } from 'axios'
+import { getErrorDescription } from '@/lib/errorMessages'
 import { borrowSlipApi } from '@/api/borrowSlips'
 import { bookApi, bookCopyApi } from '@/api/books'
 import type { Book, BookCopy } from '@/api/books'
@@ -34,11 +34,6 @@ import { toast } from 'sonner'
 
 type IdentifierMode = 'studentId' | 'username'
 
-interface ApiErrorResponse {
-  message?: string
-  error?: string
-}
-
 const AUTO_COPY = 'AUTO'
 const MAX_BORROW_ITEMS = 5
 
@@ -52,16 +47,8 @@ function normalize(value: string) {
   return value.trim().toLowerCase()
 }
 
-function getErrorMessage(error: unknown) {
-  const axiosError = error as AxiosError<ApiErrorResponse>
-  return axiosError.response?.data?.message
-    || axiosError.response?.data?.error
-    || 'Không thể tạo lượt mượn. Vui lòng kiểm tra lại thông tin.'
-}
-
 function describeCopy(copy: BookCopy) {
-  const tag = copy.nfcTagUid ? ` - NFC ${copy.nfcTagUid}` : ''
-  return `Bản #${copy.copyNumber} - ID ${copy.id}${tag}`
+  return `Bản sao #${copy.copyNumber}${copy.nfcTagUid ? ' (có nhãn NFC)' : ''}`
 }
 
 export default function DirectBorrowForm() {
@@ -155,7 +142,7 @@ export default function DirectBorrowForm() {
       setFormError('')
     },
     onError: (error) => {
-      setFormError(getErrorMessage(error))
+      setFormError(getErrorDescription(error))
     },
   })
 
@@ -164,7 +151,7 @@ export default function DirectBorrowForm() {
     if (manual) {
       const parsed = Number(manual)
       if (!Number.isInteger(parsed) || parsed <= 0) {
-        throw new Error('Copy ID phải là số nguyên dương.')
+        throw new Error('Mã bản sao phải là số nguyên dương.')
       }
       return parsed
     }
@@ -212,7 +199,7 @@ export default function DirectBorrowForm() {
         {
           book: selectedBook,
           copyId,
-          copyLabel: selectedCopy ? describeCopy(selectedCopy) : copyId ? `Copy ID ${copyId}` : 'Tự chọn bản sao khả dụng',
+          copyLabel: selectedCopy ? describeCopy(selectedCopy) : copyId ? `Bản sao #${copyId}` : 'Hệ thống tự chọn bản sao',
         },
       ])
       setBookSearch('')
@@ -220,7 +207,7 @@ export default function DirectBorrowForm() {
       setSelectedCopyId(AUTO_COPY)
       setManualCopyId('')
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Copy ID không hợp lệ.')
+      setFormError(error instanceof Error ? error.message : 'Mã bản sao không hợp lệ.')
     }
   }
 
@@ -271,7 +258,7 @@ export default function DirectBorrowForm() {
             </CardDescription>
           </div>
           <Badge variant="outline" className="w-fit">
-            Nguồn COUNTER
+            Mượn tại quầy
           </Badge>
         </div>
       </CardHeader>
@@ -331,7 +318,7 @@ export default function DirectBorrowForm() {
                   ) : (
                     <div className="space-y-2">
                       <p className="text-muted-foreground">
-                        Chưa có khớp chính xác. Backend vẫn sẽ kiểm tra khi tạo lượt mượn.
+                        Chưa có khớp chính xác. Hệ thống sẽ kiểm tra khi tạo phiếu mượn.
                       </p>
                       {matchingUsers.length > 0 && (
                         <div className="space-y-1">
@@ -418,10 +405,10 @@ export default function DirectBorrowForm() {
                   disabled={!selectedBookId || copiesQuery.isLoading || availableCopies.length === 0 || Boolean(manualCopyId.trim())}
                 >
                   <SelectTrigger id="available-copy" className="w-full">
-                    <SelectValue placeholder="Tự chọn copy khả dụng" />
+                    <SelectValue placeholder="Hệ thống tự chọn" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={AUTO_COPY}>Tự chọn copy khả dụng</SelectItem>
+                    <SelectItem value={AUTO_COPY}>Hệ thống tự chọn bản sao</SelectItem>
                     {availableCopies.map(copy => (
                       <SelectItem key={copy.id} value={String(copy.id)}>
                         {describeCopy(copy)}
@@ -430,12 +417,12 @@ export default function DirectBorrowForm() {
                   </SelectContent>
                 </Select>
                 {selectedBookId && !copiesQuery.isLoading && availableCopies.length === 0 && (
-                  <p className="text-xs text-destructive">Sách này hiện không có bản sao AVAILABLE.</p>
+                  <p className="text-xs text-destructive">Sách này hiện không có bản sao sẵn sàng.</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="manual-copy-id">Hoặc nhập Copy ID</Label>
+                <Label htmlFor="manual-copy-id">Hoặc nhập mã bản sao</Label>
                 <Input
                   data-testid="direct-borrow-copy-id"
                   id="manual-copy-id"
@@ -446,7 +433,7 @@ export default function DirectBorrowForm() {
                   disabled={isPending}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Dùng khi đã có NFC tag/mã bản sao. Backend sẽ kiểm tra đúng sách và trạng thái AVAILABLE.
+                  Nhập trực tiếp khi đã biết mã bản sao. Hệ thống sẽ tự kiểm tra tính khả dụng.
                 </p>
               </div>
 
@@ -457,7 +444,7 @@ export default function DirectBorrowForm() {
                     Sách đã chọn
                   </div>
                   <p className="line-clamp-2">{selectedBook.title}</p>
-                  <p className="text-muted-foreground">ID {selectedBook.id} - {selectedBook.availableCopies} copy khả dụng</p>
+                  <p className="text-muted-foreground">{selectedBook.availableCopies} bản sao sẵn sàng</p>
                 </div>
               )}
             </div>
@@ -472,7 +459,7 @@ export default function DirectBorrowForm() {
 
           <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-muted-foreground">
-              Nếu sinh viên có hold ACTIVE cùng đầu sách, backend sẽ tự động fulfill hold đó.
+              Nếu sinh viên có đặt trước đang chờ cho cùng đầu sách, hệ thống sẽ tự động xác nhận.
             </p>
             <Button type="submit" disabled={!canAddItem} variant="outline" className="sm:w-auto" data-testid="direct-borrow-add-item">
               <ListPlus className="mr-2 h-4 w-4" />
