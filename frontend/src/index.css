@@ -158,3 +158,37 @@
     border-radius: 999px;
   }
 }
+
+/* ─── Kiosk standalone palette (light-only, no dark variant) ─── */
+:root {
+  --kiosk-bg: #FDFBF7;
+  --kiosk-text: #1A1F26;
+  --kiosk-text-muted: #6E6855;
+  --kiosk-text-subtle: #968F71;
+  --kiosk-text-label: #4C4738;
+  --kiosk-surface: #FAF8EE;
+  --kiosk-surface-alt: #FAF6EC;
+  --kiosk-border: #E1DEC9;
+  --kiosk-border-subtle: #CFCAB2;
+  --kiosk-success: #1E8449;
+  --kiosk-success-hover: #196F3D;
+  --kiosk-success-bg: #F2FAF5;
+  --kiosk-success-bg-strong: #E8F8F5;
+  --kiosk-success-border: #D4EFDF;
+  --kiosk-success-border-strong: #A3E4D7;
+  --kiosk-error: #C0392B;
+  --kiosk-error-bg: #FDEDEC;
+  --kiosk-error-border: #FADBD8;
+  --kiosk-warning: #D35400;
+  --kiosk-warning-bg: #FEF5E7;
+  --kiosk-info: #2980B9;
+  --kiosk-info-dark: #1F618D;
+  --kiosk-info-bg: #EBF5FB;
+  --kiosk-info-border: #AED6F1;
+  --kiosk-return: #D4AC0D;
+  --kiosk-return-hover: #B7950B;
+  --kiosk-return-bg: #FCF3CF;
+  --kiosk-return-border: #F9E79F;
+  --kiosk-btn-bg: #1A1F26;
+  --kiosk-btn-hover: #2C323B;
+}
