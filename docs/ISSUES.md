@@ -28,6 +28,13 @@
 
 ## Resolved Issues
 
+### [BUG-005] RAG dùng sai trạng thái đặt trước của backend
+- **Loại**: Bug
+- **Ngày tạo**: 2026-06-15
+- **Resolved**: 2026-06-15
+- **Nguyên nhân**: `APIQueryService` lọc hold theo `PENDING`/`READY` và prompt mô tả bước thủ thư phê duyệt, trong khi backend chỉ dùng `ACTIVE`, `FULFILLED`, `CANCELED`, `EXPIRED` và giữ ngay một bản sao khi tạo hold.
+- **Giải pháp**: Đồng bộ mapping đủ bốn trạng thái, hiển thị hạn nhận cho `ACTIVE`, giữ lịch sử trạng thái kết thúc, sửa prompt và bổ sung unit test contract.
+
 ### [BUG-001] GET /api/books/{id} trả về 500 Internal Server Error
 - **Loại**: Bug
 - **Ngày tạo**: 2026-05-14

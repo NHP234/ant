@@ -354,6 +354,17 @@ async def get_user_holds(jwt_token: str) -> list[dict]:
         return []
 ```
 
+`HOLD_STATUS` phải dùng đúng contract trạng thái của backend:
+
+| Trạng thái | Ý nghĩa chatbot |
+|------------|-----------------|
+| `ACTIVE` | Bản sao đã được giữ tại quầy; sinh viên cần đến nhận trước `expiresAt` |
+| `FULFILLED` | Sinh viên đã nhận sách và hold đã chuyển thành lượt mượn |
+| `CANCELED` | Hold đã bị sinh viên hoặc nhân viên hủy |
+| `EXPIRED` | Sinh viên không nhận sách trước hạn và hold đã hết hiệu lực |
+
+Backend không có bước `PENDING`/`READY` hoặc chờ thủ thư duyệt. Khi tạo hold thành công, hệ thống chọn ngay một bản sao khả dụng, chuyển bản sao sang `RESERVED` và tạo hold `ACTIVE` trong 24 giờ.
+
 ### 6.2 Context Building
 
 ```python
