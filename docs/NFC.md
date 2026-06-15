@@ -15,6 +15,37 @@ Thay vì dùng đầu đọc USB cắm trực tiếp vào máy tính, dự án s
 - **Thẻ sinh viên**: Thẻ nhựa RFID/NFC tần số 13.56MHz (Mifare Classic 1K) dùng làm thẻ định danh sinh viên.
 - **Tag trên sách**: Tag RFID/NFC dạng sticker (Mifare 1K / NTAG215) dán lên bìa sách. (Demo khoảng 5-10 cuốn).
 
+## Sơ đồ nối chân ESP32 với RC522
+
+Cấu hình dưới đây khớp với firmware trong `nfc-firmware/src/main.cpp`:
+
+| Chân RC522 | Chân ESP32 | Chức năng |
+|------------|------------|-----------|
+| SDA / SS | GPIO 5 | Chọn thiết bị SPI (`SS`/`CS`) |
+| SCK | GPIO 18 | Xung clock SPI |
+| MOSI | GPIO 23 | Dữ liệu từ ESP32 tới RC522 |
+| MISO | GPIO 19 | Dữ liệu từ RC522 về ESP32 |
+| RST | GPIO 22 | Reset RC522 |
+| 3.3V | 3V3 | Nguồn 3.3V |
+| GND | GND | Mass |
+| IRQ | Không nối | Firmware hiện tại không sử dụng ngắt |
+
+Sơ đồ rút gọn:
+
+```text
+RC522             ESP32
+SDA / SS  ------> GPIO 5
+SCK       ------> GPIO 18
+MOSI      ------> GPIO 23
+MISO      ------> GPIO 19
+RST       ------> GPIO 22
+3.3V      ------> 3V3
+GND       ------> GND
+IRQ       ------> Không nối
+```
+
+> **Quan trọng:** Chỉ cấp nguồn cho RC522 từ chân `3V3` của ESP32, không nối vào `5V` hoặc `VIN`. Tùy bo ESP32, GPIO 5 có thể được in là `5`, `IO5` hoặc `D5`; cần ưu tiên số GPIO theo bảng trên.
+
 ## Architecture (Kiến trúc kết nối)
 
 Mô hình Client-Server qua Wi-Fi kết hợp màn hình Kiosk:
@@ -76,7 +107,8 @@ Kiosk là một màn hình (tablet hoặc màn hình phụ) luôn mở ở trang
 
 ### Phase 1: Phần cứng & ESP32 Firmware
 1. **Đấu nối dây (Wiring)**: 
-   - RC522 <-> ESP32 (Dùng giao tiếp SPI: SDA, SCK, MOSI, MISO, IRQ, GND, RST, 3.3V).
+   - Đấu RC522 với ESP32 theo bảng **Sơ đồ nối chân ESP32 với RC522** ở trên.
+   - Kiểm tra lại nguồn `3.3V`, `GND` và từng GPIO trước khi cấp điện.
 2. **Lập trình ESP32 (Arduino IDE / PlatformIO)**:
    - Thư viện: `MFRC522` (đọc thẻ) và `WiFi`, `HTTPClient` (gửi request).
    - Logic: 
