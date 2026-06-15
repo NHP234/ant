@@ -5,6 +5,7 @@ from app.config import settings
 
 logger = logging.getLogger("rag-service.api_query")
 
+
 class APIQueryService:
     def __init__(self):
         self.spring_boot_url = settings.spring_boot_url
@@ -107,29 +108,62 @@ class APIQueryService:
         Xây dựng văn bản mô tả trạng thái đặt sách từ danh sách các bản ghi hold.
         """
         if not holds:
-            return "Bạn hiện tại không có yêu cầu đăng ký đặt trước (hold) giữ chỗ cuốn sách nào."
-            
-        # Lọc ra các hold có trạng thái đang hoạt động (PENDING - chờ duyệt, READY - sẵn sàng chờ lấy)
-        active_holds = [h for h in holds if h.get("status") in ["PENDING", "READY"]]
-        
-        if not active_holds:
-            return "Bạn hiện tại không có yêu cầu giữ chỗ (hold) sách nào đang chờ xử lý hoặc sẵn sàng."
-            
-        context_lines = []
-        context_lines.append(f"Sinh viên đang có {len(active_holds)} yêu cầu đặt sách:")
-        
-        for idx, h in enumerate(active_holds, 1):
-            status = h.get("status")
-            status_vietnamese = "Đang chờ thủ thư duyệt" if status == "PENDING" else "Đã được duyệt - Sẵn sàng chờ bạn ra nhận"
-            
-            line = f"{idx}. Sách \"{h.get('bookTitle')}\" (Trạng thái: {status_vietnamese})"
-            if status == "READY" and h.get("expiresAt"):
-                exp_date_str = self._format_date(h.get("expiresAt"))
-                line += f" -> Bạn cần ra quầy thư viện lấy sách trước thời hạn: {exp_date_str} (Hết hạn sau 24h từ lúc duyệt)."
-                
-            context_lines.append(line)
-            
+            return "Sinh viên chưa có yêu cầu đặt trước sách nào."
+
+        active_holds = [hold for hold in holds if hold.get("status") == "ACTIVE"]
+        history_holds = [hold for hold in holds if hold.get("status") != "ACTIVE"]
+
+        context_lines = [
+            f"Sinh viên có {len(active_holds)} yêu cầu đặt trước đang còn hiệu lực."
+        ]
+        if active_holds:
+            context_lines.append("\nĐặt trước đang còn hiệu lực:")
+            context_lines.extend(
+                self._format_hold_line(index, hold)
+                for index, hold in enumerate(active_holds, 1)
+            )
+        else:
+            context_lines.append("Hiện không có sách nào đang được giữ chỗ.")
+
+        if history_holds:
+            context_lines.append("\nLịch sử đặt trước:")
+            context_lines.extend(
+                self._format_hold_line(index, hold)
+                for index, hold in enumerate(history_holds, 1)
+            )
+
         return "\n".join(context_lines)
+
+    def _format_hold_line(self, index: int, hold: dict) -> str:
+        title = hold.get("bookTitle") or "Không rõ tên sách"
+        status = hold.get("status")
+
+        if status == "ACTIVE":
+            expires_at = self._format_date(hold.get("expiresAt"))
+            return (
+                f'{index}. "{title}": Đang được giữ tại quầy. '
+                f"Vui lòng đến nhận trước {expires_at}."
+            )
+        if status == "FULFILLED":
+            fulfilled_at = self._format_date(hold.get("fulfilledAt"))
+            return f'{index}. "{title}": Đã nhận sách và chuyển thành lượt mượn lúc {fulfilled_at}.'
+        if status == "CANCELED":
+            canceled_at = self._format_date(hold.get("canceledAt"))
+            reason = self._format_cancel_reason(hold.get("cancelReason"))
+            return f'{index}. "{title}": Đã hủy lúc {canceled_at}. Lý do: {reason}.'
+        if status == "EXPIRED":
+            expires_at = self._format_date(hold.get("expiresAt"))
+            return f'{index}. "{title}": Đã hết hạn giữ chỗ lúc {expires_at}.'
+
+        return f'{index}. "{title}": Trạng thái chưa xác định ({status or "không có dữ liệu"}).'
+
+    def _format_cancel_reason(self, reason: str | None) -> str:
+        reasons = {
+            "USER_CANCELED": "sinh viên chủ động hủy",
+            "STAFF_CANCELED": "nhân viên thư viện hủy",
+            "EXPIRED_NO_PICKUP": "không đến nhận sách trước thời hạn",
+        }
+        return reasons.get(reason, reason or "không có thông tin")
 
     def _format_date(self, date_val) -> str:
         """

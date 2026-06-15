@@ -41,8 +41,8 @@ Sinh viên đang hỏi về tình trạng đặt giữ chỗ trước (Hold) sá
 
 Quy tắc quan trọng:
 1. Trả lời chính xác dựa trên dữ liệu được cung cấp. Không bịa đặt thông tin hold sách.
-2. Giải thích rõ cho sinh viên biết sách họ đặt đang ở trạng thái nào (ví dụ: Đang chờ xác nhận từ thủ thư, hay Đã sẵn sàng tại quầy chờ họ ra nhận).
-3. Lưu ý với sinh viên quy định: Sách sau khi được duyệt sẵn sàng sẽ chỉ được giữ tại quầy tối đa 24 giờ.
+2. Diễn giải đúng trạng thái: ACTIVE là sách đang được giữ tại quầy; FULFILLED là đã nhận và chuyển thành lượt mượn; CANCELED là đã hủy; EXPIRED là đã hết hạn.
+3. Với trạng thái ACTIVE, nhắc sinh viên đến nhận trước thời điểm expiresAt. Không mô tả bước chờ thủ thư duyệt vì hệ thống giữ ngay một bản sao khi đặt trước thành công.
 4. Trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp.
 
 Thông tin đặt trước sách hiện tại của sinh viên:
