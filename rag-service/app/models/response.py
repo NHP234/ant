@@ -17,4 +17,4 @@ class HealthResponse(BaseModel):
     status: str = Field(..., description="Trạng thái hệ thống (ví dụ: healthy)")
     classifier_loaded: bool = Field(..., description="Trạng thái load mô hình phân loại ý định (SVM)")
     chroma_books_count: int = Field(..., description="Số lượng sách hiện có trong Vector Database")
-    llm_provider: str = Field(..., description="LLM provider đang sử dụng (ví dụ: gemini)")
+    llm_provider: str = Field(..., description="LLM provider đang sử dụng (ví dụ: deepseek)")

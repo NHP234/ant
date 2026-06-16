@@ -29,7 +29,7 @@ logging.getLogger("uvicorn.access").setLevel(logging.INFO)
 
 app = FastAPI(
     title="Awaken Ant Library - RAG Service API",
-    description="Python FastAPI Microservice cung cấp trợ lý AI kết hợp Intent Classifier (SVM) và RAG (ChromaDB + Gemini API).",
+    description="Python FastAPI Microservice cung cấp trợ lý AI kết hợp Intent Classifier (SVM), RAG (ChromaDB) và LLM API.",
     version="1.0.0"
 )
 

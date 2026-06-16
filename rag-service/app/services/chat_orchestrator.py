@@ -35,7 +35,7 @@ class ChatOrchestrator:
         1. Gọi SVM Classifier phân loại ý định
         2. Nếu độ tự tin thấp -> fallback sang GENERAL_CHAT
         3. Dựa vào ý định để gọi pipeline xử lý tương ứng
-        4. Gọi Gemini LLM để tổng hợp câu trả lời tự nhiên
+        4. Gọi LLM provider đã cấu hình để tổng hợp câu trả lời tự nhiên
         Trả về: (answer, intent, confidence, source_books)
         """
         logger.info(f"Bắt đầu điều phối câu hỏi: '{question}'")

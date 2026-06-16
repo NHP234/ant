@@ -23,6 +23,7 @@ def run_ingestion_in_background(rag_service):
 async def health_check(request: Request):
     rag_service = request.app.state.rag_service
     classifier = request.app.state.classifier
+    orchestrator = request.app.state.orchestrator
     
     books_count = 0
     if rag_service:
@@ -37,7 +38,7 @@ async def health_check(request: Request):
         status="healthy",
         classifier_loaded=classifier_loaded,
         chroma_books_count=books_count,
-        llm_provider="gemini"
+        llm_provider=orchestrator.llm_service.provider
     )
 
 @router.post("/ingest")

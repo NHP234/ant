@@ -159,7 +159,7 @@
 - ✅ Init FastAPI project (requirements, config, models, health check)
 - ✅ Implement Intent Classifier (SVM + TF-IDF) với 4 intents (BOOK_SEARCH, BORROW_STATUS, HOLD_STATUS, GENERAL_CHAT)
 - ✅ Ingestion script (nạp sách từ file seed / backend -> ChromaDB bằng `sentence-transformers`)
-- ✅ RAG Pipeline cho tìm kiếm sách (Vector search + Gemini LLM)
+- ✅ RAG Pipeline cho tìm kiếm sách (Vector search + DeepSeek LLM)
 - ✅ API Query Pipeline cho mượn/trả (gọi Spring Boot APIs bằng JWT)
 - ✅ Prompt engineering cho các luồng xử lý
 
@@ -294,3 +294,4 @@
 | 2026-06-13 | Bổ sung cấp thẻ NFC sinh viên theo đúng phân quyền: thêm `GET /api/nfc/students` trả DTO tối thiểu cho ADMIN/LIBRARIAN, chỉ cho gán thẻ vào tài khoản STUDENT, thêm route `/admin/nfc-cards` và `/librarian/nfc-cards`, luồng chờ quét SSE/xác nhận gán hoặc đổi thẻ, cùng unit/controller/Playwright mock tests không ghi tag vào DB. |
 | 2026-06-14 | UI/UX Audit & Fix toàn hệ thống: (1) Xóa `font-heading` khỏi CardTitle/DialogTitle/SheetTitle (Shadcn primitives), thay emoji bằng lucide icons trong ThemeToggle/NotificationBell với aria-label. (2) Tạo shared `errorMessages.ts` mapping 12+ backend error patterns → thông báo tiếng Việt thân thiện. (3) Refactor KioskPage 996→580 dòng: tách 10 sub-components + 2 hooks (`useKioskAudio`, `useKioskSSE`) + module types, xóa 17× `font-serif`, tokenize 60+ hex colors thành CSS custom properties `--kiosk-*`, sửa copywriting kỹ thuật (ẩn UID/raw status, thay thuật ngữ DB). (4) DirectBorrowForm: thay thuật ngữ backend (Copy ID, COUNTER, AVAILABLE, hold ACTIVE, fulfill) bằng ngôn ngữ nghiệp vụ thư viện. Verification: `npx vite build` pass, sweep sạch font-serif/font-heading/emoji. |
 | 2026-06-15 | Sửa chatbot tra cứu đặt trước dùng sai contract: thay `PENDING/READY` bằng `ACTIVE/FULFILLED/CANCELED/EXPIRED`, bỏ luồng chờ thủ thư duyệt không tồn tại, hiển thị hạn nhận và lịch sử hold, bổ sung unit test cho mapping trạng thái. |
+| 2026-06-15 | Chuyển RAG chatbot hoàn toàn sang DeepSeek `deepseek-v4-flash`: non-thinking mode, giới hạn output, lỗi thân thiện cho hết số dư/rate limit, health endpoint và loại bỏ SDK/cấu hình Gemini. Verification: 8 RAG tests pass và API thật trả phản hồi thành công. |

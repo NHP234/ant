@@ -59,7 +59,8 @@ services:
     environment:
       - SPRING_BOOT_URL=http://backend:8080/api
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-flash}
       - INTERNAL_API_KEY=SuperSecretInternalApiKey123!
       - CHROMA_PERSIST_DIR=/data/chroma
       - ENV=production

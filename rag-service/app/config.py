@@ -4,7 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     spring_boot_url: str = "http://localhost:8080/api"
     database_url: str = "postgresql://library_user:library_pass@localhost:5432/library_db"
-    gemini_api_key: str = ""
+    deepseek_api_key: str = ""
+    deepseek_model: str = "deepseek-v4-flash"
+    deepseek_base_url: str = "https://api.deepseek.com"
+    llm_request_timeout_seconds: float = 30.0
     internal_api_key: str = "SuperSecretInternalApiKey123!"
     chroma_persist_dir: str = "./chroma_data"
     env: str = "development"

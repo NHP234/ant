@@ -1,69 +1,121 @@
 import logging
-import google.generativeai as genai
+
+import httpx
+
 from app.config import settings
 
 logger = logging.getLogger("rag-service.llm")
 
+
 class LLMService:
-    def __init__(self):
-        self.api_key = settings.gemini_api_key
+    def __init__(
+        self,
+        deepseek_api_key: str | None = None,
+        deepseek_model: str | None = None,
+        deepseek_base_url: str | None = None,
+    ):
+        self.provider = "deepseek"
+        self.deepseek_api_key = (
+            deepseek_api_key
+            if deepseek_api_key is not None
+            else settings.deepseek_api_key
+        )
+        self.deepseek_model = (
+            deepseek_model
+            if deepseek_model is not None
+            else settings.deepseek_model
+        )
+        self.deepseek_base_url = (
+            deepseek_base_url
+            if deepseek_base_url is not None
+            else settings.deepseek_base_url
+        ).rstrip("/")
         self.is_configured = False
-        
-        if not self.api_key:
+        self._configure_deepseek()
+
+    def _configure_deepseek(self) -> None:
+        if not self.deepseek_api_key:
             logger.warning(
-                "GEMINI_API_KEY chưa được cấu hình trong file .env! "
+                "DEEPSEEK_API_KEY chưa được cấu hình trong file .env! "
                 "Chatbot sẽ chạy ở chế độ MOCK (trả về câu trả lời giả lập)."
             )
             return
 
-        try:
-            genai.configure(api_key=self.api_key)
-            # Kiểm tra nhanh bằng cách gọi danh sách model (nếu có thể) hoặc gán flag thành công
-            self.model_name = "gemini-2.5-flash"
-            self.is_configured = True
-            logger.info(f"Đã cấu hình thành công Google Gemini SDK với model: {self.model_name}")
-        except Exception as e:
-            logger.error(f"Lỗi khi cấu hình Google Gemini SDK: {str(e)}")
+        self.is_configured = True
+        logger.info(
+            "Đã cấu hình DeepSeek API với model: %s",
+            self.deepseek_model,
+        )
 
-    def generate_response(self, prompt: str, chat_history: list[str] = []) -> str:
+    def generate_response(
+        self,
+        prompt: str,
+        chat_history: list[str] | None = None,
+    ) -> str:
         """
-        Gửi prompt và lịch sử hội thoại lên Google Gemini API để tạo câu trả lời.
+        Gửi prompt và lịch sử hội thoại tới LLM provider đã cấu hình.
         """
         if not self.is_configured:
-            # Chế độ Mock Fallback nếu không có API Key
-            logger.info("Đang chạy chế độ Mock LLM do thiếu GEMINI_API_KEY.")
+            logger.info("Đang chạy chế độ Mock LLM do thiếu API key hợp lệ.")
             return (
-                "[MOCK ANSWER - Vui lòng cung cấp GEMINI_API_KEY thực tế]\n\n"
-                "Tôi đã nhận được yêu cầu của bạn. Đây là phản hồi giả lập vì hệ thống chưa được nạp khóa API của Google Gemini.\n"
+                "[MOCK ANSWER - Vui lòng cấu hình API key cho LLM]\n\n"
+                "Tôi đã nhận được yêu cầu của bạn. Đây là phản hồi giả lập vì hệ thống chưa được cấu hình dịch vụ AI.\n"
                 f"Nội dung prompt yêu cầu:\n{prompt[:300]}..."
             )
-            
+
+        full_prompt = self._build_full_prompt(prompt, chat_history or [])
+
         try:
-            # Nếu có lịch sử hội thoại, chúng ta sẽ lồng lịch sử vào prompt để Gemini nắm ngữ cảnh
-            full_prompt = prompt
-            if chat_history:
-                history_text = "\n".join(chat_history)
-                full_prompt = f"Lịch sử hội thoại trước đó:\n{history_text}\n\nYêu cầu hiện tại:\n{prompt}"
-            
-            logger.info(f"Đang gửi request lên Gemini API ({self.model_name})...")
-            model = genai.GenerativeModel(self.model_name)
-            
-            # Cấu hình tham số sinh (generation config)
-            generation_config = genai.types.GenerationConfig(
-                temperature=0.3, # Thấp để tăng tính chính xác, giảm bịa đặt thông tin sách
-                max_output_tokens=1000
+            return self._generate_with_deepseek(full_prompt)
+        except httpx.HTTPStatusError as error:
+            status_code = error.response.status_code
+            logger.error(
+                "DeepSeek API trả về HTTP %s: %s",
+                status_code,
+                error.response.text[:500],
             )
-            
-            response = model.generate_content(
-                full_prompt,
-                generation_config=generation_config
-            )
-            
-            if response and response.text:
-                return response.text.strip()
-            
-            return "Rất tiếc, tôi không thể xử lý câu trả lời lúc này."
-            
+            if status_code == 402:
+                return "Dịch vụ trợ lý AI đang tạm hết hạn mức sử dụng. Vui lòng liên hệ quản trị viên."
+            if status_code == 429:
+                return "Trợ lý AI đang nhận quá nhiều yêu cầu. Bạn vui lòng thử lại sau ít phút."
+            return "Trợ lý AI đang tạm thời không phản hồi. Bạn vui lòng thử lại sau."
         except Exception as e:
-            logger.error(f"Lỗi khi gọi Google Gemini API: {str(e)}")
-            return f"Xin lỗi bạn, đã xảy ra lỗi trong quá trình xử lý câu hỏi với trí tuệ nhân tạo: {str(e)}"
+            logger.error("Lỗi khi gọi DeepSeek API: %s", str(e))
+            return "Trợ lý AI đang gặp sự cố kết nối. Bạn vui lòng thử lại sau."
+
+    def _generate_with_deepseek(self, full_prompt: str) -> str:
+        logger.info(
+            "Đang gửi request lên DeepSeek API (%s)...",
+            self.deepseek_model,
+        )
+        response = httpx.post(
+            f"{self.deepseek_base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self.deepseek_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": self.deepseek_model,
+                "messages": [{"role": "user", "content": full_prompt}],
+                "thinking": {"type": "disabled"},
+                "temperature": 0.3,
+                "max_tokens": 800,
+                "stream": False,
+            },
+            timeout=settings.llm_request_timeout_seconds,
+        )
+        response.raise_for_status()
+        content = response.json()["choices"][0]["message"]["content"]
+        return content.strip() if content else self._empty_response_message()
+
+    def _build_full_prompt(self, prompt: str, chat_history: list[str]) -> str:
+        if not chat_history:
+            return prompt
+        history_text = "\n".join(chat_history)
+        return (
+            f"Lịch sử hội thoại trước đó:\n{history_text}\n\n"
+            f"Yêu cầu hiện tại:\n{prompt}"
+        )
+
+    def _empty_response_message(self) -> str:
+        return "Rất tiếc, tôi không thể xử lý câu trả lời lúc này."

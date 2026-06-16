@@ -79,7 +79,7 @@ User question + JWT token
 | Intent Classifier | scikit-learn SVM (LinearSVC) + CalibratedClassifierCV | Nhận diện ngữ nghĩa sâu, hiệu chuẩn xác suất (Platt Scaling) |
 | Vector Database | ChromaDB (embedded) | Không cần server riêng, dễ deploy |
 | Embedding Model | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Hỗ trợ tiếng Việt xuất sắc, nhẹ (~130MB), chạy CPU tốt |
-| LLM | Google Gemini API (free tier) hoặc Ollama (local) | Free tier đủ cho đồ án, Ollama cho offline demo |
+| LLM | DeepSeek API (`deepseek-v4-flash`) | Chi phí thấp, OpenAI-compatible, phù hợp cho demo ổn định |
 | Vietnamese NLP | Biểu diễn ngữ nghĩa (Dense Vectors) | Tự động phân tách từ bằng WordPiece/Subword của Transformer |
 | HTTP Client | httpx | Async, gọi Spring Boot APIs |
 | Containerization | Docker | Đồng nhất môi trường |
@@ -423,7 +423,7 @@ rag-service/
 │   │   ├── intent_classifier.py # SVM + TF-IDF classifier
 │   │   ├── rag_service.py       # ChromaDB search + RAG pipeline
 │   │   ├── api_query_service.py # Call Spring Boot APIs
-│   │   ├── llm_service.py       # LLM client (Gemini / Ollama)
+│   │   ├── llm_service.py       # DeepSeek API client
 │   │   └── chat_orchestrator.py # Route intents → pipelines
 │   ├── models/
 │   │   ├── request.py           # Pydantic request models
@@ -509,7 +509,7 @@ Authorization: Bearer <jwt_token>   // Bắt buộc — dùng để gọi Spring
   "status": "healthy",
   "classifier_loaded": true,
   "chroma_books_count": 150,
-  "llm_provider": "gemini"
+  "llm_provider": "deepseek"
 }
 ```
 
@@ -526,11 +526,10 @@ Authorization: Bearer <jwt_token>   // Bắt buộc — dùng để gọi Spring
 ### LLM
 | Option | Chi phí | Chất lượng | Latency | Phù hợp |
 |--------|---------|-----------|---------|---------|
-| **Google Gemini 2.0 Flash** (free tier) | Free (15 RPM) | Tốt | ~1-2s | Development + Demo |
+| **DeepSeek V4 Flash** | Trả theo token | Tốt | ~1-3s | Development + Demo |
 | Ollama + Gemma 2 9B | Free (local) | Khá | ~3-5s | Offline demo, cần 8GB+ RAM |
-| OpenAI GPT-4o-mini | ~$0.15/1M tokens | Rất tốt | ~1s | Production (nếu có budget) |
 
-> **Khuyến nghị**: Dùng **Gemini 2.0 Flash** free tier cho development và demo. Đủ tốt cho domain thư viện, hoàn toàn miễn phí (15 requests/phút). Fallback sang Ollama khi offline.
+> **Cấu hình hiện tại**: dùng duy nhất `deepseek-v4-flash` ở non-thinking mode, `temperature=0.3` và giới hạn 800 output tokens.
 
 ### Intent Classifier (SVM)
 - `sklearn.svm.LinearSVC` + `CalibratedClassifierCV` + `SentenceTransformer`
@@ -610,7 +609,8 @@ rag-service:
     - "8000:8000"
   environment:
     - SPRING_BOOT_URL=http://backend:8080/api
-    - GEMINI_API_KEY=${GEMINI_API_KEY}
+    - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+    - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-flash}
     - CHROMA_PERSIST_DIR=/data/chroma
     - INTERNAL_API_KEY=${INTERNAL_API_KEY}
   volumes:
@@ -629,7 +629,7 @@ volumes:
 
 ### Phase 1: Foundation (Tuần 11 — ngày 1-2)
 - [x] Init FastAPI project (`rag-service/`)
-- [x] Setup `requirements.txt` (fastapi, uvicorn, chromadb, sentence-transformers, scikit-learn, underthesea, httpx, python-dotenv, google-generativeai, psycopg2-binary)
+- [x] Setup `requirements.txt` (fastapi, uvicorn, chromadb, sentence-transformers, scikit-learn, underthesea, httpx, python-dotenv, psycopg2-binary)
 - [x] Config `.env.example` + `config.py` (cần thêm `DATABASE_URL` để kết nối Postgres đọc dữ liệu sách)
 - [x] Pydantic models (request/response)
 - [x] Health check endpoint
@@ -645,7 +645,7 @@ volumes:
 - [x] Implement ingestion script (PostgreSQL → ChromaDB)
 - [x] Implement vector search
 - [x] Prompt templates cho BOOK_SEARCH
-- [x] LLM service (Gemini API client)
+- [x] LLM service dùng DeepSeek API
 - [x] Test RAG end-to-end
 
 ### Phase 4: API Query Pipeline (Tuần 12 — ngày 1-2)
@@ -688,7 +688,7 @@ volumes:
 
 | Rủi ro | Giải pháp |
 |--------|-----------|
-| Gemini free tier rate limit (15 RPM) | Cache kết quả, queue requests, fallback Ollama |
+| DeepSeek hết số dư hoặc rate limit | Hiển thị lỗi thân thiện và theo dõi Usage/Billing để nạp thêm hạn mức |
 | SVM accuracy thấp | Thêm training data, tune hyperparams, dùng LLM-based classification fallback |
 | ChromaDB embedding chậm | Batch ingestion, chỉ re-ingest sách mới/thay đổi |
 | Tiếng Việt không chính xác | Dùng `underthesea` tokenizer, thêm domain-specific từ vựng |
