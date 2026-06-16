@@ -314,6 +314,7 @@ Redis cache serialization:
   - Python RAG service khi nhận tín hiệu sẽ tự động đọc lại các sách mới/sửa đổi từ Postgres và đồng bộ hóa tức thì vào ChromaDB.
 
 ## Notes
+- Application time zone is configured as `Asia/Ho_Chi_Minh` via `TimeConfig`, Jackson and Hibernate JDBC settings. Current DTO/schema still use `LocalDateTime`, so new borrow/hold timestamps are generated as Vietnam local business time instead of Docker container UTC.
 - `BorrowService` giữ vai trò facade cho controller để API và audit annotation không thay đổi. Service này chuyển toàn bộ tạo phiếu, validate batch, chọn copy và fulfill hold sang `BorrowSlipCreationService`; `BorrowSlipService` chỉ phụ trách truy vấn.
 - Admin account tự động tạo qua DataInitializer (username/password từ application.yml)
 - Due date mặc định 14 ngày, max borrows 5, configurable trong application.yml
