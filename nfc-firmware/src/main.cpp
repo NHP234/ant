@@ -16,6 +16,22 @@
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 
+bool initializeRfid() {
+  rfid.PCD_Init();
+  delay(50);
+
+  byte version = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+  Serial.printf("RC522 VersionReg: 0x%02X\n", version);
+
+  if (version == 0x00 || version == 0xFF) {
+    Serial.println("Không giao tiếp được với RC522. Kiểm tra nguồn 3.3V, GND và các dây SDA/SCK/MOSI/MISO/RST.");
+    return false;
+  }
+
+  Serial.println("RC522 sẵn sàng. Vui lòng quẹt thẻ...");
+  return true;
+}
+
 void setup() {
   Serial.begin(115200);
   
@@ -30,8 +46,7 @@ void setup() {
 
   // 2. Khởi tạo SPI và RC522
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
-  rfid.PCD_Init();
-  Serial.println("RC522 sẵn sàng. Vui lòng quẹt thẻ...");
+  initializeRfid();
 }
 
 void loop() {
