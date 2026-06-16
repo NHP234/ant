@@ -1,11 +1,17 @@
 import os
 import logging
+import re
 import chromadb
 from sentence_transformers import SentenceTransformer
 
 from app.config import settings
 
 logger = logging.getLogger("rag-service.rag")
+
+
+def _normalize_title(title: str) -> str:
+    normalized = re.sub(r"\s+", " ", (title or "").strip().lower())
+    return normalized.strip("\"'`*_.,:;!? ")
 
 class SentenceTransformerEmbeddingFunction:
     def __init__(self, model_name: str = 'paraphrase-multilingual-MiniLM-L12-v2'):
@@ -144,3 +150,38 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
         context = "\n\n---\n\n".join(documents)
         logger.info(f"Tìm thấy {len(source_books)} sách liên quan trong ChromaDB.")
         return context, source_books
+
+    def get_book_by_title(self, title: str) -> tuple[str, list[dict]]:
+        if self.get_books_count() == 0:
+            logger.warning("ChromaDB is empty. Ingest books before exact title lookup.")
+            return "", []
+
+        expected_title = _normalize_title(title)
+        logger.info("Looking up book by exact title: '%s'...", title)
+        results = self.collection.get(
+            where={"title": title},
+            include=["documents", "metadatas"],
+        )
+
+        documents = results.get("documents") or []
+        metadatas = results.get("metadatas") or []
+        if not documents:
+            logger.info("Exact title lookup missed; falling back to vector search by title.")
+            context, source_books = self.search_books(title, n_results=1)
+            if source_books and _normalize_title(source_books[0].get("title", "")) == expected_title:
+                return context, source_books
+            return "", []
+
+        for document, meta in zip(documents, metadatas):
+            if _normalize_title(meta.get("title", "")) != expected_title:
+                continue
+            return document, [
+                {
+                    "book_id": meta["book_id"],
+                    "title": meta["title"],
+                    "author": meta["author"],
+                    "relevance_score": 1.0,
+                }
+            ]
+
+        return "", []

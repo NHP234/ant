@@ -1,9 +1,10 @@
 import httpx
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from app.config import settings
 
 logger = logging.getLogger("rag-service.api_query")
+DISPLAY_TIME_ZONE = timezone(timedelta(hours=7))
 
 
 class APIQueryService:
@@ -175,7 +176,10 @@ class APIQueryService:
             # Nếu là chuỗi ISO datetime từ Spring Boot (ví dụ "2026-05-25T13:30:00")
             if isinstance(date_val, str):
                 # Cắt lấy phần YYYY-MM-DD và giờ nếu cần
-                dt = datetime.fromisoformat(date_val.replace("Z", ""))
+                normalized = date_val.replace("Z", "+00:00")
+                dt = datetime.fromisoformat(normalized)
+                if dt.tzinfo is not None:
+                    dt = dt.astimezone(DISPLAY_TIME_ZONE)
                 return dt.strftime("%d/%m/%Y %H:%M")
             return str(date_val)
         except Exception:

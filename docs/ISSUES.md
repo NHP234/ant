@@ -28,6 +28,13 @@
 
 ## Resolved Issues
 
+### [BUG-006] Chatbot mất context hội thoại và hiển thị giờ đặt trước lệch UTC
+- **Loại**: Bug
+- **Ngày tạo**: 2026-06-16
+- **Resolved**: 2026-06-16
+- **Nguyên nhân**: Frontend/backend gửi lịch sử chat bằng field `chatHistory` nhưng RAG chỉ đọc `chat_history`; ngoài ra intent classification và vector search chỉ dùng câu hỏi hiện tại nên câu hỏi nối tiếp như "sách này..." không gắn với tên sách vừa được nhắc. Backend chạy trong Docker theo UTC trong khi đang lưu `LocalDateTime` không kèm timezone, làm thời gian đặt trước bị lệch 7 giờ so với giờ Việt Nam.
+- **Giải pháp**: RAG request nhận cả `chatHistory` và `chat_history`, thêm bước rewrite câu hỏi theo tên sách gần nhất trong lịch sử trước khi classifier/search, giới hạn history frontend gửi lên. Với follow-up chi tiết về cuốn đã nhắc, RAG lookup chính xác theo title và trả lời câu hỏi tác giả trực tiếp từ metadata để tránh gợi ý sách ngẫu nhiên. Backend cấu hình clock/Jackson/Hibernate theo `Asia/Ho_Chi_Minh`; RAG formatter convert ISO datetime có offset về UTC+7.
+
 ### [BUG-005] RAG dùng sai trạng thái đặt trước của backend
 - **Loại**: Bug
 - **Ngày tạo**: 2026-06-15

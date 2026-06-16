@@ -538,6 +538,8 @@ Hold `ACTIVE` đã hết hạn không được tính vào giới hạn mượn/�
 }
 ```
 
+`chatHistory` là field chính frontend/backend đang dùng; RAG service cũng chấp nhận alias `chat_history` khi gọi trực tiếp. History nên chỉ gửi các lượt gần nhất để giữ prompt gọn và hỗ trợ câu hỏi nối tiếp như "sách này..." dựa trên tên sách đã nhắc trong hội thoại.
+
 ---
 
 ## NFC Integration

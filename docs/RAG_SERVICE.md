@@ -466,6 +466,8 @@ rag-service/
 Authorization: Bearer <jwt_token>   // Bắt buộc — dùng để gọi Spring Boot APIs
 ```
 
+RAG service nhận cả `chat_history` và `chatHistory` để tương thích với Spring Boot/Frontend. Trước khi phân loại intent và tìm kiếm vector, orchestrator sẽ dùng lịch sử hội thoại gần nhất để bổ sung ngữ cảnh cho câu hỏi nối tiếp như "sách này về chủ đề gì?", ưu tiên tên sách xuất hiện trong dòng `Sách: ...` của câu trả lời trước đó. Với câu hỏi chi tiết về cuốn đã nhắc (`tác giả là ai`, `chủ đề gì`, `thể loại gì`, `nói về gì`), service lookup chính xác theo title trước; riêng câu hỏi tác giả được trả lời trực tiếp từ metadata để tránh LLM gợi ý sách ngẫu nhiên. Câu hỏi đã bổ sung ngữ cảnh chỉ dùng cho routing/search; prompt gửi LLM vẫn giữ cả câu hỏi gốc để câu trả lời tự nhiên.
+
 ```json
 // Response — BOOK_SEARCH
 {

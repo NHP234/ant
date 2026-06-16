@@ -16,6 +16,8 @@ interface Message {
   confidence?: number
 }
 
+const CHAT_HISTORY_LIMIT = 10
+
 const QUICK_PROMPTS = [
   { text: "Gợi ý sách học Java", category: "search" },
   { text: "Sách tôi đặt mượn đã có chưa?", category: "hold" },
@@ -65,7 +67,7 @@ export default function ChatPage() {
     setInput('')
     setIsLoading(true)
 
-    const chatHistory = messages.map(msg => 
+    const chatHistory = messages.slice(-CHAT_HISTORY_LIMIT).map(msg =>
       msg.sender === 'user' ? `User: ${msg.text}` : `Bot: ${msg.text}`
     )
 
