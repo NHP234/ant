@@ -24,6 +24,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +48,7 @@ class BookServiceTest {
     @Mock private CategoryRepository categoryRepository;
     @Mock private AuthorRepository authorRepository;
     @Mock private BookMapper bookMapper;
+    @Mock private RagBookSyncService ragBookSyncService;
 
     @InjectMocks private BookService bookService;
 
@@ -117,6 +120,7 @@ class BookServiceTest {
             assertThat(result.getId()).isEqualTo(1L);
             verify(bookRepository).save(any(Book.class));
             verify(bookCopyRepository, times(2)).save(any(BookCopy.class));
+            verify(ragBookSyncService).upsertBook(1L);
         }
 
         @Test
@@ -144,6 +148,38 @@ class BookServiceTest {
             assertThat(result).isNotNull();
             verify(categoryRepository).findAllById(any());
             verify(bookCopyRepository, times(2)).save(any(BookCopy.class));
+            verify(ragBookSyncService).upsertBook(1L);
+        }
+
+        @Test
+        @DisplayName("should sync RAG only after transaction commit")
+        void createBook_syncsRagAfterCommit() {
+            BookCreateRequest request = new BookCreateRequest();
+            request.setTitle("New Book");
+            request.setAuthor("Author");
+            request.setQuantity(1);
+
+            when(bookMapper.toEntity(request)).thenReturn(testBook);
+            when(bookRepository.save(any(Book.class))).thenReturn(testBook);
+            when(bookMapper.toResponse(testBook)).thenReturn(testBookResponse);
+            when(bookCopyRepository.save(any(BookCopy.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(bookCopyRepository.countByBookId(1L)).thenReturn(1);
+            when(bookCopyRepository.countByBookIdAndStatus(1L, CopyStatus.AVAILABLE)).thenReturn(1);
+
+            TransactionSynchronizationManager.initSynchronization();
+            try {
+                bookService.createBook(request);
+
+                verify(ragBookSyncService, never()).upsertBook(any());
+                List<TransactionSynchronization> synchronizations = TransactionSynchronizationManager.getSynchronizations();
+                assertThat(synchronizations).hasSize(1);
+
+                synchronizations.forEach(TransactionSynchronization::afterCommit);
+
+                verify(ragBookSyncService).upsertBook(1L);
+            } finally {
+                TransactionSynchronizationManager.clearSynchronization();
+            }
         }
     }
 
@@ -159,6 +195,7 @@ class BookServiceTest {
             bookService.deleteBook(1L);
 
             verify(bookRepository).delete(testBook);
+            verify(ragBookSyncService).deleteBook(1L);
         }
 
         @Test

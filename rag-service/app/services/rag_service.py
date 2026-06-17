@@ -109,6 +109,36 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
             
         logger.info("Upsert toàn bộ dữ liệu sách vào ChromaDB hoàn tất!")
 
+    def delete_book(self, book_id: int):
+        """
+        Remove one book from the vector database. Missing IDs are treated as a no-op.
+        """
+        chroma_id = f"book_{book_id}"
+        try:
+            self.collection.delete(ids=[chroma_id])
+            logger.info("Deleted book %s from ChromaDB if it existed.", book_id)
+        except Exception as e:
+            logger.error("Failed to delete book %s from ChromaDB: %s", book_id, str(e))
+            raise
+
+    def delete_books_not_in(self, book_ids: list[int]) -> int:
+        """
+        Remove stale vectors that no longer exist in PostgreSQL.
+        """
+        keep_ids = {f"book_{book_id}" for book_id in book_ids}
+        results = self.collection.get(include=[])
+        existing_ids = results.get("ids") or []
+        stale_ids = [chroma_id for chroma_id in existing_ids if chroma_id not in keep_ids]
+        if not stale_ids:
+            return 0
+
+        batch_size = 500
+        for i in range(0, len(stale_ids), batch_size):
+            self.collection.delete(ids=stale_ids[i:i + batch_size])
+
+        logger.info("Deleted %s stale book vectors from ChromaDB.", len(stale_ids))
+        return len(stale_ids)
+
     def search_books(self, question: str, n_results: int = 5) -> tuple[str, list[dict]]:
         """
         Tìm kiếm các sách liên quan nhất trong vector database bằng cosine similarity.

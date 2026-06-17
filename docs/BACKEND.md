@@ -302,16 +302,15 @@ Redis cache serialization:
 ### 1. AI Chatbot Proxying
 - Khi người dùng gửi câu hỏi tới `POST /api/chat`, `ChatController` của Spring Boot đóng vai trò proxy bảo mật.
 - Nó tự động forward request (bao gồm `ChatRequest` chứa câu hỏi và lịch sử cuộc hội thoại) kèm theo header JWT Token của người dùng (`Authorization`) sang Python RAG service (`POST /api/chat`).
-- Python RAG service sẽ trích xuất JWT để lấy ID sinh viên phục vụ việc tra cứu thông tin cá nhân (như sách đang mượn/chờ mượn) hoặc thực hiện truy vấn thông tin sách trong cơ sở dữ liệu vector ChromaDB, sau đó dùng Gemini để tạo ra phản hồi thân thiện.
+- Python RAG service sẽ trích xuất JWT để lấy ID sinh viên phục vụ việc tra cứu thông tin cá nhân (như sách đang mượn/chờ mượn) hoặc thực hiện truy vấn thông tin sách trong cơ sở dữ liệu vector ChromaDB, sau đó dùng DeepSeek để tạo ra phản hồi thân thiện.
 - **Fallback Cơ Chế**: Nếu RAG service gặp sự cố hoặc offline, Spring Boot sẽ bắt lỗi `Exception` và áp dụng chế độ Fallback, trả về một câu trả lời thân thiện được định nghĩa sẵn để tránh làm gián đoạn trải nghiệm người dùng.
 
-### 2. Auto-ingest khi thêm/sửa sách (Bất đồng bộ)
-- Nhằm giữ cho Vector Database (ChromaDB) luôn khớp với dữ liệu thực tế trong Postgres, `BookService` được trang bị khả năng tự động cập nhật.
-- Mỗi khi có sự thay đổi về sách (Thêm sách mới, Sửa thông tin sách, Xóa sách):
-  - `BookService` gọi phương thức `triggerReIngest()`.
-  - Phương thức này được gắn annotation `@Async` (kích hoạt qua `@EnableAsync` trong `DemoApplication`) để chạy bất đồng bộ trên một thread riêng, hoàn toàn không gây chậm trễ cho HTTP thread của người dùng.
-  - `@Async triggerReIngest()` gửi một HTTP POST request nhanh tới endpoint `/api/ingest` của Python RAG service kèm header bảo mật nội bộ `X-Internal-Key`.
-  - Python RAG service khi nhận tín hiệu sẽ tự động đọc lại các sách mới/sửa đổi từ Postgres và đồng bộ hóa tức thì vào ChromaDB.
+### 2. Đồng bộ sách sang ChromaDB
+- Nhằm giữ Vector Database (ChromaDB) khớp với dữ liệu thực tế trong Postgres, `BookService` đăng ký callback sau transaction commit rồi gọi `RagBookSyncService`.
+- Khi thêm/sửa sách thành công, backend gọi nội bộ `POST /api/ingest/books/{bookId}` trên RAG service để upsert đúng một đầu sách vào ChromaDB.
+- Khi xóa sách thành công, backend gọi nội bộ `DELETE /api/ingest/books/{bookId}` để xóa vector tương ứng.
+- Cả hai lời gọi đều chạy qua `@Async` trong `RagBookSyncService`, dùng shared header `X-Internal-Key` và được xem là non-critical: nếu RAG service lỗi, nghiệp vụ quản lý sách vẫn không rollback.
+- Endpoint `POST /api/ingest` vẫn tồn tại cho backfill/rebuild toàn bộ; sau khi upsert toàn bộ sách từ PostgreSQL, RAG service prune các vector `book_*` không còn tồn tại trong DB để tránh chatbot gợi ý sách đã xóa.
 
 ## Notes
 - Application time zone is configured as `Asia/Ho_Chi_Minh` via `TimeConfig`, Jackson and Hibernate JDBC settings. Current DTO/schema still use `LocalDateTime`, so new borrow/hold timestamps are generated as Vietnam local business time instead of Docker container UTC.

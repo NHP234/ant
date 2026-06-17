@@ -418,7 +418,7 @@ rag-service/
 │   ├── config.py                # Settings (env vars)
 │   ├── routers/
 │   │   ├── chat.py              # POST /api/chat
-│   │   └── admin.py             # POST /api/ingest, GET /api/health
+│   │   └── admin.py             # GET /api/health, full + single-book ingest endpoints
 │   ├── services/
 │   │   ├── intent_classifier.py # SVM + TF-IDF classifier
 │   │   ├── rag_service.py       # ChromaDB search + RAG pipeline
@@ -492,15 +492,44 @@ RAG service nhận cả `chat_history` và `chatHistory` để tương thích v�
 ### POST /api/ingest
 
 ```json
-// Trigger re-ingestion of books from DB
-// Protected: chỉ internal call từ Spring Boot (API key)
+// Trigger full re-ingestion of books from PostgreSQL.
+// Protected: chỉ internal call từ Spring Boot/admin tooling (API key)
 // Headers: X-Internal-Key: <shared_secret>
 
 // Response
 {
   "status": "success",
-  "books_ingested": 150,
-  "duration_seconds": 12.5
+  "message": "Đã bắt đầu tiến trình đồng bộ dữ liệu sách trong nền (Background Ingestion started)."
+}
+```
+
+Full ingest chạy nền: đọc toàn bộ sách từ PostgreSQL, upsert vào ChromaDB, sau đó prune các vector `book_*` không còn tồn tại trong PostgreSQL.
+
+### POST /api/ingest/books/{book_id}
+
+```json
+// Upsert một đầu sách đã commit từ PostgreSQL vào ChromaDB.
+// Protected: internal call, header X-Internal-Key.
+
+// Response
+{
+  "status": "success",
+  "books_ingested": 1,
+  "book_id": 25445
+}
+```
+
+### DELETE /api/ingest/books/{book_id}
+
+```json
+// Xóa vector của một đầu sách khỏi ChromaDB sau khi sách bị xóa ở backend.
+// Protected: internal call, header X-Internal-Key.
+
+// Response
+{
+  "status": "success",
+  "books_deleted": 1,
+  "book_id": 25445
 }
 ```
 
@@ -583,23 +612,18 @@ public class ChatController {
 }
 ```
 
-### 10.2 Auto-Ingest khi thêm/sửa sách
+### 10.2 Auto-sync khi thêm/sửa/xóa sách
 
 ```java
-// Trong BookService.java — sau khi create/update book
-@Async
-public void triggerReIngest() {
-    try {
-        restClient.post()
-            .uri(ragServiceUrl + "/api/ingest")
-            .header("X-Internal-Key", internalApiKey)
-            .retrieve()
-            .toBodilessEntity();
-    } catch (Exception e) {
-        log.warn("RAG ingest failed (non-critical): {}", e.getMessage());
-    }
-}
+// BookService registers this after the DB transaction commits.
+runAfterCommit(() -> ragBookSyncService.upsertBook(bookId));
+
+// RagBookSyncService sends non-critical async internal requests.
+POST /api/ingest/books/{bookId}
+DELETE /api/ingest/books/{bookId}
 ```
+
+Backend không gọi full `/api/ingest` cho từng lần thêm/sửa sách nữa. Full ingest chỉ dùng khi cần rebuild/backfill toàn bộ vector DB.
 
 ### 10.3 Docker Compose
 
@@ -664,7 +688,7 @@ volumes:
 
 ### Phase 6: Integration (Tuần 12 — ngày 3-5)
 - [x] Spring Boot `ChatController` (proxy)
-- [x] Auto-ingest trigger khi thêm/sửa sách
+- [x] Auto-sync từng sách khi thêm/sửa/xóa, full ingest có prune vector cũ
 - [x] Dockerfile cho rag-service
 - [x] Docker Compose integration
 - [x] Frontend: kết nối ChatPage.tsx với API thực
