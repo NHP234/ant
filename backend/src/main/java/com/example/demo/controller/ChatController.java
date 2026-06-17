@@ -3,6 +3,8 @@ package com.example.demo.controller;
 import com.example.demo.dto.request.ChatRequest;
 import com.example.demo.dto.response.ApiResponse;
 import com.example.demo.dto.response.ChatResponse;
+import com.example.demo.model.entity.Book;
+import com.example.demo.repository.BookRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,6 +20,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
@@ -31,6 +38,7 @@ public class ChatController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
+    private final BookRepository bookRepository;
 
     @PostMapping
     @Operation(summary = "Gửi tin nhắn hỏi đáp cho Trợ lý AI")
@@ -59,6 +67,7 @@ public class ChatController {
             );
 
             ChatResponse response = responseEntity.getBody();
+            enrichSourceBookCovers(response);
 
             return ResponseEntity.ok(ApiResponse.ok(response, "Thành công"));
         } catch (Exception e) {
@@ -73,5 +82,36 @@ public class ChatController {
             
             return ResponseEntity.ok(ApiResponse.ok(fallbackResponse, "RAG service offline (Fallback applied)"));
         }
+    }
+
+    private void enrichSourceBookCovers(ChatResponse response) {
+        if (response == null || response.getSourceBooks() == null || response.getSourceBooks().isEmpty()) {
+            return;
+        }
+
+        var missingCoverIds = response.getSourceBooks().stream()
+                .filter(source -> source.getBookId() != null)
+                .filter(source -> source.getCoverImageUrl() == null || source.getCoverImageUrl().isBlank())
+                .map(ChatResponse.SourceBook::getBookId)
+                .distinct()
+                .toList();
+
+        if (missingCoverIds.isEmpty()) {
+            return;
+        }
+
+        Map<Long, Book> booksById = bookRepository.findAllById(missingCoverIds).stream()
+                .filter(book -> book.getCoverImageUrl() != null && !book.getCoverImageUrl().isBlank())
+                .collect(Collectors.toMap(Book::getId, Function.identity()));
+
+        response.getSourceBooks().forEach(source -> {
+            if (source.getBookId() == null || source.getCoverImageUrl() != null && !source.getCoverImageUrl().isBlank()) {
+                return;
+            }
+            Book book = booksById.get(source.getBookId());
+            if (Objects.nonNull(book)) {
+                source.setCoverImageUrl(book.getCoverImageUrl());
+            }
+        });
     }
 }

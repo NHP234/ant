@@ -28,7 +28,7 @@ def test_deepseek_generates_response_with_non_thinking_mode(monkeypatch):
     request = post.call_args.kwargs
     assert request["json"]["model"] == "deepseek-v4-flash"
     assert request["json"]["thinking"] == {"type": "disabled"}
-    assert request["json"]["max_tokens"] == 800
+    assert request["json"]["max_tokens"] == 1200
     assert "Lịch sử hội thoại trước đó" in request["json"]["messages"][0]["content"]
     assert request["headers"]["Authorization"] == "Bearer test-key"
 
@@ -53,6 +53,29 @@ def test_deepseek_returns_friendly_message_when_balance_is_empty(monkeypatch):
 
     assert "hết hạn mức sử dụng" in result
     assert "Insufficient Balance" not in result
+
+
+def test_clean_response_text_removes_single_asterisk_artifacts():
+    service = LLMService(deepseek_api_key="")
+
+    result = service._clean_response_text("Book A - *Author A*\n* Summary line")
+
+    assert "*" not in result
+    assert "Author A" in result
+    assert "- Summary line" in result
+
+
+def test_clean_response_text_removes_markdown_emphasis_artifacts():
+    service = LLMService(deepseek_api_key="")
+
+    result = service._clean_response_text(
+        "1. **TÃªn sÃ¡ch:** _Clean Code_\n**TÃ¡c giáº£:** Robert C. Martin"
+    )
+
+    assert "*" not in result
+    assert "_" not in result
+    assert "TÃªn sÃ¡ch:" in result
+    assert "Clean Code" in result
 
 
 def test_missing_key_uses_mock_mode():

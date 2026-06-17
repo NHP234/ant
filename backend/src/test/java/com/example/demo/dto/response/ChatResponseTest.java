@@ -21,6 +21,7 @@ class ChatResponseTest {
                       "book_id": 42,
                       "title": "Clean Code",
                       "author": "Robert C. Martin",
+                      "cover_image_url": "https://example.com/cover.jpg",
                       "relevance_score": 0.88
                     }
                   ]
@@ -34,6 +35,7 @@ class ChatResponseTest {
         assertThat(source.getBookId()).isEqualTo(42L);
         assertThat(source.getTitle()).isEqualTo("Clean Code");
         assertThat(source.getAuthor()).isEqualTo("Robert C. Martin");
+        assertThat(source.getCoverImageUrl()).isEqualTo("https://example.com/cover.jpg");
         assertThat(source.getRelevanceScore()).isEqualTo(0.88);
     }
 }

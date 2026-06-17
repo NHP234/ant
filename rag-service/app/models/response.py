@@ -1,20 +1,30 @@
+from typing import List
+
 from pydantic import BaseModel, Field
-from typing import List, Optional
+
 
 class SourceBook(BaseModel):
-    book_id: int = Field(..., description="ID của cuốn sách trong database PostgreSQL")
-    title: str = Field(..., description="Tên cuốn sách")
-    author: str = Field(..., description="Tên tác giả")
-    relevance_score: float = Field(..., description="Độ tương đồng tương đối so với câu hỏi (0.0 - 1.0)")
+    book_id: int = Field(..., description="PostgreSQL book ID")
+    title: str = Field(..., description="Book title")
+    author: str = Field(..., description="Book author")
+    relevance_score: float = Field(
+        ...,
+        description="Relative similarity score for the current question",
+    )
+
 
 class ChatResponse(BaseModel):
-    answer: str = Field(..., description="Câu trả lời từ Trợ lý AI")
-    intent: str = Field(..., description="Ý định câu hỏi được phân loại bởi SVM Classifier")
-    confidence: float = Field(..., description="Độ tự tin/độ tin cậy của việc phân loại ý định")
-    source_books: List[SourceBook] = Field(default=[], description="Danh sách các cuốn sách liên quan được gợi ý (nếu có)")
+    answer: str = Field(..., description="Assistant answer")
+    intent: str = Field(..., description="Classified question intent")
+    confidence: float = Field(..., description="Intent classification confidence")
+    source_books: List[SourceBook] = Field(
+        default=[],
+        description="Related books suggested by the retrieval pipeline",
+    )
+
 
 class HealthResponse(BaseModel):
-    status: str = Field(..., description="Trạng thái hệ thống (ví dụ: healthy)")
-    classifier_loaded: bool = Field(..., description="Trạng thái load mô hình phân loại ý định (SVM)")
-    chroma_books_count: int = Field(..., description="Số lượng sách hiện có trong Vector Database")
-    llm_provider: str = Field(..., description="LLM provider đang sử dụng (ví dụ: deepseek)")
+    status: str = Field(..., description="Service health status")
+    classifier_loaded: bool = Field(..., description="Intent classifier status")
+    chroma_books_count: int = Field(..., description="Number of books in ChromaDB")
+    llm_provider: str = Field(..., description="Configured LLM provider")

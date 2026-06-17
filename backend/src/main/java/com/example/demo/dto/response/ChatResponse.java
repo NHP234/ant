@@ -29,6 +29,8 @@ public class ChatResponse {
         private Long bookId;
         private String title;
         private String author;
+        @JsonAlias("cover_image_url")
+        private String coverImageUrl;
         @JsonAlias("relevance_score")
         private Double relevanceScore;
     }

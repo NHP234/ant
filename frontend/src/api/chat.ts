@@ -4,6 +4,7 @@ export interface SourceBook {
   bookId: number
   title: string
   author: string
+  coverImageUrl?: string | null
   relevanceScore: number
 }
 

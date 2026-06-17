@@ -53,10 +53,12 @@ def test_rag_service_ops():
     context, source_books = service.search_books("Học máy tính", n_results=1)
     assert len(source_books) == 1
     assert source_books[0]["book_id"] in [101, 102]
+    assert "cover_image_url" not in source_books[0]
     assert "Tên sách:" in context
 
     detail_context, detail_sources = service.get_book_by_title("Machine Learning thực chiến")
     assert len(detail_sources) == 1
     assert detail_sources[0]["book_id"] == 102
     assert detail_sources[0]["author"] == "Trần Thị B"
+    assert "cover_image_url" not in detail_sources[0]
     assert "Machine Learning thực chiến" in detail_context

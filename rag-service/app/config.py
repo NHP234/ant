@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     deepseek_model: str = "deepseek-v4-flash"
     deepseek_base_url: str = "https://api.deepseek.com"
     llm_request_timeout_seconds: float = 30.0
+    llm_max_tokens: int = 1200
     internal_api_key: str = "SuperSecretInternalApiKey123!"
     chroma_persist_dir: str = "./chroma_data"
     env: str = "development"

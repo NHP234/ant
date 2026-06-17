@@ -1,4 +1,5 @@
 import logging
+import re
 
 import httpx
 
@@ -99,14 +100,25 @@ class LLMService:
                 "messages": [{"role": "user", "content": full_prompt}],
                 "thinking": {"type": "disabled"},
                 "temperature": 0.3,
-                "max_tokens": 800,
+                "max_tokens": settings.llm_max_tokens,
                 "stream": False,
             },
             timeout=settings.llm_request_timeout_seconds,
         )
         response.raise_for_status()
         content = response.json()["choices"][0]["message"]["content"]
-        return content.strip() if content else self._empty_response_message()
+        return self._clean_response_text(content) if content else self._empty_response_message()
+
+    def _clean_response_text(self, content: str) -> str:
+        text = content.strip()
+        text = re.sub(r"\*\*([^*\n]+)\*\*", r"\1", text)
+        text = re.sub(r"__([^_\n]+)__", r"\1", text)
+        text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", text)
+        text = re.sub(r"(?<!_)_([^_\n]+)_(?!_)", r"\1", text)
+        text = re.sub(r"(?m)^\s*\*\s+", "- ", text)
+        text = re.sub(r"(?<!\*)\*(?!\*)", "", text)
+        text = re.sub(r"(?<!_)_(?!_)", "", text)
+        return text.strip()
 
     def _build_full_prompt(self, prompt: str, chat_history: list[str]) -> str:
         if not chat_history:

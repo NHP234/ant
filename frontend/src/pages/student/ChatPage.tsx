@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { chatApi } from '@/api/chat'
 import type { SourceBook } from '@/api/chat'
 import PageHeader from '@/components/shared/PageHeader'
+import BookCover from '@/components/shared/BookCover'
 
 interface Message {
   sender: 'user' | 'bot'
@@ -81,7 +82,7 @@ export default function ChatPage() {
       const botMessage: Message = {
         sender: 'bot',
         text: data.answer,
-        sourceBooks: data.sourceBooks,
+        sourceBooks: data.sourceBooks ?? [],
         intent: data.intent,
         confidence: data.confidence
       }
@@ -174,9 +175,12 @@ export default function ChatPage() {
                           }}
                           className="flex-none w-48 p-3 rounded-xl border border-border/60 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring bg-card/50 hover:bg-card shadow-sm transition-all cursor-pointer group snap-start"
                         >
-                          <div className="aspect-[2/3] w-full bg-muted rounded mb-3 flex items-center justify-center border border-border/30">
-                             <span className="font-medium text-xs text-muted-foreground text-center px-2 line-clamp-3">{book.title}</span>
-                          </div>
+                          <BookCover
+                            src={book.coverImageUrl}
+                            title={book.title}
+                            className="aspect-[2/3] w-full rounded mb-3 border border-border/30 overflow-hidden"
+                            fallbackClassName="text-xs px-2"
+                          />
                           <p className="font-semibold text-sm text-foreground group-hover:text-primary line-clamp-2">
                             {book.title}
                           </p>

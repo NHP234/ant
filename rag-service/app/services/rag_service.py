@@ -89,7 +89,7 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
                 "book_id": int(book["id"]),
                 "title": book["title"],
                 "author": book["author"],
-                "categories": categories_str
+                "categories": categories_str,
             })
             ids.append(f"book_{book['id']}")
             
