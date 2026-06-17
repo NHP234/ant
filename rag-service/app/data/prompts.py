@@ -11,6 +11,7 @@ Quy tắc quan trọng:
 5. Không dùng ký hiệu Markdown dạng *, **, _, bullet * hoặc heading #. Dùng danh sách đánh số và nhãn ngắn như "Tóm tắt:" / "Vì sao phù hợp:".
 
 Danh sách sách liên quan tìm thấy trong thư viện:
+Lưu ý: Nếu danh sách dưới đây có sách khớp rõ với tên sách, tác giả hoặc từ khóa của sinh viên, không được trả lời rằng thư viện chưa có sách phù hợp; hãy trình bày những sách khớp đó.
 {context}
 
 Câu hỏi của sinh viên: {question}

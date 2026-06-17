@@ -48,7 +48,10 @@ AUTHOR_TERMS = (
 
 def _mentions_previous_book(question: str) -> bool:
     normalized = question.lower()
-    return any(term in normalized for term in CONTEXT_REFERENCE_TERMS)
+    return any(
+        re.search(rf"(?<!\w){re.escape(term)}(?!\w)", normalized)
+        for term in CONTEXT_REFERENCE_TERMS
+    )
 
 
 def _is_book_detail_question(question: str) -> bool:

@@ -1,17 +1,148 @@
 import os
 import logging
 import re
+import unicodedata
 import chromadb
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from sentence_transformers import SentenceTransformer
 
 from app.config import settings
 
 logger = logging.getLogger("rag-service.rag")
 
+SEARCH_STOPWORDS = {
+    "a",
+    "about",
+    "ai",
+    "anh",
+    "author",
+    "ban",
+    "book",
+    "books",
+    "cho",
+    "chung",
+    "co",
+    "cua",
+    "cuon",
+    "dau",
+    "duoc",
+    "find",
+    "gia",
+    "gi",
+    "giup",
+    "khong",
+    "kiem",
+    "la",
+    "nao",
+    "noi",
+    "of",
+    "quyen",
+    "sach",
+    "search",
+    "tac",
+    "the",
+    "thi",
+    "tim",
+    "toi",
+    "truyen",
+    "sao",
+    "thu",
+    "ve",
+    "vien",
+    "viet",
+    "voi",
+}
+
 
 def _normalize_title(title: str) -> str:
     normalized = re.sub(r"\s+", " ", (title or "").strip().lower())
     return normalized.strip("\"'`*_.,:;!? ")
+
+
+def _normalize_search_text(value: str) -> str:
+    ascii_text = unicodedata.normalize("NFKD", value or "")
+    ascii_text = "".join(char for char in ascii_text if not unicodedata.combining(char))
+    normalized = re.sub(r"[^a-zA-Z0-9]+", " ", ascii_text.lower())
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def _extract_lexical_terms(question: str, limit: int = 8) -> list[str]:
+    normalized = _normalize_search_text(question)
+    terms = []
+    for token in normalized.split():
+        if len(token) < 2 or token.isdigit() or token in SEARCH_STOPWORDS:
+            continue
+        if token not in terms:
+            terms.append(token)
+        if len(terms) >= limit:
+            break
+    return terms
+
+
+def _format_book_document(book: dict) -> str:
+    categories = book.get("categories", [])
+    categories_str = ", ".join(categories) if isinstance(categories, list) else str(categories or "")
+    return f"""
+Tên sách: {book.get("title", "")}
+Tác giả: {book.get("author", "")}
+Thể loại: {categories_str}
+Nhà xuất bản: {book.get("publisher", "N/A")}
+Năm xuất bản: {book.get("publishYear", "N/A")}
+Mô tả: {book.get("description", "Chưa có mô tả chi tiết cho cuốn sách này.")}
+""".strip()
+
+
+def _source_from_book(book: dict, relevance_score: float) -> dict:
+    return {
+        "book_id": int(book["id"]),
+        "title": book["title"],
+        "author": book.get("author", ""),
+        "relevance_score": round(max(0.0, min(1.0, relevance_score)), 2),
+    }
+
+
+def _score_lexical_book(book: dict, terms: list[str]) -> int:
+    title = _normalize_search_text(book.get("title", ""))
+    author = _normalize_search_text(book.get("author", ""))
+    categories = _normalize_search_text(" ".join(book.get("categories", [])))
+    description = _normalize_search_text(book.get("description", ""))
+    title_tokens = title.split()
+    author_tokens = author.split()
+    category_tokens = categories.split()
+    description_tokens = description.split()
+    phrase = " ".join(terms)
+
+    score = 0
+    if len(terms) > 1 and phrase in title:
+        score += 100
+    if len(terms) > 1 and phrase in author:
+        score += 95
+    if all(_matches_token(term, title_tokens) for term in terms):
+        score += 70
+    if all(_matches_token(term, author_tokens, allow_prefix=False) for term in terms):
+        score += 65
+
+    for term in terms:
+        if _matches_token(term, title_tokens):
+            score += 22
+        if _matches_token(term, author_tokens, allow_prefix=False):
+            score += 20
+        if _matches_token(term, category_tokens):
+            score += 4
+        if _matches_token(term, description_tokens):
+            score += 2
+    return score
+
+
+def _is_strong_lexical_score(score: int) -> bool:
+    return score >= 20
+
+
+def _matches_token(term: str, tokens: list[str], allow_prefix: bool = True) -> bool:
+    if term in tokens:
+        return True
+    return allow_prefix and len(term) >= 4 and any(token.startswith(term) for token in tokens)
 
 class SentenceTransformerEmbeddingFunction:
     def __init__(self, model_name: str = 'paraphrase-multilingual-MiniLM-L12-v2'):
@@ -139,7 +270,72 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
         logger.info("Deleted %s stale book vectors from ChromaDB.", len(stale_ids))
         return len(stale_ids)
 
-    def search_books(self, question: str, n_results: int = 5) -> tuple[str, list[dict]]:
+    def _search_books_lexically(self, question: str, limit: int) -> list[tuple[str, dict]]:
+        terms = _extract_lexical_terms(question)
+        if not terms:
+            return []
+
+        where_clause = " OR ".join(["search_text LIKE %s" for _ in terms])
+        rank_clause = " + ".join(["CASE WHEN search_text LIKE %s THEN 1 ELSE 0 END" for _ in terms])
+        like_params = [f"%{term}%" for term in terms]
+        params = like_params + like_params
+        query = f"""
+            WITH book_data AS (
+                SELECT
+                    b.id,
+                    b.title,
+                    COALESCE(string_agg(DISTINCT auth.name, ', '), '') AS author,
+                    b.publisher,
+                    b.publish_year AS "publishYear",
+                    COALESCE(b.description, '') AS description,
+                    COALESCE(string_agg(DISTINCT c.name, ','), '') AS categories,
+                    lower(unaccent(concat_ws(
+                        ' ',
+                        b.title,
+                        COALESCE(string_agg(DISTINCT auth.name, ', '), ''),
+                        COALESCE(b.description, ''),
+                        COALESCE(string_agg(DISTINCT c.name, ','), '')
+                    ))) AS search_text
+                FROM books b
+                LEFT JOIN book_authors ba ON b.id = ba.book_id
+                LEFT JOIN authors auth ON ba.author_id = auth.id
+                LEFT JOIN book_categories bc ON b.id = bc.book_id
+                LEFT JOIN categories c ON bc.category_id = c.id
+                GROUP BY b.id
+            )
+            SELECT id, title, author, publisher, "publishYear", description, categories
+            FROM book_data
+            WHERE {where_clause}
+            ORDER BY ({rank_clause}) DESC, id
+            LIMIT 200
+        """
+
+        try:
+            with psycopg2.connect(settings.database_url) as connection:
+                with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+                    cursor.execute(query, params)
+                    rows = cursor.fetchall()
+        except Exception as e:
+            logger.warning("Lexical PostgreSQL book search failed; falling back to Chroma only: %s", str(e))
+            return []
+
+        scored_books = []
+        for row in rows:
+            book = dict(row)
+            categories = book.get("categories") or ""
+            book["categories"] = [category.strip() for category in categories.split(",") if category.strip()]
+            score = _score_lexical_book(book, terms)
+            if _is_strong_lexical_score(score):
+                scored_books.append((score, book))
+
+        scored_books.sort(key=lambda item: (-item[0], item[1]["id"]))
+        matches = []
+        for score, book in scored_books[:limit]:
+            relevance = 0.65 + (min(score, 160) / 400)
+            matches.append((_format_book_document(book), _source_from_book(book, relevance)))
+        return matches
+
+    def _search_books_chroma_only(self, question: str, n_results: int = 5) -> tuple[str, list[dict]]:
         """
         Tìm kiếm các sách liên quan nhất trong vector database bằng cosine similarity.
         Trả về: (context_str, source_books_list)
@@ -179,6 +375,71 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
         # Ghép các documents thành một chuỗi context ngăn cách bởi dấu phân tách
         context = "\n\n---\n\n".join(documents)
         logger.info(f"Tìm thấy {len(source_books)} sách liên quan trong ChromaDB.")
+        return context, source_books
+
+    def search_books(self, question: str, n_results: int = 5) -> tuple[str, list[dict]]:
+        """
+        Search books with a lexical PostgreSQL pass first, then Chroma semantic search.
+        Returns: (context_str, source_books_list)
+        """
+        if self.get_books_count() == 0:
+            logger.warning("ChromaDB is empty. Ingest books before searching.")
+            return "", []
+
+        logger.info("Searching books for question: '%s'...", question)
+        lexical_matches = self._search_books_lexically(question, limit=n_results)
+        decisive_lexical_match = (
+            bool(lexical_matches)
+            and lexical_matches[0][1].get("relevance_score", 0.0) >= 0.9
+        )
+        if decisive_lexical_match:
+            lexical_matches = [
+                match
+                for match in lexical_matches
+                if match[1].get("relevance_score", 0.0) >= 0.9
+            ]
+        if lexical_matches:
+            vector_context, vector_sources = "", []
+        else:
+            vector_context, vector_sources = self._search_books_chroma_only(
+                question,
+                n_results=max(n_results, n_results + len(lexical_matches)),
+            )
+
+        merged_documents = []
+        source_books = []
+        seen_book_ids = set()
+
+        for document, source in lexical_matches:
+            book_id = source["book_id"]
+            if book_id in seen_book_ids:
+                continue
+            merged_documents.append(document)
+            source_books.append(source)
+            seen_book_ids.add(book_id)
+
+        vector_documents = [doc for doc in vector_context.split("\n\n---\n\n") if doc.strip()]
+        for index, source in enumerate(vector_sources):
+            if len(source_books) >= n_results:
+                break
+            book_id = source["book_id"]
+            if book_id in seen_book_ids:
+                continue
+            if index < len(vector_documents):
+                merged_documents.append(vector_documents[index])
+            source_books.append(source)
+            seen_book_ids.add(book_id)
+
+        if not source_books:
+            return "", []
+
+        context = "\n\n---\n\n".join(merged_documents)
+        logger.info(
+            "Hybrid book search found %s lexical and %s vector matches; returning %s books.",
+            len(lexical_matches),
+            len(vector_sources),
+            len(source_books),
+        )
         return context, source_books
 
     def get_book_by_title(self, title: str) -> tuple[str, list[dict]]:

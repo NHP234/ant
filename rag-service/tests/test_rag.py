@@ -49,6 +49,7 @@ def test_rag_service_ops():
 
     service.upsert_books(mock_books)
     assert service.get_books_count() == 2
+    service._search_books_lexically = lambda question, limit: []
 
     context, source_books = service.search_books("Học máy tính", n_results=1)
     assert len(source_books) == 1

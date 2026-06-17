@@ -156,3 +156,12 @@ def test_orchestrator_answers_contextual_author_question_without_llm():
     assert source_books[0]["author"] == "Tracey West"
     assert rag_service.title_lookups == ["LEGO Legends of Chima: Origins: A Starter Handbook"]
     assert llm_service.prompts == []
+
+
+def test_contextual_question_does_not_treat_noi_as_no_reference():
+    history = ['Bot: - Sach: *truyen thieu nhi*']
+
+    assert (
+        build_contextual_question("sach ve lego noi chung thi sao, thu vien co khong?", history)
+        == "sach ve lego noi chung thi sao, thu vien co khong?"
+    )
