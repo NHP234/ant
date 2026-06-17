@@ -303,6 +303,7 @@ Redis cache serialization:
 - Khi người dùng gửi câu hỏi tới `POST /api/chat`, `ChatController` của Spring Boot đóng vai trò proxy bảo mật.
 - Nó tự động forward request (bao gồm `ChatRequest` chứa câu hỏi và lịch sử cuộc hội thoại) kèm theo header JWT Token của người dùng (`Authorization`) sang Python RAG service (`POST /api/chat`).
 - Python RAG service sẽ trích xuất JWT để lấy ID sinh viên phục vụ việc tra cứu thông tin cá nhân (như sách đang mượn/chờ mượn) hoặc thực hiện truy vấn thông tin sách trong cơ sở dữ liệu vector ChromaDB, sau đó dùng DeepSeek để tạo ra phản hồi thân thiện.
+- Sau khi nhận response từ RAG, Spring Boot batch query PostgreSQL theo `sourceBooks.bookId` để bù `coverImageUrl`; ChromaDB chỉ lưu metadata phục vụ retrieval và không lưu ảnh bìa.
 - **Fallback Cơ Chế**: Nếu RAG service gặp sự cố hoặc offline, Spring Boot sẽ bắt lỗi `Exception` và áp dụng chế độ Fallback, trả về một câu trả lời thân thiện được định nghĩa sẵn để tránh làm gián đoạn trải nghiệm người dùng.
 
 ### 2. Đồng bộ sách sang ChromaDB

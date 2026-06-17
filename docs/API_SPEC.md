@@ -530,6 +530,7 @@ Hold `ACTIVE` đã hết hạn không được tính vào giới hạn mượn/�
         "bookId": 15,
         "title": "Deep Learning",
         "author": "Ian Goodfellow",
+        "coverImageUrl": "https://example.com/deep-learning.jpg",
         "relevanceScore": 0.89
       }
     ]

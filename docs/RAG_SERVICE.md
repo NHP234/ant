@@ -468,6 +468,8 @@ Authorization: Bearer <jwt_token>   // Bắt buộc — dùng để gọi Spring
 
 RAG service nhận cả `chat_history` và `chatHistory` để tương thích với Spring Boot/Frontend. Trước khi phân loại intent và tìm kiếm vector, orchestrator sẽ dùng lịch sử hội thoại gần nhất để bổ sung ngữ cảnh cho câu hỏi nối tiếp như "sách này về chủ đề gì?", ưu tiên tên sách xuất hiện trong dòng `Sách: ...` của câu trả lời trước đó. Với câu hỏi chi tiết về cuốn đã nhắc (`tác giả là ai`, `chủ đề gì`, `thể loại gì`, `nói về gì`), service lookup chính xác theo title trước; riêng câu hỏi tác giả được trả lời trực tiếp từ metadata để tránh LLM gợi ý sách ngẫu nhiên. Câu hỏi đã bổ sung ngữ cảnh chỉ dùng cho routing/search; prompt gửi LLM vẫn giữ cả câu hỏi gốc để câu trả lời tự nhiên.
 
+`source_books` from RAG only contains retrieval metadata: `book_id`, `title`, `author`, and `relevance_score`. Cover images are not stored in ChromaDB; Spring Boot enriches `coverImageUrl` from PostgreSQL before returning `/api/chat` to the frontend.
+
 ```json
 // Response — BOOK_SEARCH
 {
@@ -560,7 +562,7 @@ Full ingest chạy nền: đọc toàn bộ sách từ PostgreSQL, upsert vào C
 | **DeepSeek V4 Flash** | Trả theo token | Tốt | ~1-3s | Development + Demo |
 | Ollama + Gemma 2 9B | Free (local) | Khá | ~3-5s | Offline demo, cần 8GB+ RAM |
 
-> **Cấu hình hiện tại**: dùng duy nhất `deepseek-v4-flash` ở non-thinking mode, `temperature=0.3` và giới hạn 800 output tokens.
+> **Cấu hình hiện tại**: dùng duy nhất `deepseek-v4-flash` ở non-thinking mode, `temperature=0.3` và giới hạn mặc định 1200 output tokens (`LLM_MAX_TOKENS`). Prompt tìm sách giới hạn tối đa 3 gợi ý và service dọn các dấu Markdown/emphasis để giao diện chat hiển thị sạch hơn.
 
 ### Intent Classifier (SVM)
 - `sklearn.svm.LinearSVC` + `CalibratedClassifierCV` + `SentenceTransformer`
