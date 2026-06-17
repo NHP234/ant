@@ -1,4 +1,4 @@
-import { Bot, Send, User, BookOpen, Loader2, HelpCircle } from 'lucide-react'
+import { ArrowRight, Bot, Send, User, BookOpen, Loader2, HelpCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -163,8 +163,16 @@ export default function ChatPage() {
                       {msg.sourceBooks.map((book) => (
                         <div
                           key={book.bookId}
+                          role="link"
+                          tabIndex={0}
                           onClick={() => navigate(`/books/${book.bookId}`)}
-                          className="flex-none w-48 p-3 rounded-xl border border-border/60 hover:border-primary/40 bg-card/50 hover:bg-card shadow-sm transition-all cursor-pointer group snap-start"
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              navigate(`/books/${book.bookId}`)
+                            }
+                          }}
+                          className="flex-none w-48 p-3 rounded-xl border border-border/60 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring bg-card/50 hover:bg-card shadow-sm transition-all cursor-pointer group snap-start"
                         >
                           <div className="aspect-[2/3] w-full bg-muted rounded mb-3 flex items-center justify-center border border-border/30">
                              <span className="font-medium text-xs text-muted-foreground text-center px-2 line-clamp-3">{book.title}</span>
@@ -175,6 +183,10 @@ export default function ChatPage() {
                           <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                             {book.author}
                           </p>
+                          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                            Xem chi tiết
+                            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                          </span>
                         </div>
                       ))}
                     </div>

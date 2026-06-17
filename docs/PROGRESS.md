@@ -166,7 +166,7 @@
 ### Tuần 12: Orchestrator & Integration
 - ✅ Chat Orchestrator (route intent -> đúng pipeline) & POST /api/chat
 - ✅ Chat history support (multi-turn context)
-- ✅ Spring Boot `ChatController` proxy & Auto-ingest trigger khi thêm/sửa sách
+- ✅ Spring Boot `ChatController` proxy & auto-sync vector DB khi thêm/sửa/xóa sách
 - ✅ Dockerize RAG service & kết nối Docker Compose
 - ✅ Frontend: Hoàn thiện `ChatPage.tsx` kết nối API thực
 - ✅ Test & refine (confidence threshold, fallback khi service down, nâng cấp hiệu chuẩn Calibrated Transformer Embeddings)
@@ -296,3 +296,5 @@
 | 2026-06-15 | Sửa chatbot tra cứu đặt trước dùng sai contract: thay `PENDING/READY` bằng `ACTIVE/FULFILLED/CANCELED/EXPIRED`, bỏ luồng chờ thủ thư duyệt không tồn tại, hiển thị hạn nhận và lịch sử hold, bổ sung unit test cho mapping trạng thái. |
 | 2026-06-15 | Chuyển RAG chatbot hoàn toàn sang DeepSeek `deepseek-v4-flash`: non-thinking mode, giới hạn output, lỗi thân thiện cho hết số dư/rate limit, health endpoint và loại bỏ SDK/cấu hình Gemini. Verification: 8 RAG tests pass và API thật trả phản hồi thành công. |
 | 2026-06-16 | Sửa chatbot multi-turn context và lệch giờ hold: RAG nhận cả `chatHistory`/`chat_history`, rewrite câu hỏi nối tiếp như "sách này..." theo tên sách gần nhất trong lịch sử trước classifier/vector search, lookup chính xác title cho follow-up chi tiết và trả lời tác giả trực tiếp từ metadata; frontend giới hạn 10 message history; backend dùng timezone `Asia/Ho_Chi_Minh` cho Clock/Jackson/Hibernate và RAG formatter convert ISO offset về UTC+7. Verification: RAG tests, backend TimeConfig test và targeted ESLint ChatPage pass. |
+| 2026-06-16 | Sửa đồng bộ sách mới vào vector DB: backend chuyển từ full `/api/ingest` mỗi lần thêm/sửa/xóa sang `RagBookSyncService` gọi `POST/DELETE /api/ingest/books/{bookId}` sau transaction commit; RAG full ingest thêm `ORDER BY b.id` và prune vector `book_*` không còn trong PostgreSQL. Verification: cuốn test NFC `Tiếng Nhật công nghệ thông tin trong ngành phần mềm` đã xuất hiện trong ChromaDB sau full ingest; sẽ rebuild image backend/RAG để dùng cơ chế incremental mới. |
+| 2026-06-17 | Sửa link chi tiết sách trong chatbot: backend `ChatResponse` nhận alias snake_case từ RAG (`source_books`, `book_id`, `relevance_score`) để không mất `sourceBooks` khi proxy sang frontend; ChatPage hiển thị rõ CTA `Xem chi tiết` và hỗ trợ keyboard trên card sách liên quan. Verification: `ChatResponseTest` pass, frontend `npm run build` pass. |
