@@ -470,6 +470,8 @@ RAG service nhận cả `chat_history` và `chatHistory` để tương thích v�
 
 `source_books` from RAG only contains retrieval metadata: `book_id`, `title`, `author`, and `relevance_score`. Cover images are not stored in ChromaDB; Spring Boot enriches `coverImageUrl` from PostgreSQL before returning `/api/chat` to the frontend.
 
+Book search uses hybrid retrieval: the RAG service first performs a lightweight PostgreSQL lexical lookup over normalized title, author, category, and description terms, then merges those matches ahead of ChromaDB semantic results with `book_id` deduplication. The PostgreSQL step fetches broad candidates with any meaningful query term, then ranks and filters them in Python so filler words in natural questions do not make the lookup fail. This keeps exact-ish queries such as `lego chima` or `tracey west` from being displaced by semantically similar but wrong vector matches, while broad topic questions still use ChromaDB.
+
 ```json
 // Response — BOOK_SEARCH
 {
