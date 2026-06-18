@@ -2,6 +2,7 @@ import { ArrowRight, Bot, Send, User, BookOpen, Loader2, HelpCircle, Sparkles } 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useState, useRef, useEffect } from 'react'
+import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { chatApi } from '@/api/chat'
 import type { SourceBook } from '@/api/chat'
@@ -109,7 +110,7 @@ function renderMessageText(text: string) {
     let lastIndex = 0
     let match
     const boldRegex = /\*\*(.*?)\*\*/g
-    const parts: (string | JSX.Element)[] = []
+    const parts: ReactNode[] = []
 
     while ((match = boldRegex.exec(paragraph)) !== null) {
       if (match.index > lastIndex) {
