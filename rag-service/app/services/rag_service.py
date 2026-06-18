@@ -11,6 +11,8 @@ from app.config import settings
 
 logger = logging.getLogger("rag-service.rag")
 
+VECTOR_RELEVANCE_THRESHOLD = 0.57
+
 SEARCH_STOPWORDS = {
     "a",
     "about",
@@ -112,15 +114,39 @@ def _score_lexical_book(book: dict, terms: list[str]) -> int:
     category_tokens = categories.split()
     description_tokens = description.split()
     phrase = " ".join(terms)
+    title_count = _count_token_matches(terms, title_tokens)
+    author_count = _count_token_matches(terms, author_tokens, allow_prefix=False)
+    category_count = _count_token_matches(terms, category_tokens)
+    description_count = _count_token_matches(terms, description_tokens)
+    phrase_in_title = len(terms) > 1 and phrase in title
+    phrase_in_author = len(terms) > 1 and phrase in author
+    phrase_in_categories = len(terms) > 1 and phrase in categories
+    phrase_in_description = len(terms) > 1 and phrase in description
+
+    if len(terms) > 1 and not (
+        phrase_in_title
+        or phrase_in_author
+        or phrase_in_categories
+        or phrase_in_description
+        or title_count == len(terms)
+        or author_count == len(terms)
+        or category_count == len(terms)
+        or description_count == len(terms)
+    ):
+        return 0
 
     score = 0
-    if len(terms) > 1 and phrase in title:
+    if phrase_in_title:
         score += 100
-    if len(terms) > 1 and phrase in author:
+    if phrase_in_author:
         score += 95
-    if all(_matches_token(term, title_tokens) for term in terms):
+    if phrase_in_categories:
+        score += 80
+    if phrase_in_description:
+        score += 45
+    if title_count == len(terms):
         score += 70
-    if all(_matches_token(term, author_tokens, allow_prefix=False) for term in terms):
+    if author_count == len(terms):
         score += 65
 
     for term in terms:
@@ -143,6 +169,14 @@ def _matches_token(term: str, tokens: list[str], allow_prefix: bool = True) -> b
     if term in tokens:
         return True
     return allow_prefix and len(term) >= 4 and any(token.startswith(term) for token in tokens)
+
+
+def _count_token_matches(terms: list[str], tokens: list[str], allow_prefix: bool = True) -> int:
+    return sum(1 for term in terms if _matches_token(term, tokens, allow_prefix))
+
+
+def _is_relevant_vector_match(relevance: float) -> bool:
+    return relevance >= VECTOR_RELEVANCE_THRESHOLD
 
 class SentenceTransformerEmbeddingFunction:
     def __init__(self, model_name: str = 'paraphrase-multilingual-MiniLM-L12-v2'):
@@ -355,6 +389,7 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
             return "", []
             
         source_books = []
+        relevant_documents = []
         documents = results["documents"][0]
         metadatas = results["metadatas"][0]
         distances = results["distances"][0]
@@ -364,7 +399,10 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
             # Relevance score = 1 - Cosine distance. Đảm bảo nằm trong khoảng 0.0 - 1.0.
             distance = distances[i]
             relevance = max(0.0, min(1.0, float(1.0 - distance)))
+            if not _is_relevant_vector_match(relevance):
+                continue
             
+            relevant_documents.append(documents[i])
             source_books.append({
                 "book_id": meta["book_id"],
                 "title": meta["title"],
@@ -373,7 +411,7 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
             })
             
         # Ghép các documents thành một chuỗi context ngăn cách bởi dấu phân tách
-        context = "\n\n---\n\n".join(documents)
+        context = "\n\n---\n\n".join(relevant_documents)
         logger.info(f"Tìm thấy {len(source_books)} sách liên quan trong ChromaDB.")
         return context, source_books
 

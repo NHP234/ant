@@ -5,7 +5,12 @@ import chromadb
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services.rag_service import RAGService, _extract_lexical_terms, _score_lexical_book
+from app.services.rag_service import (
+    RAGService,
+    _extract_lexical_terms,
+    _is_relevant_vector_match,
+    _score_lexical_book,
+)
 
 
 class MockEmbeddingFunction:
@@ -38,6 +43,43 @@ def test_lexical_scoring_avoids_substring_false_positive():
         },
         ["lego"],
     ) > 0
+
+
+def test_lexical_scoring_requires_multi_token_evidence():
+    terms = ["thien", "van", "hoc"]
+
+    assert _score_lexical_book(
+        {
+            "title": "Thien Than Sam Hoi",
+            "author": "Ta Duy Anh",
+            "description": "",
+            "categories": ["Van hoc"],
+        },
+        terms,
+    ) == 0
+    assert _score_lexical_book(
+        {
+            "title": "De helende kracht van acceptatie",
+            "author": "Annemarie Postma",
+            "description": "",
+            "categories": [],
+        },
+        terms,
+    ) == 0
+    assert _score_lexical_book(
+        {
+            "title": "Nhap mon thien van hoc",
+            "author": "Nguyen Van A",
+            "description": "",
+            "categories": ["Khoa hoc"],
+        },
+        terms,
+    ) > 0
+
+
+def test_vector_relevance_threshold_filters_weak_sources():
+    assert _is_relevant_vector_match(0.57)
+    assert not _is_relevant_vector_match(0.55)
 
 
 def test_search_books_prefers_lexical_matches_and_deduplicates():
