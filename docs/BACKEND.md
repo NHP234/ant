@@ -260,6 +260,10 @@ Redis cache serialization:
 - Key prefix: `library:v2:` to avoid reading stale Redis values written with older serializer formats
 - `CacheErrorHandler` treats Redis read/write/evict failures as non-critical: log, evict corrupted keys when possible, and fall back to source data
 
+Category API notes:
+- `GET /api/categories` vẫn trả danh sách đầy đủ và được cache 24h để phục vụ dropdown/form cần toàn bộ danh mục.
+- `GET /api/categories/page?page=0&size=20` trả `PageResponse<CategoryResponse>` cho màn quản trị danh mục, tránh tải toàn bộ dữ liệu khi số lượng category lớn.
+
 ## API Response Format
 
 ### Success

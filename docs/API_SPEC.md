@@ -148,10 +148,14 @@ Trả về `PageResponse<BookResponse>` cho các sách cùng danh mục, loại 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | /categories | Public | Danh sách categories |
+| GET | /categories/page?page=0&size=20 | Public | Danh sách categories phân trang |
 | GET | /categories/{id} | Public | Chi tiết category |
 | POST | /categories | ADMIN | Thêm category |
 | PUT | /categories/{id} | ADMIN | Cập nhật category |
 | DELETE | /categories/{id} | ADMIN | Xóa category |
+
+### GET /categories/page?page=0&size=20
+Trả về `PageResponse<CategoryResponse>`, mặc định sắp xếp theo `name,asc`. Endpoint này dùng cho trang quản trị danh mục để không tải toàn bộ category khi dữ liệu lớn. `GET /categories` vẫn được giữ để tương thích với các form/dropdown cần danh sách đầy đủ.
 
 ### POST /categories
 ```json

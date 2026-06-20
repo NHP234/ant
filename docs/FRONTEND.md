@@ -132,6 +132,7 @@ frontend/src/
 - Auto caching, background refetch, optimistic updates
 - Query keys convention: `['entity', ...params]`
   - `['books', page, size]`, `['book', id]`
+  - `['categories', page, size]` cho trang quản lý danh mục; `categoryApi.getAll()` chỉ dùng cho form/dropdown cần danh sách đầy đủ
   - `['holds', 'my', page]`, `['admin', 'holds', page, filter]`
   - `['borrow-slips', page]`, `['dashboard', 'stats']`
 - Stale time: 30s cho danh sách, 5m cho detail/stats

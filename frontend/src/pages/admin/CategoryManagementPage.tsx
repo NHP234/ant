@@ -8,21 +8,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
 import PageHeader from '@/components/shared/PageHeader'
+import Pagination from '@/components/shared/Pagination'
+
+const PAGE_SIZE = 20
 
 export default function CategoryManagementPage() {
   const queryClient = useQueryClient()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [page, setPage] = useState(0)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => categoryApi.getAll(),
+    queryKey: ['categories', page, PAGE_SIZE],
+    queryFn: () => categoryApi.getPage(page, PAGE_SIZE),
   })
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string; description?: string }) => categoryApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] })
+      setPage(0)
       setDialogOpen(false)
       toast.success('Thêm danh mục thành công')
     },
@@ -45,12 +50,17 @@ export default function CategoryManagementPage() {
     mutationFn: (id: number) => categoryApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] })
+      if (categories.length === 1 && page > 0) {
+        setPage(page - 1)
+      }
       toast.success('Đã xóa danh mục')
     },
     onError: () => toast.error('Xóa thất bại'),
   })
 
-  const categories = data?.data?.data ?? []
+  const categoryPage = data?.data?.data
+  const categories = categoryPage?.content ?? []
+  const totalCategories = categoryPage?.totalElements ?? 0
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -81,7 +91,7 @@ export default function CategoryManagementPage() {
     <div className="space-y-6">
       <PageHeader
         title="Quản lý danh mục"
-        description={`${categories.length} danh mục sách`}
+        description={`${totalCategories} danh mục sách`}
         actions={
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -155,6 +165,13 @@ export default function CategoryManagementPage() {
           </TableBody>
         </Table>
       </div>
+      {categoryPage && categoryPage.totalPages > 1 && (
+        <Pagination
+          page={categoryPage.page}
+          totalPages={categoryPage.totalPages}
+          onPageChange={setPage}
+        />
+      )}
     </div>
   )
 }

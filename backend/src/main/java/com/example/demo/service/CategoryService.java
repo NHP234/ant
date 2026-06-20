@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.dto.request.CategoryCreateRequest;
 import com.example.demo.dto.response.CategoryResponse;
+import com.example.demo.dto.response.PageResponse;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.CategoryMapper;
 import com.example.demo.model.entity.Category;
@@ -9,6 +10,8 @@ import com.example.demo.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +24,7 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
 
+    @Transactional(readOnly = true)
     @Cacheable(value = "categories", key = "'all'")
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findAll().stream()
@@ -28,6 +32,16 @@ public class CategoryService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<CategoryResponse> getCategories(Pageable pageable) {
+        Page<Category> page = categoryRepository.findAll(pageable);
+        List<CategoryResponse> content = page.getContent().stream()
+                .map(categoryMapper::toResponse)
+                .toList();
+        return PageResponse.from(page, content);
+    }
+
+    @Transactional(readOnly = true)
     public CategoryResponse getCategoryById(Long id) {
         Category category = findCategoryOrThrow(id);
         return categoryMapper.toResponse(category);

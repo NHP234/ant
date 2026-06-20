@@ -21,6 +21,13 @@
 ```
 - [ ] PASS
 
+### 1.1b GET /api/categories/page - Lấy categories phân trang
+- **Method**: GET
+- **URL**: `http://localhost:8080/api/categories/page?page=0&size=20`
+- **Auth**: Không cần token (public)
+- **Expected**: 200 OK, trả về `PageResponse` có `content`, `page`, `size`, `totalElements`, `totalPages`, `last`; mặc định sắp xếp theo `name,asc`
+- [ ] PASS
+
 ### 1.2 GET /api/categories/{id} - Lấy 1 category
 - **Method**: GET
 - **URL**: `http://localhost:8080/api/categories/1`

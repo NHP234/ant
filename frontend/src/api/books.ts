@@ -110,6 +110,9 @@ export const categoryApi = {
   getAll: () =>
     api.get<{ data: Category[] }>('/categories'),
 
+  getPage: (page = 0, size = 20) =>
+    api.get<{ data: PageResponse<Category> }>('/categories/page', { params: { page, size } }),
+
   create: (data: { name: string; description?: string }) =>
     api.post<{ data: Category }>('/categories', data),
 
