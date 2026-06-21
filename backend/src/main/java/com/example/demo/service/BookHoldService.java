@@ -14,6 +14,7 @@ import com.example.demo.model.entity.User;
 import com.example.demo.model.enums.CopyStatus;
 import com.example.demo.model.enums.HoldStatus;
 import com.example.demo.model.enums.NotificationType;
+import com.example.demo.model.enums.Role;
 import com.example.demo.repository.BookCopyRepository;
 import com.example.demo.repository.BookHoldRepository;
 import com.example.demo.repository.BookRepository;
@@ -51,6 +52,9 @@ public class BookHoldService {
     @Transactional
     public HoldResponse createHold(String username, HoldCreateRequest request) {
         User user = findUserForUpdateOrThrow(username);
+        if (user.getRole() != Role.STUDENT) {
+            throw new IllegalArgumentException("Only students can place holds");
+        }
         LocalDateTime now = LocalDateTime.now(clock);
 
         if (user.getHoldBanUntil() != null && user.getHoldBanUntil().isAfter(now)) {

@@ -148,6 +148,20 @@ class BookHoldServiceTest {
     }
 
     @Test
+    void staffCannotCreateHold() {
+        HoldCreateRequest request = new HoldCreateRequest();
+        request.setBookId(10L);
+        when(userRepository.findByUsernameForUpdate("librarian"))
+                .thenReturn(Optional.of(librarian));
+
+        assertThatThrownBy(() -> bookHoldService.createHold("librarian", request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Only students can place holds");
+
+        verifyNoInteractions(borrowPolicyService, bookRepository);
+    }
+
+    @Test
     void createHoldExpiresStaleReservationBeforeSelectingCopy() {
         HoldCreateRequest request = new HoldCreateRequest();
         request.setBookId(10L);

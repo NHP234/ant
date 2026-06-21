@@ -50,6 +50,7 @@ public class BorrowController {
     }
 
     @GetMapping("/my")
+    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<PageResponse<BorrowRecordResponse>>> getMyBorrows(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(required = false) String statuses,

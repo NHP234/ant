@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import type { AxiosError } from 'axios'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,11 +26,12 @@ export default function RegisterPage() {
         password: formData.get('password') as string,
         email: formData.get('email') as string,
         fullName: formData.get('fullName') as string,
-        studentId: formData.get('studentId') as string || undefined,
+        studentId: formData.get('studentId') as string,
       })
       navigate('/')
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Đăng ký thất bại')
+    } catch (err: unknown) {
+      const error = err as AxiosError<{ message?: string }>
+      setError(error.response?.data?.message || 'Đăng ký thất bại')
     } finally {
       setLoading(false)
     }
@@ -43,13 +45,13 @@ export default function RegisterPage() {
             <Library className="h-7 w-7 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Awaken Ant</h1>
-          <p className="text-sm text-muted-foreground mt-1">Tạo tài khoản mới</p>
+          <p className="text-sm text-muted-foreground mt-1">Tạo tài khoản sinh viên</p>
         </div>
 
         <Card className="border-border/50 shadow-xl rounded-2xl">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl">Đăng ký</CardTitle>
-            <CardDescription>Điền thông tin để tạo tài khoản sinh viên</CardDescription>
+            <CardDescription>Điền thông tin tài khoản sinh viên để sử dụng thư viện</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -59,23 +61,23 @@ export default function RegisterPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="fullName">Họ và tên</Label>
+                <Label htmlFor="fullName">Họ và tên *</Label>
                 <Input id="fullName" name="fullName" required autoFocus className="rounded-lg" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="username">Tên đăng nhập</Label>
+                <Label htmlFor="username">Tên đăng nhập *</Label>
                 <Input id="username" name="username" required className="rounded-lg" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input id="email" name="email" type="email" required className="rounded-lg" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="studentId">Mã sinh viên</Label>
-                <Input id="studentId" name="studentId" placeholder="Không bắt buộc" className="rounded-lg" />
+                <Label htmlFor="studentId">Mã sinh viên *</Label>
+                <Input id="studentId" name="studentId" required placeholder="VD: 20200001" className="rounded-lg" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Mật khẩu</Label>
+                <Label htmlFor="password">Mật khẩu *</Label>
                 <Input id="password" name="password" type="password" required minLength={6} className="rounded-lg" />
               </div>
               <Button type="submit" className="w-full rounded-lg h-11" disabled={loading}>

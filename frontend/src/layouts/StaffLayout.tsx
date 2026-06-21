@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
-import NotificationBell from '@/components/shared/NotificationBell'
 import ThemeToggle from '@/components/shared/ThemeToggle'
 import { cn } from '@/lib/utils'
 import {
@@ -68,7 +67,7 @@ const librarianNavGroups: StaffNavGroup[] = [
 function SidebarContent({ role }: { role: string | undefined }) {
   const isAdmin = role === 'ADMIN'
   const navGroups = isAdmin ? adminNavGroups : librarianNavGroups
-  const studentLinkLabel = isAdmin ? 'Xem trang sinh viên' : 'Xem catalog'
+  const catalogLinkLabel = 'Xem kho sách'
 
   return (
     <div className="flex h-full flex-col bg-card/70 backdrop-blur-xl">
@@ -126,7 +125,7 @@ function SidebarContent({ role }: { role: string | undefined }) {
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-all hover:bg-muted/80 hover:text-foreground"
         >
           <ExternalLink className="h-4 w-4" />
-          {studentLinkLabel}
+          {catalogLinkLabel}
         </NavLink>
       </div>
     </div>
@@ -183,7 +182,6 @@ export default function StaffLayout() {
 
           <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
-            <NotificationBell />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

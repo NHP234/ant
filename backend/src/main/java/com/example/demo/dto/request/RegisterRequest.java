@@ -27,6 +27,7 @@ public class RegisterRequest {
     @Size(max = 100)
     private String fullName;
 
+    @NotBlank(message = "Student ID is required")
     @Size(max = 20)
     private String studentId;
 }

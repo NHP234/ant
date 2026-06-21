@@ -38,6 +38,7 @@ public class BorrowSlipController {
     }
 
     @GetMapping("/my")
+    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<PageResponse<BorrowSlipResponse>>> getMySlips(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             Authentication authentication) {

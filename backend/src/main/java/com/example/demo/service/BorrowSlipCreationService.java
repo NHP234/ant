@@ -18,6 +18,7 @@ import com.example.demo.model.enums.BorrowStatus;
 import com.example.demo.model.enums.CopyStatus;
 import com.example.demo.model.enums.HoldStatus;
 import com.example.demo.model.enums.NotificationType;
+import com.example.demo.model.enums.Role;
 import com.example.demo.repository.BookCopyRepository;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.BorrowRecordRepository;
@@ -317,13 +318,23 @@ public class BorrowSlipCreationService {
             throw new IllegalArgumentException("Provide only one of username or studentId");
         }
         if (username != null) {
-            return userRepository.findByUsernameForUpdate(username)
+            User borrower = userRepository.findByUsernameForUpdate(username)
                     .orElseThrow(() ->
                             new ResourceNotFoundException("User", "username", username));
+            ensureStudentBorrower(borrower);
+            return borrower;
         }
-        return userRepository.findByStudentIdForUpdate(studentId)
+        User borrower = userRepository.findByStudentIdForUpdate(studentId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("User", "studentId", studentId));
+        ensureStudentBorrower(borrower);
+        return borrower;
+    }
+
+    private void ensureStudentBorrower(User borrower) {
+        if (borrower.getRole() != Role.STUDENT) {
+            throw new IllegalArgumentException("Borrower must be a student");
+        }
     }
 
     private User findUserOrThrow(String username) {

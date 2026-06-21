@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import type { AxiosError } from 'axios'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,8 +26,9 @@ export default function LoginPage() {
         password: formData.get('password') as string,
       })
       navigate('/')
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Đăng nhập thất bại')
+    } catch (err: unknown) {
+      const error = err as AxiosError<{ message?: string }>
+      setError(error.response?.data?.message || 'Đăng nhập thất bại')
     } finally {
       setLoading(false)
     }
@@ -40,13 +42,13 @@ export default function LoginPage() {
             <Library className="h-7 w-7 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Awaken Ant</h1>
-          <p className="text-sm text-muted-foreground mt-1">Hệ thống quản lý thư viện</p>
+          <p className="text-sm text-muted-foreground mt-1">Hệ thống thư viện trực tuyến</p>
         </div>
 
         <Card className="border-border/50 shadow-xl rounded-2xl">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl">Đăng nhập</CardTitle>
-            <CardDescription>Nhập thông tin tài khoản để tiếp tục</CardDescription>
+            <CardDescription>Truy cập tài khoản thư viện của bạn</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -67,7 +69,7 @@ export default function LoginPage() {
                 {loading ? 'Đang xử lý...' : 'Đăng nhập'}
               </Button>
               <p className="text-center text-sm text-muted-foreground pt-2">
-                Chưa có tài khoản?{' '}
+                Chưa có tài khoản sinh viên?{' '}
                 <Link to="/register" className="text-primary font-medium hover:underline">
                   Đăng ký
                 </Link>

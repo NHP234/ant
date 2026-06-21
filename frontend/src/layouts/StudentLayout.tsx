@@ -20,8 +20,10 @@ const navItems = [
 
 function SidebarContent() {
   const { isAdmin, isLibrarian } = useAuth()
+  const isStaff = isAdmin || isLibrarian
   const staffHref = isAdmin ? '/admin/dashboard' : '/librarian/dashboard'
   const staffLabel = isAdmin ? 'Trang quản trị' : 'Bàn thủ thư'
+  const visibleNavItems = isStaff ? navItems.slice(0, 1) : navItems
 
   return (
     <div className="flex flex-col h-full bg-card/60 backdrop-blur-xl">
@@ -35,7 +37,7 @@ function SidebarContent() {
       <div className="px-4"><Separator className="bg-border/50" /></div>
       
       <nav className="flex-1 p-4 space-y-1.5">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon
           return (
             <NavLink
@@ -60,6 +62,9 @@ function SidebarContent() {
         <>
           <div className="px-4"><Separator className="bg-border/50" /></div>
           <div className="p-4">
+            <p className="mb-2 px-3 text-xs text-muted-foreground" data-testid="staff-catalog-readonly-note">
+              Chế độ xem kho sách, không thao tác như sinh viên.
+            </p>
             <NavLink
               to={staffHref}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all"
@@ -75,10 +80,11 @@ function SidebarContent() {
 }
 
 export default function StudentLayout() {
-  const { user, logout } = useAuth()
+  const { user, logout, isAdmin, isLibrarian } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const isStaff = isAdmin || isLibrarian
 
   const handleLogout = () => {
     logout()
@@ -108,7 +114,7 @@ export default function StudentLayout() {
 
           <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
-            <NotificationBell />
+            {!isStaff && <NotificationBell />}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

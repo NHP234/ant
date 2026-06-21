@@ -17,6 +17,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -41,6 +42,7 @@ public class ChatController {
     private final BookRepository bookRepository;
 
     @PostMapping
+    @PreAuthorize("hasRole('STUDENT')")
     @Operation(summary = "Gửi tin nhắn hỏi đáp cho Trợ lý AI")
     public ResponseEntity<ApiResponse<ChatResponse>> chat(
             @Valid @RequestBody ChatRequest request,

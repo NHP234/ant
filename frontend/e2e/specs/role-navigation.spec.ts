@@ -126,4 +126,37 @@ test.describe('Role based staff navigation', () => {
     await page.goto('/librarian/dashboard')
     await expect(page).toHaveURL(/\/browse/)
   })
+
+  test('staff sees catalog as read-only without student personal navigation', async ({ page }) => {
+    await loginWithSession(page, librarianSession)
+    await page.goto('/browse')
+
+    await expect(page).toHaveURL(/\/browse/)
+    await expect(page.locator('a[href="/browse"]')).toBeVisible()
+    await expect(page.locator('a[href="/my-borrows"]')).toHaveCount(0)
+    await expect(page.locator('a[href="/notifications"]')).toHaveCount(0)
+    await expect(page.locator('a[href="/chat"]')).toHaveCount(0)
+    await expect(page.getByTestId('staff-catalog-readonly-note')).toBeVisible()
+  })
+
+  test('staff cannot place holds from book detail', async ({ page }) => {
+    await loginWithSession(page, adminSession)
+    await page.goto(`/books/${testBookId}`)
+
+    await expect(page.getByTestId('book-hold-button')).toHaveCount(0)
+    await expect(page.getByTestId('book-hold-staff-readonly')).toBeVisible()
+  })
+
+  test('staff is redirected away from student-only routes', async ({ page }) => {
+    await loginWithSession(page, librarianSession)
+
+    await page.goto('/my-borrows')
+    await expect(page).toHaveURL(/\/librarian\/dashboard/)
+
+    await page.goto('/notifications')
+    await expect(page).toHaveURL(/\/librarian\/dashboard/)
+
+    await page.goto('/chat')
+    await expect(page).toHaveURL(/\/librarian\/dashboard/)
+  })
 })

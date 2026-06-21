@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import BookCover from '@/components/shared/BookCover'
 import { useCarouselScroll } from '@/hooks/useCarouselScroll'
+import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import { ChevronLeft, ChevronRight, BookOpen, Hash, Building2, Calendar } from 'lucide-react'
 
@@ -112,6 +113,7 @@ export default function BookDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { isStudent } = useAuth()
 
   const { data: bookData, isLoading: bookLoading } = useQuery({
     queryKey: ['book', id],
@@ -189,14 +191,24 @@ export default function BookDetailPage() {
                      {book.availableCopies > 0 ? `Sẵn sàng (${book.availableCopies} cuốn)` : 'Đã mượn hết'}
                    </Badge>
                  </div>
-                 <Button
-                    size="lg"
-                    className="w-full rounded-full shadow-md hover:scale-[1.02] transition-transform text-md h-12"
-                    disabled={book.availableCopies === 0 || holdMutation.isPending}
-                    onClick={() => holdMutation.mutate()}
-                  >
-                    {holdMutation.isPending ? 'Đang xử lý...' : 'Đặt mượn (giữ 24h)'}
-                  </Button>
+                 {isStudent ? (
+                   <Button
+                      size="lg"
+                      data-testid="book-hold-button"
+                      className="w-full rounded-full shadow-md hover:scale-[1.02] transition-transform text-md h-12"
+                      disabled={book.availableCopies === 0 || holdMutation.isPending}
+                      onClick={() => holdMutation.mutate()}
+                    >
+                      {holdMutation.isPending ? 'Đang xử lý...' : 'Đặt mượn (giữ 24h)'}
+                    </Button>
+                 ) : (
+                   <div
+                     className="rounded-xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-muted-foreground"
+                     data-testid="book-hold-staff-readonly"
+                   >
+                     Chỉ sinh viên được đặt mượn trên web. Nhân viên đang xem kho sách ở chế độ đọc.
+                   </div>
+                 )}
               </CardContent>
             </Card>
           </div>

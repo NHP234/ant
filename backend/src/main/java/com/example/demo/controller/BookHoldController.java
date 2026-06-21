@@ -39,6 +39,7 @@ public class BookHoldController {
     private final BorrowService borrowService;
 
     @PostMapping
+    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<HoldResponse>> createHold(
             @Valid @RequestBody HoldCreateRequest request,
             Authentication authentication) {
@@ -48,6 +49,7 @@ public class BookHoldController {
     }
 
     @GetMapping("/my")
+    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<PageResponse<HoldResponse>>> getMyHolds(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(required = false) String statuses,

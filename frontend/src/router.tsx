@@ -44,6 +44,18 @@ function RootRedirect() {
   return <Navigate to="/browse" replace />
 }
 
+function StudentOnlyRoute() {
+  const { user, isLoading, isAdmin, isLibrarian } = useAuth()
+
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role === 'STUDENT') return <Outlet />
+
+  if (isAdmin) return <Navigate to="/admin/dashboard" replace />
+  if (isLibrarian) return <Navigate to="/librarian/dashboard" replace />
+  return <Navigate to="/" replace />
+}
+
 export default function AppRouter() {
   return (
     <BrowserRouter>
@@ -83,9 +95,14 @@ export default function AppRouter() {
           <Route element={<StudentLayout />}>
             <Route path="/browse" element={<BookCatalogPage />} />
             <Route path="/books/:id" element={<BookDetailPage />} />
-            <Route path="/my-borrows" element={<MyBorrowsPage />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/chat" element={<ChatPage />} />
+          </Route>
+
+          <Route element={<StudentOnlyRoute />}>
+            <Route element={<StudentLayout />}>
+              <Route path="/my-borrows" element={<MyBorrowsPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/chat" element={<ChatPage />} />
+            </Route>
           </Route>
         </Route>
 

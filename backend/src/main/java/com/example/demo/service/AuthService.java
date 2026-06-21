@@ -41,24 +41,39 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
+        String username = normalizeRequired(request.getUsername(), "Username is required");
+        String email = normalizeRequired(request.getEmail(), "Email is required");
+        String fullName = normalizeRequired(request.getFullName(), "Full name is required");
+        String studentId = normalizeRequired(request.getStudentId(), "Student ID is required");
+
+        if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("Username already exists");
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already exists");
+        }
+        if (userRepository.existsByStudentId(studentId)) {
+            throw new IllegalArgumentException("Student ID already exists");
         }
 
         User user = User.builder()
-                .username(request.getUsername())
+                .username(username)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .email(request.getEmail())
-                .fullName(request.getFullName())
-                .studentId(request.getStudentId())
+                .email(email)
+                .fullName(fullName)
+                .studentId(studentId)
                 .role(Role.STUDENT)
                 .build();
 
         user = userRepository.save(user);
         return buildAuthResponse(user);
+    }
+
+    private String normalizeRequired(String value, String message) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        return value.trim();
     }
 
     public AuthResponse refresh(String refreshToken) {

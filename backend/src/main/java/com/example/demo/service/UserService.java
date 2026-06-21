@@ -27,21 +27,30 @@ public class UserService {
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
+        String username = normalizeRequired(request.getUsername(), "Username is required");
+        String email = normalizeRequired(request.getEmail(), "Email is required");
+        String studentId = normalizeOptional(request.getStudentId());
+
+        if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("Username already exists");
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already exists");
+        }
+        if (studentId != null && userRepository.existsByStudentId(studentId)) {
+            throw new IllegalArgumentException("Student ID already exists");
         }
 
         Role role = parseRole(request.getRole());
+        ensureStudentIdForStudentRole(role, studentId);
+        String fullName = normalizeRequired(request.getFullName(), "Full name is required");
 
         User user = User.builder()
-                .username(request.getUsername())
+                .username(username)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .email(request.getEmail())
-                .fullName(request.getFullName())
-                .studentId(request.getStudentId())
+                .email(email)
+                .fullName(fullName)
+                .studentId(studentId)
                 .role(role)
                 .build();
 
@@ -75,6 +84,7 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         Role role = parseRole(roleName);
+        ensureStudentIdForStudentRole(role, normalizeOptional(user.getStudentId()));
         user.setRole(role);
         user = userRepository.save(user);
         return userMapper.toResponse(user);
@@ -96,5 +106,26 @@ public class UserService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid role: " + roleName + ". Must be one of: ADMIN, LIBRARIAN, STUDENT");
         }
+    }
+
+    private void ensureStudentIdForStudentRole(Role role, String studentId) {
+        if (role == Role.STUDENT && studentId == null) {
+            throw new IllegalArgumentException("Student ID is required for STUDENT users");
+        }
+    }
+
+    private String normalizeRequired(String value, String message) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        return value.trim();
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isBlank() ? null : trimmed;
     }
 }

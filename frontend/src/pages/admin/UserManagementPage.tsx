@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { AxiosError } from 'axios'
 import { userApi, type CreateUserRequest } from '@/api/users'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +15,7 @@ export default function UserManagementPage() {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<'STUDENT' | 'LIBRARIAN' | 'ADMIN'>('STUDENT')
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users', page],
@@ -27,7 +29,7 @@ export default function UserManagementPage() {
       setDialogOpen(false)
       toast.success('Tạo người dùng thành công')
     },
-    onError: (err: any) => toast.error(err.response?.data?.message || 'Tạo thất bại'),
+    onError: (err: AxiosError<{ message?: string }>) => toast.error(err.response?.data?.message || 'Tạo thất bại'),
   })
 
   const statusMutation = useMutation({
@@ -91,12 +93,25 @@ export default function UserManagementPage() {
                   <Input id="password" name="password" type="password" required minLength={6} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="studentId">Mã sinh viên</Label>
-                  <Input id="studentId" name="studentId" />
+                  <Label htmlFor="studentId">
+                    Mã sinh viên {selectedRole === 'STUDENT' ? '*' : ''}
+                  </Label>
+                  <Input
+                    id="studentId"
+                    name="studentId"
+                    required={selectedRole === 'STUDENT'}
+                    placeholder={selectedRole === 'STUDENT' ? 'VD: 20200001' : 'Không bắt buộc với nhân viên'}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Quyền *</Label>
-                  <select name="role" required className="w-full rounded-md border bg-transparent px-3 py-2 text-sm">
+                  <select
+                    name="role"
+                    required
+                    value={selectedRole}
+                    onChange={(event) => setSelectedRole(event.target.value as 'STUDENT' | 'LIBRARIAN' | 'ADMIN')}
+                    className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                  >
                     <option value="STUDENT">Sinh viên</option>
                     <option value="LIBRARIAN">Thủ thư</option>
                     <option value="ADMIN">Admin</option>

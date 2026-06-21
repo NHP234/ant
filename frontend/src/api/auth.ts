@@ -10,7 +10,7 @@ export interface RegisterRequest {
   password: string
   email: string
   fullName: string
-  studentId?: string
+  studentId: string
 }
 
 export interface AuthResponse {

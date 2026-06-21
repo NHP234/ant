@@ -106,6 +106,48 @@ class UserServiceTest {
         }
 
         @Test
+        @DisplayName("should throw when creating student without student ID")
+        void createUser_studentWithoutStudentId() {
+            CreateUserRequest request = new CreateUserRequest();
+            request.setUsername("student01");
+            request.setPassword("Pass123");
+            request.setEmail("student01@test.com");
+            request.setFullName("Student One");
+            request.setRole("STUDENT");
+
+            when(userRepository.existsByUsername("student01")).thenReturn(false);
+            when(userRepository.existsByEmail("student01@test.com")).thenReturn(false);
+
+            assertThatThrownBy(() -> userService.createUser(request))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Student ID is required");
+
+            verify(userRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw when student ID already exists")
+        void createUser_duplicateStudentId() {
+            CreateUserRequest request = new CreateUserRequest();
+            request.setUsername("student01");
+            request.setPassword("Pass123");
+            request.setEmail("student01@test.com");
+            request.setFullName("Student One");
+            request.setStudentId("20260001");
+            request.setRole("STUDENT");
+
+            when(userRepository.existsByUsername("student01")).thenReturn(false);
+            when(userRepository.existsByEmail("student01@test.com")).thenReturn(false);
+            when(userRepository.existsByStudentId("20260001")).thenReturn(true);
+
+            assertThatThrownBy(() -> userService.createUser(request))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Student ID already exists");
+
+            verify(userRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("should throw when role is invalid")
         void createUser_invalidRole() {
             CreateUserRequest request = new CreateUserRequest();
@@ -139,6 +181,19 @@ class UserServiceTest {
 
             assertThat(result).isNotNull();
             verify(userRepository).save(any(User.class));
+        }
+
+        @Test
+        @DisplayName("should reject changing user without student ID to student")
+        void updateRole_missingStudentIdForStudent() {
+            testUser.setStudentId(null);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+            assertThatThrownBy(() -> userService.updateRole(1L, "STUDENT"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Student ID is required");
+
+            verify(userRepository, never()).save(any(User.class));
         }
 
         @Test

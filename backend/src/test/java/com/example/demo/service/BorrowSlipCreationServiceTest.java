@@ -209,6 +209,26 @@ class BorrowSlipCreationServiceTest {
         }
 
         @Test
+        void rejectsNonStudentBorrower() {
+            User staffBorrower = User.builder()
+                    .id(3L)
+                    .username("staff-borrower")
+                    .role(Role.LIBRARIAN)
+                    .build();
+            when(userRepository.findByUsernameForUpdate("staff-borrower"))
+                    .thenReturn(Optional.of(staffBorrower));
+            BorrowSlipCreateRequest request = slipRequest(borrowItem(1L, null));
+            request.setUsername("staff-borrower");
+
+            assertThatThrownBy(() ->
+                    creationService.createBorrowSlip("librarian01", request))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Borrower must be a student");
+
+            verifyNoInteractions(bookRepository);
+        }
+
+        @Test
         void unavailableItemDoesNotCreateSlip() {
             Book secondBook = Book.builder().id(2L).title("Unavailable").build();
             stubBookWithoutHold(firstBook, firstCopy);

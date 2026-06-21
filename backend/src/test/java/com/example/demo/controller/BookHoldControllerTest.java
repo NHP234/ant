@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -17,7 +18,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,6 +47,21 @@ class BookHoldControllerTest {
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Test
+    @WithMockUser(username = "librarian", roles = "LIBRARIAN")
+    void createHoldRejectsLibrarian() throws Exception {
+        mockMvc.perform(post("/api/holds")
+                        .principal(new TestingAuthenticationToken(
+                                "librarian", null, "ROLE_LIBRARIAN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "bookId": 10 }
+                                """))
+                .andExpect(status().isForbidden());
+
+        verify(bookHoldService, never()).createHold(any(), any());
+    }
 
     @Test
     @WithMockUser(username = "librarian", roles = "LIBRARIAN")
