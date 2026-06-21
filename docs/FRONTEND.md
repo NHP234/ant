@@ -95,9 +95,11 @@ frontend/src/
 /librarian/nfc-cards        # Student NFC card assignment
 /librarian/profile          # Librarian profile
 
-# Student routes (any authenticated user)
+# Catalog routes
 /browse                     # Book catalog with search
 /books/:id                  # Book detail + Hold button
+
+# Student-only routes
 /my-borrows                 # My borrows (tabs: holds/borrowing/history)
 /notifications              # Notifications
 /chat                       # RAG chatbot (AI Trợ lý học tập)
@@ -141,6 +143,8 @@ frontend/src/
 - JWT + Refresh Token lưu trong localStorage
 - Auth context: `user { username, role }`, `isAuthenticated`, `login()`, `logout()`
 - Role checks: `isAdmin`, `isLibrarian`, `isStudent` computed properties
+- Register page creates STUDENT accounts and requires `studentId`. Login remains a shared screen; staff use accounts created by ADMIN.
+- ADMIN/LIBRARIAN can open `/browse` and `/books/:id` only as read-only catalog views. Student personal navigation (`/my-borrows`, `/notifications`, `/chat`) is hidden and guarded by `StudentOnlyRoute`.
 
 ### Hold Flow (Student → Librarian)
 1. Student nhấn "Đặt mượn (Hold 24h)" trên Book Detail → `POST /api/holds`

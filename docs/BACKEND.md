@@ -178,10 +178,10 @@ public class GlobalExceptionHandler {
    - Public: GET /api/books/**, GET /api/categories/**
    - ADMIN/LIBRARIAN: POST/PUT /api/books/**
    - ADMIN only: DELETE /api/books/**, CRUD /api/categories/**, CRUD /api/users/**, POST /api/admin/seed (batch seed data)
-   - ADMIN/LIBRARIAN: POST /api/borrows
-   - ADMIN/LIBRARIAN: POST /api/borrow-slips
-   - Authenticated: GET /api/borrows/my, POST /api/chat (gửi câu hỏi cho AI Chatbot proxy)
+   - ADMIN/LIBRARIAN: POST /api/borrows, POST /api/borrow-slips cho borrower role STUDENT
+   - STUDENT: POST /api/holds, GET /api/holds/my, GET /api/borrows/my, GET /api/borrow-slips/my, POST /api/chat
    - ADMIN/LIBRARIAN: PUT /api/borrows/{id}/return, GET /api/borrows, GET /api/borrows/overdue
+   - ADMIN/LIBRARIAN có thể xem catalog/read-only qua frontend, nhưng không được impersonate sinh viên hoặc tạo hold/chat/my-borrows như sinh viên
 ```
 
 ## Hold + Borrow Flow (V11)
@@ -210,20 +210,22 @@ public class GlobalExceptionHandler {
 
 4. Direct borrow at counter (no hold): POST /api/borrows
    a. Librarian provides borrower identifier (username or studentId)
-   b. Optional NFC copyId to select a specific copy
-   c. If borrower has active hold for the same book, auto-fulfill it
-   d. Otherwise, pick any AVAILABLE copy and proceed with borrow
+   b. Borrower must resolve to a user with role STUDENT
+   c. Optional NFC copyId to select a specific copy
+   d. If borrower has active hold for the same book, auto-fulfill it
+   e. Otherwise, pick any AVAILABLE copy and proceed with borrow
 
 5. Batch borrow at counter/kiosk: POST /api/borrow-slips
    a. Resolve exactly one borrower identifier and lock the borrower row
-   b. Validate the full item list before creating the slip
-   c. Lock active holds and copies in stable book/copy order
-   d. BorrowPolicyService calculates active borrows + unexpired holds + new direct items
+   b. Reject borrower accounts that are not role STUDENT
+   c. Validate the full item list before creating the slip
+   d. Lock active holds and copies in stable book/copy order
+   e. BorrowPolicyService calculates active borrows + unexpired holds + new direct items
       (items fulfilling an existing hold are not counted twice)
-   e. Create exactly one BorrowSlip and one BorrowRecord per item
-   f. Update copies to BORROWED, fulfill matching holds and create notifications
-   g. Any failure rolls back the whole transaction
-   h. POST /api/borrows wraps one item around the same core workflow for compatibility
+   f. Create exactly one BorrowSlip and one BorrowRecord per item
+   g. Update copies to BORROWED, fulfill matching holds and create notifications
+   h. Any failure rolls back the whole transaction
+   i. POST /api/borrows wraps one item around the same core workflow for compatibility
 
 6. Return: PUT /api/borrows/{id}/return
    a. Lock BorrowRecord, then set status = RETURNED and returnDate = now
@@ -318,6 +320,7 @@ Category API notes:
 - Endpoint `POST /api/ingest` vẫn tồn tại cho backfill/rebuild toàn bộ; sau khi upsert toàn bộ sách từ PostgreSQL, RAG service prune các vector `book_*` không còn tồn tại trong DB để tránh chatbot gợi ý sách đã xóa.
 
 ## Notes
+- Student registration requires a unique `studentId`. ADMIN-created STUDENT accounts also require `studentId`; staff accounts can omit it. Changing an existing user to STUDENT is rejected until the account has a student ID.
 - Application time zone is configured as `Asia/Ho_Chi_Minh` via `TimeConfig`, Jackson and Hibernate JDBC settings. Current DTO/schema still use `LocalDateTime`, so new borrow/hold timestamps are generated as Vietnam local business time instead of Docker container UTC.
 - `BorrowService` giữ vai trò facade cho controller để API và audit annotation không thay đổi. Service này chuyển toàn bộ tạo phiếu, validate batch, chọn copy và fulfill hold sang `BorrowSlipCreationService`; `BorrowSlipService` chỉ phụ trách truy vấn.
 - Admin account tự động tạo qua DataInitializer (username/password từ application.yml)

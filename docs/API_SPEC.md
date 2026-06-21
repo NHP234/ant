@@ -29,6 +29,8 @@
 }
 ```
 
+`studentId` là bắt buộc và phải duy nhất khi sinh viên tự đăng ký tài khoản.
+
 ### POST /auth/login
 ```json
 // Request
@@ -174,7 +176,7 @@ Trả về `PageResponse<CategoryResponse>`, mặc định sắp xếp theo `nam
 |--------|----------|------|-------------|
 | POST | /borrows | ADMIN/LIBRARIAN | Mượn sách tại quầy (direct borrow, auto-fulfill hold nếu có) |
 | PUT | /borrows/{id}/return?note= | LIBRARIAN/ADMIN | Trả sách |
-| GET | /borrows/my?statuses=BORROWING,OVERDUE | User | Lịch sử mượn của user hiện tại, có thể lọc theo status |
+| GET | /borrows/my?statuses=BORROWING,OVERDUE | STUDENT | Lịch sử mượn của sinh viên hiện tại, có thể lọc theo status |
 | GET | /borrows | LIBRARIAN/ADMIN | Tất cả borrow records |
 | GET | /borrows/overdue | LIBRARIAN/ADMIN | Sách quá hạn |
 | GET | /borrows/active?studentId=20200001 | LIBRARIAN/ADMIN | Sách đang mượn/quá hạn của sinh viên theo mã sinh viên |
@@ -207,7 +209,7 @@ Trả về `PageResponse<CategoryResponse>`, mặc định sắp xếp theo `nam
 }
 ```
 
-> **Lưu ý**: `username` hoặc `studentId` là bắt buộc (chỉ chọn 1). `copyId` optional — nếu có hold ACTIVE cho cùng đầu sách, hệ thống tự động fulfill hold. `source` optional (`COUNTER` hoặc `NFC`), mặc định là `COUNTER`.
+> **Lưu ý**: `username` hoặc `studentId` là bắt buộc (chỉ chọn 1). Borrower resolve được phải có role `STUDENT`; ADMIN/LIBRARIAN không thể bị mượn sách như sinh viên. `copyId` optional — nếu có hold ACTIVE cho cùng đầu sách, hệ thống tự động fulfill hold. `source` optional (`COUNTER` hoặc `NFC`), mặc định là `COUNTER`.
 
 ### GET /borrows/my?statuses=BORROWING,OVERDUE&page=0&size=20
 `statuses` là optional, dạng comma-separated. Nếu không truyền, API trả toàn bộ borrow records của user hiện tại.
@@ -222,7 +224,7 @@ Trả về `List<BorrowRecordResponse>` gồm các record `BORROWING` và `OVERD
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | /borrow-slips | LIBRARIAN/ADMIN | Tạo một phiếu mượn gồm nhiều sách trong một transaction |
-| GET | /borrow-slips/my | User | Phiếu mượn của user hiện tại |
+| GET | /borrow-slips/my | STUDENT | Phiếu mượn của sinh viên hiện tại |
 | GET | /borrow-slips | LIBRARIAN/ADMIN | Tất cả phiếu mượn |
 | GET | /borrow-slips/{id} | User | Chi tiết phiếu mượn (kèm danh sách records) |
 
@@ -243,6 +245,7 @@ Response `201 Created` là `BorrowSlipResponse` như phần chi tiết bên dư�
 
 Quy tắc:
 - Phải truyền đúng một trong `username` hoặc `studentId`.
+- Borrower resolve được phải có role `STUDENT`; nhân viên chỉ tạo phiếu cho sinh viên, không thao tác như sinh viên.
 - `items` không được rỗng, không được trùng `bookId` hoặc `copyId`, và không vượt giới hạn mượn cấu hình (mặc định 5).
 - Với `source = NFC`, mọi item bắt buộc có `copyId`; `COUNTER` có thể để backend tự chọn bản sao `AVAILABLE`.
 - Nếu sinh viên có hold `ACTIVE` của đầu sách tương ứng, hold được fulfill trong cùng phiếu và không bị tính hai lần vào giới hạn.
@@ -293,8 +296,8 @@ Quy tắc:
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | /holds | User | Đặt mượn (giữ chỗ 24h nếu còn copy AVAILABLE) |
-| GET | /holds/my?statuses=ACTIVE | User | Danh sách hold của user hiện tại, có thể lọc theo status |
+| POST | /holds | STUDENT | Đặt mượn (giữ chỗ 24h nếu còn copy AVAILABLE) |
+| GET | /holds/my?statuses=ACTIVE | STUDENT | Danh sách hold của sinh viên hiện tại, có thể lọc theo status |
 | GET | /holds | LIBRARIAN/ADMIN | Danh sách tất cả hold |
 | GET | /holds/{id} | LIBRARIAN/ADMIN | Chi tiết hold |
 | PUT | /holds/{id}/confirm | LIBRARIAN/ADMIN | Xác nhận mượn (có thể đổi copy cùng đầu sách) |
@@ -387,6 +390,8 @@ Hold `ACTIVE` đã hết hạn không được tính vào giới hạn mượn/�
 // Response 201
 { "success": true, "data": { "id": 3, "username": "librarian01", "email": "lib01@library.com", "fullName": "Tran Thi B", "role": "LIBRARIAN", "isActive": true }, "message": "User created successfully" }
 ```
+
+Khi `role = STUDENT`, `studentId` là bắt buộc và phải duy nhất. Khi `role = ADMIN` hoặc `LIBRARIAN`, `studentId` là optional. Đổi role một user sang `STUDENT` yêu cầu user đã có `studentId`.
 
 ### PUT /users/{id}/role
 ```json
@@ -509,7 +514,7 @@ Hold `ACTIVE` đã hết hạn không được tính vào giới hạn mượn/�
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | /chat | User | Gửi tin nhắn hỏi đáp cho Trợ lý AI (RAG) |
+| POST | /chat | STUDENT | Gửi tin nhắn hỏi đáp cho Trợ lý AI (RAG) |
 
 ### POST /chat
 ```json
