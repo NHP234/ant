@@ -16,5 +16,6 @@ public class UserResponse {
     private String studentId;
     private String role;
     private Boolean isActive;
+    private LocalDateTime holdBanUntil;
     private LocalDateTime createdAt;
 }

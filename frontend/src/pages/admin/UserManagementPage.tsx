@@ -16,6 +16,7 @@ export default function UserManagementPage() {
   const [page, setPage] = useState(0)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedRole, setSelectedRole] = useState<'STUDENT' | 'LIBRARIAN' | 'ADMIN'>('STUDENT')
+  const [renderedAt] = useState(() => Date.now())
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users', page],
@@ -40,6 +41,15 @@ export default function UserManagementPage() {
     },
   })
 
+  const clearHoldBanMutation = useMutation({
+    mutationFn: (id: number) => userApi.clearHoldBan(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      toast.success('Đã mở khóa đặt mượn')
+    },
+    onError: (err: AxiosError<{ message?: string }>) => toast.error(err.response?.data?.message || 'Mở khóa thất bại'),
+  })
+
   const users = data?.data?.data
 
   const handleCreateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -60,6 +70,18 @@ export default function UserManagementPage() {
     LIBRARIAN: 'default',
     STUDENT: 'secondary',
   }
+
+  const isHoldBanActive = (holdBanUntil: string | null) =>
+    Boolean(holdBanUntil && new Date(holdBanUntil).getTime() > renderedAt)
+
+  const formatDateTime = (date: string) =>
+    new Date(date).toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
 
   return (
     <div className="space-y-6">
@@ -135,39 +157,66 @@ export default function UserManagementPage() {
               <TableHead className="hidden md:table-cell">Email</TableHead>
               <TableHead>Quyền</TableHead>
               <TableHead className="text-center">Trạng thái</TableHead>
+              <TableHead className="hidden lg:table-cell">Đặt mượn</TableHead>
               <TableHead className="text-right">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8">Đang tải...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8">Đang tải...</TableCell></TableRow>
             ) : !users?.content?.length ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Không có người dùng</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Không có người dùng</TableCell></TableRow>
             ) : (
-              users.content.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.fullName}</TableCell>
-                  <TableCell>{user.username}</TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={roleColors[user.role] ?? 'secondary'}>{user.role}</Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={user.isActive ? 'default' : 'secondary'}>
-                      {user.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => statusMutation.mutate({ id: user.id, active: !user.isActive })}
-                    >
-                      {user.isActive ? 'Khóa' : 'Mở'}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              users.content.map((user) => {
+                const holdBanActive = user.role === 'STUDENT' && isHoldBanActive(user.holdBanUntil)
+
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.fullName}</TableCell>
+                    <TableCell>{user.username}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={roleColors[user.role] ?? 'secondary'}>{user.role}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={user.isActive ? 'default' : 'secondary'}>
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {holdBanActive ? (
+                        <div className="space-y-1">
+                          <Badge variant="destructive">Đang khóa</Badge>
+                          <div className="text-xs text-muted-foreground">
+                            Đến {formatDateTime(user.holdBanUntil as string)}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Bình thường</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right space-x-1">
+                      {holdBanActive && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={clearHoldBanMutation.isPending}
+                          onClick={() => clearHoldBanMutation.mutate(user.id)}
+                        >
+                          Mở khóa đặt mượn
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => statusMutation.mutate({ id: user.id, active: !user.isActive })}
+                      >
+                        {user.isActive ? 'Khóa' : 'Mở'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>

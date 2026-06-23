@@ -120,7 +120,7 @@ frontend/src/
 | `Hold` | `HoldResponse.java` | `api/holds.ts` |
 | `DashboardStats` | `DashboardStatsResponse.java` | `api/dashboard.ts` |
 | `Notification` | `NotificationResponse.java` | `api/notifications.ts` |
-| `User` | `UserResponse.java` | `api/users.ts` |
+| `User` | `UserResponse.java` (+`holdBanUntil`) | `api/users.ts` |
 | `NfcStudent` | `NfcStudentResponse.java` | `api/nfc.ts` |
 
 ## Key Implementation Notes
@@ -145,6 +145,7 @@ frontend/src/
 - Role checks: `isAdmin`, `isLibrarian`, `isStudent` computed properties
 - Register page creates STUDENT accounts and requires `studentId`. Login remains a shared screen; staff use accounts created by ADMIN.
 - ADMIN/LIBRARIAN can open `/browse` and `/books/:id` only as read-only catalog views. Student personal navigation (`/my-borrows`, `/notifications`, `/chat`) is hidden and guarded by `StudentOnlyRoute`.
+- ADMIN User Management displays active student hold bans via `holdBanUntil` and can clear them with `DELETE /users/{id}/hold-ban`. LIBRARIAN does not receive this administrative override.
 
 ### Hold Flow (Student → Librarian)
 1. Student nhấn "Đặt mượn (Hold 24h)" trên Book Detail → `POST /api/holds`
@@ -152,6 +153,7 @@ frontend/src/
 3. Student đến quầy → Librarian xem Hold Management → nhấn "Xác nhận mượn" → `PUT /api/holds/{id}/confirm`
 4. Hệ thống tự động tạo BorrowSlip + BorrowRecord
 5. Nếu 24h không đến → Hold auto-expire → ban 7 ngày
+6. ADMIN có thể mở khóa đặt mượn cho sinh viên từ trang quản lý người dùng nếu cần xử lý ngoại lệ vận hành
 
 ### Batch Borrow Flow (Counter + Kiosk)
 1. Form tại quầy giữ nguyên sinh viên trong lúc thủ thư tìm và thêm tối đa 5 đầu sách vào danh sách chờ.

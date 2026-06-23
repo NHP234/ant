@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.audit.Auditable;
 import com.example.demo.dto.request.CreateUserRequest;
 import com.example.demo.dto.response.PageResponse;
 import com.example.demo.dto.response.UserResponse;
@@ -96,6 +97,17 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         user.setIsActive(active);
+        user = userRepository.save(user);
+        return userMapper.toResponse(user);
+    }
+
+    @Transactional
+    @Auditable(action = "CLEAR_HOLD_BAN", entityType = "USER")
+    public UserResponse clearHoldBan(Long userId) {
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        user.setHoldBanUntil(null);
         user = userRepository.save(user);
         return userMapper.toResponse(user);
     }

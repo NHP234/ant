@@ -177,7 +177,7 @@ public class GlobalExceptionHandler {
 4. Role-based access:
    - Public: GET /api/books/**, GET /api/categories/**
    - ADMIN/LIBRARIAN: POST/PUT /api/books/**
-   - ADMIN only: DELETE /api/books/**, CRUD /api/categories/**, CRUD /api/users/**, POST /api/admin/seed (batch seed data)
+   - ADMIN only: DELETE /api/books/**, CRUD /api/categories/**, CRUD /api/users/**, DELETE /api/users/{id}/hold-ban, POST /api/admin/seed (batch seed data)
    - ADMIN/LIBRARIAN: POST /api/borrows, POST /api/borrow-slips cho borrower role STUDENT
    - STUDENT: POST /api/holds, GET /api/holds/my, GET /api/borrows/my, GET /api/borrow-slips/my, POST /api/chat
    - ADMIN/LIBRARIAN: PUT /api/borrows/{id}/return, GET /api/borrows, GET /api/borrows/overdue
@@ -244,6 +244,11 @@ public class GlobalExceptionHandler {
    d. Set hold.status = EXPIRED, release copy to AVAILABLE
    e. Set user.holdBanUntil = now + 7 days and send notifications
    f. Failure on one hold is logged without rolling back the other holds
+
+9. Admin override:
+   a. ADMIN can call DELETE /api/users/{id}/hold-ban to clear `holdBanUntil`
+   b. The endpoint is idempotent and uses a pessimistic lock on the user row
+   c. The operation is audited as `CLEAR_HOLD_BAN` on entity type `USER`
 ```
 
 ## Caching Strategy

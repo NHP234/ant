@@ -9,6 +9,7 @@ export interface User {
   studentId: string | null
   role: string
   isActive: boolean
+  holdBanUntil: string | null
   createdAt: string
 }
 
@@ -39,4 +40,7 @@ export const userApi = {
 
   updateStatus: (id: number, active: boolean) =>
     api.put<{ data: User }>(`/users/${id}/status`, { active }),
+
+  clearHoldBan: (id: number) =>
+    api.delete<{ data: User }>(`/users/${id}/hold-ban`),
 }

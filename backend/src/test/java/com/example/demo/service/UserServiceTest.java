@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -235,6 +236,55 @@ class UserServiceTest {
             UserResponse result = userService.updateStatus(1L, true);
 
             assertThat(result.getIsActive()).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("clearHoldBan")
+    class ClearHoldBan {
+
+        @Test
+        @DisplayName("should clear active hold ban")
+        void clearHoldBan_success() {
+            testUser.setHoldBanUntil(LocalDateTime.now().plusDays(3));
+
+            when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.save(any(User.class))).thenReturn(testUser);
+            when(userMapper.toResponse(testUser)).thenReturn(
+                    UserResponse.builder().id(1L).holdBanUntil(null).build());
+
+            UserResponse result = userService.clearHoldBan(1L);
+
+            assertThat(testUser.getHoldBanUntil()).isNull();
+            assertThat(result.getHoldBanUntil()).isNull();
+            verify(userRepository).save(testUser);
+        }
+
+        @Test
+        @DisplayName("should be idempotent when user has no hold ban")
+        void clearHoldBan_noActiveBan() {
+            testUser.setHoldBanUntil(null);
+
+            when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.save(any(User.class))).thenReturn(testUser);
+            when(userMapper.toResponse(testUser)).thenReturn(testUserResponse);
+
+            UserResponse result = userService.clearHoldBan(1L);
+
+            assertThat(result).isEqualTo(testUserResponse);
+            assertThat(testUser.getHoldBanUntil()).isNull();
+            verify(userRepository).save(testUser);
+        }
+
+        @Test
+        @DisplayName("should throw when user not found")
+        void clearHoldBan_userNotFound() {
+            when(userRepository.findByIdForUpdate(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.clearHoldBan(99L))
+                    .isInstanceOf(ResourceNotFoundException.class);
+
+            verify(userRepository, never()).save(any());
         }
     }
 

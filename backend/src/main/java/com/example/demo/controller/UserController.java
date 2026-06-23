@@ -73,4 +73,11 @@ public class UserController {
         UserResponse user = userService.updateStatus(id, request.getActive());
         return ResponseEntity.ok(ApiResponse.ok(user, "User status updated successfully"));
     }
+
+    @DeleteMapping("/{id}/hold-ban")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> clearHoldBan(@PathVariable Long id) {
+        UserResponse user = userService.clearHoldBan(id);
+        return ResponseEntity.ok(ApiResponse.ok(user, "Hold ban cleared successfully"));
+    }
 }

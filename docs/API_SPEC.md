@@ -381,6 +381,7 @@ Hold `ACTIVE` đã hết hạn không được tính vào giới hạn mượn/�
 | GET | /users/{id} | ADMIN | Chi tiết user |
 | PUT | /users/{id}/role | ADMIN | Thay đổi role user |
 | PUT | /users/{id}/status | ADMIN | Cập nhật trạng thái user (explicit active/inactive) |
+| DELETE | /users/{id}/hold-ban | ADMIN | Mở khóa đặt mượn cho sinh viên |
 
 ### POST /users (ADMIN only)
 ```json
@@ -388,10 +389,10 @@ Hold `ACTIVE` đã hết hạn không được tính vào giới hạn mượn/�
 { "username": "librarian01", "password": "Lib@1234", "email": "lib01@library.com", "fullName": "Tran Thi B", "studentId": null, "role": "LIBRARIAN" }
 
 // Response 201
-{ "success": true, "data": { "id": 3, "username": "librarian01", "email": "lib01@library.com", "fullName": "Tran Thi B", "role": "LIBRARIAN", "isActive": true }, "message": "User created successfully" }
+{ "success": true, "data": { "id": 3, "username": "librarian01", "email": "lib01@library.com", "fullName": "Tran Thi B", "role": "LIBRARIAN", "isActive": true, "holdBanUntil": null }, "message": "User created successfully" }
 ```
 
-Khi `role = STUDENT`, `studentId` là bắt buộc và phải duy nhất. Khi `role = ADMIN` hoặc `LIBRARIAN`, `studentId` là optional. Đổi role một user sang `STUDENT` yêu cầu user đã có `studentId`.
+`UserResponse` có `holdBanUntil` để ADMIN biết sinh viên đang bị khóa đặt mượn đến thời điểm nào. Khi `role = STUDENT`, `studentId` là bắt buộc và phải duy nhất. Khi `role = ADMIN` hoặc `LIBRARIAN`, `studentId` là optional. Đổi role một user sang `STUDENT` yêu cầu user đã có `studentId`.
 
 ### PUT /users/{id}/role
 ```json
@@ -410,6 +411,14 @@ Khi `role = STUDENT`, `studentId` là bắt buộc và phải duy nhất. Khi `r
 // Response 200
 { "success": true, "data": { "id": 2, "username": "student01", "role": "STUDENT", "isActive": false }, "message": "User status updated successfully" }
 ```
+
+### DELETE /users/{id}/hold-ban
+```json
+// Response 200
+{ "success": true, "data": { "id": 2, "username": "student01", "role": "STUDENT", "isActive": true, "holdBanUntil": null }, "message": "Hold ban cleared successfully" }
+```
+
+Endpoint này idempotent: nếu user không có khóa đặt mượn thì vẫn trả về thành công với `holdBanUntil = null`. Hành động được ghi audit log với action `CLEAR_HOLD_BAN`.
 
 ---
 
