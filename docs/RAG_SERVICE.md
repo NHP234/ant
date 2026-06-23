@@ -1,13 +1,13 @@
 # RAG Service — AI Chatbot Thư viện Awaken Ant Library
 
 > Microservice Python (FastAPI) cung cấp chatbot AI thông minh cho sinh viên.
-> Kết hợp **Intent Classification (SVM)** + **RAG (Vector Search)** + **Direct API queries**.
+> Kết hợp **Intent Classification (SentenceTransformer + Calibrated SVM)** + **Hybrid Retrieval (PostgreSQL lexical + ChromaDB semantic)** + **Direct API queries** + **DeepSeek LLM**.
 
 ## 1. Mục đích & Phạm vi
 
-### Chatbot có thể xử lý 2 loại câu hỏi:
+### Chatbot có thể xử lý 4 nhóm câu hỏi:
 
-**Loại A — Câu hỏi về tìm kiếm sách (RAG):**
+**Loại A — Câu hỏi về tìm kiếm/tra cứu sách (RAG):**
 - "Có sách nào về machine learning cho người mới không?"
 - "Gợi ý sách lập trình Java"
 - "Sách nào về kinh tế vĩ mô?"
@@ -20,32 +20,46 @@
 - "Tôi đã mượn bao nhiêu sách rồi?"
 - "Hạn trả sách của tôi là khi nào?"
 
+**Loại C — Câu hỏi nối tiếp dựa trên lịch sử hội thoại:**
+- "Sách này nói về gì?"
+- "Tác giả là ai?"
+- "Cuốn này thuộc thể loại gì?"
+
+**Loại D — Hội thoại chung / hướng dẫn sử dụng thư viện:**
+- "Xin chào"
+- "Tôi có thể hỏi bạn những gì?"
+- "Làm sao để đặt mượn sách?"
+
 ---
 
 ## 2. Kiến trúc tổng quan — Intent Router
 
 ```
-User question + JWT token
+User question + chat_history + JWT token
      |
      v
 [FastAPI endpoint: POST /api/chat]
      |
      v
+[Contextual question builder]
+     |
+     v
 ┌──────────────────────────────┐
-│  Intent Classifier (SVM)     │
-│  Phân loại câu hỏi thành:   │
+│  Intent Classifier           │
+│  SentenceTransformer + SVM   │
+│  Phân loại câu hỏi thành:    │
 │   - BOOK_SEARCH              │
 │   - BORROW_STATUS            │
 │   - HOLD_STATUS              │
 │   - GENERAL_CHAT             │
-│   - UNKNOWN                  │
 └──────────────────────────────┘
      |
      ├── BOOK_SEARCH ──────────> [RAG Pipeline]
-     │                              ├── Embed question
-     │                              ├── Query ChromaDB (top-k)
+     │                              ├── PostgreSQL lexical lookup
+     │                              ├── ChromaDB semantic fallback
+     │                              ├── Merge + dedupe by book_id
      │                              ├── Build prompt + context
-     │                              ├── Call LLM
+     │                              ├── Call DeepSeek
      │                              └── Return answer + source books
      │
      ├── BORROW_STATUS ────────> [API Query Pipeline]
@@ -54,11 +68,11 @@ User question + JWT token
      │                              │   (GET /borrows/my, /holds/my)
      │                              ├── Format kết quả thành context
      │                              ├── Build prompt + context
-     │                              ├── Call LLM
+     │                              ├── Call DeepSeek
      │                              └── Return friendly answer
      │
-     └── GENERAL_CHAT ─────────> [Direct LLM]
-         UNKNOWN                    ├── Prompt: "Bạn là trợ lý thư viện..."
+     └── GENERAL_CHAT ─────────> [Direct DeepSeek]
+                                    ├── Prompt: "Bạn là trợ lý thư viện..."
                                     └── Trả lời chung / hướng dẫn sử dụng
 ```
 
@@ -76,9 +90,10 @@ User question + JWT token
 | Component | Công nghệ | Lý do |
 |-----------|-----------|-------|
 | Web Framework | FastAPI | Async, tự sinh docs, type-safe |
-| Intent Classifier | scikit-learn SVM (LinearSVC) + CalibratedClassifierCV | Nhận diện ngữ nghĩa sâu, hiệu chuẩn xác suất (Platt Scaling) |
+| Intent Classifier | SentenceTransformer + scikit-learn LinearSVC + CalibratedClassifierCV | Nhận diện ngữ nghĩa sâu, hiệu chuẩn xác suất (Platt Scaling) |
 | Vector Database | ChromaDB (embedded) | Không cần server riêng, dễ deploy |
 | Embedding Model | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Hỗ trợ tiếng Việt xuất sắc, nhẹ (~130MB), chạy CPU tốt |
+| Lexical Retrieval | PostgreSQL + `unaccent` + ranking trong Python | Ưu tiên match chính xác theo tên sách, tác giả, thể loại, mô tả trước khi dùng vector fallback |
 | LLM | DeepSeek API (`deepseek-v4-flash`) | Chi phí thấp, OpenAI-compatible, phù hợp cho demo ổn định |
 | Vietnamese NLP | Biểu diễn ngữ nghĩa (Dense Vectors) | Tự động phân tách từ bằng WordPiece/Subword của Transformer |
 | HTTP Client | httpx | Async, gọi Spring Boot APIs |
@@ -105,7 +120,7 @@ TRAINING_DATA = [
     ("tôi muốn đọc sách về mạng máy tính", "BOOK_SEARCH"),
     ("có cuốn clean code không", "BOOK_SEARCH"),
     ("sách nào của tác giả robert martin", "BOOK_SEARCH"),
-    # ... thêm ~100 câu nữa
+    # ... tổng cộng 45 câu BOOK_SEARCH
 
     # === BORROW_STATUS ===
     ("tôi đang mượn bao nhiêu sách", "BORROW_STATUS"),
@@ -116,7 +131,7 @@ TRAINING_DATA = [
     ("tôi đã trả sách gì rồi", "BORROW_STATUS"),
     ("lịch sử mượn sách của tôi", "BORROW_STATUS"),
     ("tôi có sách quá hạn không", "BORROW_STATUS"),
-    # ... thêm ~50 câu nữa
+    # ... tổng cộng 25 câu BORROW_STATUS
 
     # === HOLD_STATUS ===
     ("tôi đang đặt mượn cuốn gì", "HOLD_STATUS"),
@@ -124,7 +139,7 @@ TRAINING_DATA = [
     ("hold của tôi còn bao lâu", "HOLD_STATUS"),
     ("tôi có thể hủy đặt mượn được không", "HOLD_STATUS"),
     ("sách tôi đặt trước đã sẵn sàng chưa", "HOLD_STATUS"),
-    # ... thêm ~30 câu nữa
+    # ... tổng cộng 20 câu HOLD_STATUS
 
     # === GENERAL_CHAT ===
     ("xin chào", "GENERAL_CHAT"),
@@ -133,7 +148,7 @@ TRAINING_DATA = [
     ("làm sao để mượn sách", "GENERAL_CHAT"),
     ("tôi là sinh viên năm nhất", "GENERAL_CHAT"),
     ("tạm biệt", "GENERAL_CHAT"),
-    # ... thêm ~30 câu nữa
+    # ... tổng cộng 25 câu GENERAL_CHAT
 ]
 ```
 
@@ -219,7 +234,7 @@ if confidence < CONFIDENCE_THRESHOLD:
     intent = "GENERAL_CHAT"
 ```
 
-> Nếu SVM không tự tin (< 0.6), fallback sang GENERAL_CHAT để LLM tự xử lý.
+> Nếu SVM không tự tin (< 0.5), fallback sang GENERAL_CHAT để LLM tự xử lý.
 
 ---
 
@@ -276,26 +291,52 @@ def ingest_books(books: list[dict]):
 
 ```python
 # rag_service.py
-def search_books(question: str, n_results: int = 5) -> list[dict]:
-    """Tìm sách liên quan bằng vector similarity"""
-    results = collection.query(
-        query_texts=[question],
-        n_results=n_results,
-        include=["documents", "metadatas", "distances"]
-    )
+def search_books(question: str, n_results: int = 5) -> tuple[str, list[dict]]:
+    """
+    Tìm sách bằng hybrid retrieval:
+    1. Trích các lexical terms có ý nghĩa từ câu hỏi.
+    2. Tra PostgreSQL theo title/author/category/description đã normalize.
+    3. Rank/filter candidate trong Python để tránh match sai theo substring.
+    4. Nếu lexical chưa đủ mạnh, fallback sang ChromaDB semantic search.
+    5. Merge kết quả và dedupe theo book_id.
+    """
+    lexical_matches = _search_books_lexically(question, limit=n_results)
 
+    if lexical_matches:
+        vector_context, vector_sources = "", []
+    else:
+        vector_context, vector_sources = _search_books_chroma_only(
+            question,
+            n_results=n_results,
+        )
+
+    merged_documents = []
     source_books = []
-    for i, metadata in enumerate(results["metadatas"][0]):
-        source_books.append({
-            "book_id": metadata["book_id"],
-            "title": metadata["title"],
-            "author": metadata["author"],
-            "relevance_score": round(1 - results["distances"][0][i], 2)
-        })
+    seen_book_ids = set()
 
-    context = "\n---\n".join(results["documents"][0])
-    return context, source_books
+    for document, source in lexical_matches:
+        if source["book_id"] in seen_book_ids:
+            continue
+        merged_documents.append(document)
+        source_books.append(source)
+        seen_book_ids.add(source["book_id"])
+
+    vector_documents = [doc for doc in vector_context.split("\n\n---\n\n") if doc.strip()]
+    for index, source in enumerate(vector_sources):
+        if len(source_books) >= n_results or source["book_id"] in seen_book_ids:
+            continue
+        if index < len(vector_documents):
+            merged_documents.append(vector_documents[index])
+        source_books.append(source)
+        seen_book_ids.add(source["book_id"])
+
+    return "\n\n---\n\n".join(merged_documents), source_books
 ```
+
+Ghi chú hiện trạng:
+- `source_books` của RAG service chỉ chứa metadata phục vụ retrieval: `book_id`, `title`, `author`, `relevance_score`.
+- Ảnh bìa không được lưu trong ChromaDB. Spring Boot proxy sẽ enrich `coverImageUrl` từ PostgreSQL trước khi trả về Frontend.
+- Với câu hỏi chi tiết về sách đã được nhắc trong lịch sử chat, orchestrator ưu tiên lookup chính xác theo title; riêng câu hỏi tác giả có thể trả lời trực tiếp từ metadata thay vì gọi LLM.
 
 ### 5.3 Prompt Template
 
@@ -420,8 +461,8 @@ rag-service/
 │   │   ├── chat.py              # POST /api/chat
 │   │   └── admin.py             # GET /api/health, full + single-book ingest endpoints
 │   ├── services/
-│   │   ├── intent_classifier.py # SVM + TF-IDF classifier
-│   │   ├── rag_service.py       # ChromaDB search + RAG pipeline
+│   │   ├── intent_classifier.py # SentenceTransformer embeddings + Calibrated SVM
+│   │   ├── rag_service.py       # PostgreSQL lexical + ChromaDB semantic retrieval
 │   │   ├── api_query_service.py # Call Spring Boot APIs
 │   │   ├── llm_service.py       # DeepSeek API client
 │   │   └── chat_orchestrator.py # Route intents → pipelines
@@ -468,7 +509,7 @@ rag-service/
 Authorization: Bearer <jwt_token>   // Bắt buộc — dùng để gọi Spring Boot APIs
 ```
 
-RAG service nhận cả `chat_history` và `chatHistory` để tương thích với Spring Boot/Frontend. Trước khi phân loại intent và tìm kiếm vector, orchestrator sẽ dùng lịch sử hội thoại gần nhất để bổ sung ngữ cảnh cho câu hỏi nối tiếp như "sách này về chủ đề gì?", ưu tiên tên sách xuất hiện trong dòng `Sách: ...` của câu trả lời trước đó. Với câu hỏi chi tiết về cuốn đã nhắc (`tác giả là ai`, `chủ đề gì`, `thể loại gì`, `nói về gì`), service lookup chính xác theo title trước; riêng câu hỏi tác giả được trả lời trực tiếp từ metadata để tránh LLM gợi ý sách ngẫu nhiên. Câu hỏi đã bổ sung ngữ cảnh chỉ dùng cho routing/search; prompt gửi LLM vẫn giữ cả câu hỏi gốc để câu trả lời tự nhiên.
+RAG service nhận cả `chat_history` và `chatHistory` để tương thích với Spring Boot/Frontend. Trước khi phân loại intent và truy xuất dữ liệu, orchestrator sẽ dùng lịch sử hội thoại gần nhất để bổ sung ngữ cảnh cho câu hỏi nối tiếp như "sách này về chủ đề gì?", ưu tiên tên sách xuất hiện trong dòng `Sách: ...` của câu trả lời trước đó. Với câu hỏi chi tiết về cuốn đã nhắc (`tác giả là ai`, `chủ đề gì`, `thể loại gì`, `nói về gì`), service lookup chính xác theo title trước; riêng câu hỏi tác giả được trả lời trực tiếp từ metadata để tránh LLM gợi ý sách ngẫu nhiên. Câu hỏi đã bổ sung ngữ cảnh chỉ dùng cho routing/search; prompt gửi LLM vẫn giữ cả câu hỏi gốc để câu trả lời tự nhiên.
 
 `source_books` from RAG only contains retrieval metadata: `book_id`, `title`, `author`, and `relevance_score`. Cover images are not stored in ChromaDB; Spring Boot enriches `coverImageUrl` from PostgreSQL before returning `/api/chat` to the frontend.
 
@@ -667,15 +708,15 @@ volumes:
 - [x] Health check endpoint
 
 ### Phase 2: Intent Classifier (Tuần 11 — ngày 2-3)
-- [x] Viết training data (~200 câu, 4 intents)
-- [x] Implement `IntentClassifier` (SVM + TF-IDF)
+- [x] Viết training data (115 câu, 4 intents: 45 BOOK_SEARCH, 25 BORROW_STATUS, 20 HOLD_STATUS, 25 GENERAL_CHAT)
+- [x] Implement `IntentClassifier` (SentenceTransformer dense embeddings + Calibrated SVM)
 - [x] Train + save model (`.joblib`)
 - [x] Unit tests cho classifier (accuracy > 90%)
 - [x] Confidence threshold + fallback logic
 
 ### Phase 3: RAG Pipeline (Tuần 11 — ngày 3-5)
 - [x] Implement ingestion script (PostgreSQL → ChromaDB)
-- [x] Implement vector search
+- [x] Implement hybrid search (PostgreSQL lexical + ChromaDB semantic fallback)
 - [x] Prompt templates cho BOOK_SEARCH
 - [x] LLM service dùng DeepSeek API
 - [x] Test RAG end-to-end
@@ -724,7 +765,7 @@ volumes:
 | DeepSeek hết số dư hoặc rate limit | Hiển thị lỗi thân thiện và theo dõi Usage/Billing để nạp thêm hạn mức |
 | SVM accuracy thấp | Thêm training data, tune hyperparams, dùng LLM-based classification fallback |
 | ChromaDB embedding chậm | Batch ingestion, chỉ re-ingest sách mới/thay đổi |
-| Tiếng Việt không chính xác | Dùng `underthesea` tokenizer, thêm domain-specific từ vựng |
+| Tiếng Việt không chính xác | Dùng SentenceTransformer multilingual cho phân loại/tìm kiếm ngữ nghĩa; bổ sung training data và stopword/domain terms khi gặp câu hỏi mới |
 | JWT expired khi gọi Spring Boot | Forward nguyên JWT từ frontend, để Spring Boot tự validate |
 
 ## Status: ✅ Đã hoàn thành
