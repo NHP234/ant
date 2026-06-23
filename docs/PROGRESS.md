@@ -60,6 +60,7 @@
 - ✅ User Management: UserController + UserService + UserMapper (ADMIN tạo user với role tùy chọn)
 - ✅ API: POST /api/users (tạo LIBRARIAN/ADMIN), GET /api/users (list), GET /api/users/me (profile)
 - ✅ API: PUT /api/users/{id}/role (đổi role), PUT /api/users/{id}/status (activate/deactivate)
+- ✅ API/UI: ADMIN mở khóa đặt mượn cho sinh viên qua DELETE /api/users/{id}/hold-ban và trang quản lý người dùng
 
 ---
 
@@ -305,3 +306,5 @@
 | 2026-06-17 | Redesign ChatPage thành assistant workspace rộng rãi: bỏ `max-w-4xl` container constraint, thêm Welcome landing state với grid prompt cards, chuyển source book cards từ horizontal scroll sang responsive 2-col grid (xóa overflow-x), input bar pin ở bottom, message bubble rộng hơn (85-90%) với break-words cho text dài, quick prompts dạng chip dưới input bar. Tuân thủ design system tokens, không emoji, không font-serif. Verification: `npx vite build` pass. |
 | 2026-06-20 | Thêm phân trang cho quản lý danh mục: backend bổ sung `GET /api/categories/page` trả `PageResponse<CategoryResponse>` sắp xếp theo tên, frontend `CategoryManagementPage` chuyển sang tải 20 danh mục/trang và giữ `/api/categories` full list cho form/dropdown hiện có. Verification: `npm run build`, `mvn test`, `git diff --check` pass. |
 | 2026-06-21 | Tighten STUDENT/staff boundaries: require studentId for STUDENT accounts, keep staff catalog read-only, guard student personal routes, and reject holds/chat/my-borrow plus borrow borrowers that are not STUDENT. Verification: `mvn test`, `npm run build`, targeted ESLint for changed frontend files, targeted Playwright role-navigation spec, and `git diff --check` pass. Full `npm run lint` still has pre-existing lint debt outside this scope. |
+| 2026-06-23 | Bổ sung quyền vận hành cho ADMIN mở khóa đặt mượn: expose `holdBanUntil` trong `UserResponse`, thêm `DELETE /api/users/{id}/hold-ban` idempotent có audit, và trang quản lý người dùng hiển thị/nút mở khóa cho sinh viên đang bị ban. Verification: `mvn test`, frontend build, targeted ESLint, Docker rebuild backend/frontend. |
+| 2026-06-23 | Bổ sung test coverage phục vụ mục kiểm thử đồ án: thêm unit tests cho `BookCopyService`, `NotificationService`, `RagBookSyncService`; thêm RAG FastAPI endpoint tests cho `POST/DELETE /api/ingest/books/{bookId}` với fake data/internal key; cập nhật fixture ingestion có đủ title/author/description/categories. Verification: backend `mvn test` pass, RAG `pytest` 34 tests pass. |

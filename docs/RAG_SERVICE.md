@@ -441,8 +441,10 @@ rag-service/
 │   ├── train_classifier.py      # Script train SVM
 │   └── ingest_books.py          # Script ingest books
 ├── tests/
-│   ├── test_classifier.py       # Unit tests cho SVM
-│   └── test_rag.py              # Unit tests cho RAG
+│   ├── test_classifier.py             # Unit tests cho SVM
+│   ├── test_rag.py                    # ChromaDB ephemeral + mock embedding
+│   ├── test_ingestion.py              # PostgreSQL -> Chroma sync orchestration
+│   └── test_admin_ingest_router.py    # Internal ingest/delete endpoints + X-Internal-Key
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml           # Standalone hoặc merge vào project chính
@@ -693,6 +695,7 @@ volumes:
 ### Phase 6: Integration (Tuần 12 — ngày 3-5)
 - [x] Spring Boot `ChatController` (proxy)
 - [x] Auto-sync từng sách khi thêm/sửa/xóa, full ingest có prune vector cũ
+- [x] Kiểm thử chuỗi sync nội bộ: Spring Boot gọi đúng endpoint, RAG endpoint xác thực `X-Internal-Key`, ingestion gọi upsert/delete và ChromaDB ephemeral lưu/truy vấn được bằng mock embedding
 - [x] Dockerfile cho rag-service
 - [x] Docker Compose integration
 - [x] Frontend: kết nối ChatPage.tsx với API thực

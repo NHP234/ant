@@ -24,7 +24,15 @@ class FakeRagService:
 
 
 def test_sync_book_from_postgres_upserts_single_book(monkeypatch):
-    book = {"id": 42, "title": "Test Book"}
+    book = {
+        "id": 42,
+        "title": "Test Book",
+        "author": "Test Author",
+        "description": "A test book used to verify single-book vector synchronization.",
+        "categories": ["Testing", "RAG"],
+        "publisher": "Test Publisher",
+        "publishYear": 2026,
+    }
     service = FakeRagService()
     monkeypatch.setattr(ingestion, "load_books_from_postgres", lambda book_id=None: [book])
 
@@ -35,7 +43,15 @@ def test_sync_book_from_postgres_upserts_single_book(monkeypatch):
 
 
 def test_full_sync_prunes_stale_vectors(monkeypatch):
-    book = {"id": 42, "title": "Test Book"}
+    book = {
+        "id": 42,
+        "title": "Test Book",
+        "author": "Test Author",
+        "description": "A test book used to verify full vector synchronization.",
+        "categories": ["Testing", "RAG"],
+        "publisher": "Test Publisher",
+        "publishYear": 2026,
+    }
     service = FakeRagService()
     monkeypatch.setattr(ingestion, "load_books_from_postgres", lambda book_id=None: [book])
 
