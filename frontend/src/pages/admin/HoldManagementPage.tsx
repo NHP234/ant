@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { holdApi, type Hold } from '@/api/holds'
 import { Button } from '@/components/ui/button'
@@ -26,13 +26,25 @@ function formatDate(date: string) {
   return new Date(date).toLocaleDateString('vi-VN')
 }
 
-function HoldRow({ hold, refetch }: { hold: Hold; refetch: () => void }) {
+function formatDateTime(date: string) {
+  return new Date(date).toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function HoldRow({ hold }: { hold: Hold }) {
   const queryClient = useQueryClient()
 
   const confirmMutation = useMutation({
     mutationFn: (id: number) => holdApi.confirm(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'holds'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'borrow-slips'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       toast.success('Xác nhận mượn thành công')
     },
     onError: () => toast.error('Xác nhận thất bại'),
@@ -86,6 +98,82 @@ function HoldRow({ hold, refetch }: { hold: Hold; refetch: () => void }) {
   )
 }
 
+function ActivePickupGroups({ holds }: { holds: Hold[] }) {
+  const queryClient = useQueryClient()
+
+  const pickupMutation = useMutation({
+    mutationFn: (userId: number) => holdApi.pickup({ userId, source: 'COUNTER' }),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'holds'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'borrow-slips'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      const recordCount = response.data.data.records?.length ?? 0
+      toast.success(`Đã lập phiếu mượn gồm ${recordCount} sách`)
+    },
+    onError: () => toast.error('Lập phiếu nhận sách thất bại'),
+  })
+
+  const groups = useMemo(() => {
+    const byUser = new Map<number, { userId: number; userFullName: string; holds: Hold[] }>()
+    holds
+      .filter((hold) => hold.status === 'ACTIVE')
+      .forEach((hold) => {
+        const group = byUser.get(hold.userId) ?? {
+          userId: hold.userId,
+          userFullName: hold.userFullName,
+          holds: [],
+        }
+        group.holds.push(hold)
+        byUser.set(hold.userId, group)
+      })
+
+    return Array.from(byUser.values()).map((group) => ({
+      ...group,
+      nearestExpiry: group.holds
+        .map((hold) => hold.expiresAt)
+        .sort((first, second) => new Date(first).getTime() - new Date(second).getTime())[0],
+    }))
+  }, [holds])
+
+  if (!groups.length) return null
+
+  return (
+    <div className="rounded-md border bg-card p-4">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold">Nhận sách đã đặt</h2>
+        <p className="text-sm text-muted-foreground">
+          Gom toàn bộ sách đang giữ của một sinh viên thành một phiếu mượn.
+        </p>
+      </div>
+      <div className="space-y-3">
+        {groups.map((group) => (
+          <div
+            key={group.userId}
+            className="flex flex-col gap-3 rounded-md border bg-background p-4 lg:flex-row lg:items-center lg:justify-between"
+          >
+            <div className="min-w-0 space-y-1">
+              <div className="font-medium">{group.userFullName}</div>
+              <div className="text-sm text-muted-foreground">
+                {group.holds.length} sách đang chờ nhận · Hạn gần nhất: {formatDateTime(group.nearestExpiry)}
+              </div>
+              <div className="truncate text-sm text-muted-foreground">
+                {group.holds.map((hold) => hold.bookTitle).join(', ')}
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => pickupMutation.mutate(group.userId)}
+              disabled={pickupMutation.isPending}
+            >
+              Lập phiếu nhận tất cả
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function HoldManagementPage() {
   const [page, setPage] = useState(0)
   const [filter, setFilter] = useState('ALL')
@@ -106,6 +194,8 @@ export default function HoldManagementPage() {
         title="Quản lý đặt trước"
         description="Xác nhận hoặc hủy yêu cầu đặt mượn sách"
       />
+
+      <ActivePickupGroups holds={holds?.content ?? []} />
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v)}>
         <TabsList>
@@ -137,7 +227,7 @@ export default function HoldManagementPage() {
               <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Không có yêu cầu đặt trước</TableCell></TableRow>
             ) : (
               filtered.map((hold) => (
-                <HoldRow key={hold.id} hold={hold} refetch={() => {}} />
+                <HoldRow key={hold.id} hold={hold} />
               ))
             )}
           </TableBody>

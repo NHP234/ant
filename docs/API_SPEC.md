@@ -301,6 +301,7 @@ Quy tắc:
 | GET | /holds | LIBRARIAN/ADMIN | Danh sách tất cả hold |
 | GET | /holds/{id} | LIBRARIAN/ADMIN | Chi tiết hold |
 | PUT | /holds/{id}/confirm | LIBRARIAN/ADMIN | Xác nhận mượn (có thể đổi copy cùng đầu sách) |
+| POST | /holds/pickup | LIBRARIAN/ADMIN | Lập một phiếu mượn từ toàn bộ hold ACTIVE chưa hết hạn của một sinh viên |
 | PUT | /holds/{id}/cancel | User/LIBRARIAN/ADMIN | Hủy hold |
 
 ### POST /holds
@@ -334,6 +335,25 @@ Quy tắc:
 
 ### GET /holds/my?statuses=ACTIVE&page=0&size=10
 `statuses` là optional, dạng comma-separated (`ACTIVE,FULFILLED,EXPIRED,CANCELED`). Nếu không truyền, API trả toàn bộ holds của user hiện tại.
+
+### POST /holds/pickup
+```json
+// Request
+{
+  "userId": 1,
+  "source": "COUNTER"
+}
+```
+
+Response `201 Created` là `BorrowSlipResponse` chứa một phiếu mượn và toàn bộ records được tạo từ các hold `ACTIVE` chưa hết hạn của sinh viên đó.
+
+Quy tắc:
+- Chỉ ADMIN/LIBRARIAN được gọi.
+- Phải truyền đúng một trong `userId`, `username` hoặc `studentId`.
+- Borrower resolve được phải có role `STUDENT`.
+- `source` optional (`COUNTER` hoặc `NFC`), mặc định là `COUNTER`.
+- Backend khóa borrower, các hold và copy theo thứ tự ổn định; nếu sinh viên không còn hold hợp lệ thì trả lỗi và không tạo phiếu.
+- Endpoint này phục vụ thao tác nhận sách tại quầy khi một sinh viên đến lấy nhiều sách đã đặt; `PUT /holds/{id}/confirm` vẫn giữ cho thao tác xác nhận từng hold riêng lẻ.
 
 ### PUT /holds/{id}/confirm
 ```json

@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.exception.HoldExpiredException;
+import com.example.demo.dto.response.BorrowSlipResponse;
 import com.example.demo.security.JwtAuthenticationFilter;
 import com.example.demo.service.BookHoldService;
 import com.example.demo.service.BorrowService;
@@ -74,5 +75,27 @@ class BookHoldControllerTest {
                                 "librarian", null, "ROLE_LIBRARIAN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("HOLD_EXPIRED"));
+    }
+
+    @Test
+    @WithMockUser(username = "librarian", roles = "LIBRARIAN")
+    void pickupHoldsCreatesBorrowSlip() throws Exception {
+        when(borrowService.pickupActiveHolds(eq("librarian"), any()))
+                .thenReturn(BorrowSlipResponse.builder()
+                        .id(90L)
+                        .userId(1L)
+                        .userFullName("Student One")
+                        .build());
+
+        mockMvc.perform(post("/api/holds/pickup")
+                        .principal(new TestingAuthenticationToken(
+                                "librarian", null, "ROLE_LIBRARIAN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "userId": 1 }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.id").value(90))
+                .andExpect(jsonPath("$.message").value("Hold pickup completed"));
     }
 }

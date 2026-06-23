@@ -1,6 +1,7 @@
 import api from './axios'
 import type { PageResponse } from './books'
 import type { BorrowSource } from './borrows'
+import type { BorrowSlip } from './borrowSlips'
 
 export type HoldStatus = 'ACTIVE' | 'FULFILLED' | 'EXPIRED' | 'CANCELED'
 
@@ -37,6 +38,13 @@ export interface HoldCancelRequest {
   reason?: string
 }
 
+export interface HoldPickupRequest {
+  userId?: number
+  username?: string
+  studentId?: string
+  source?: BorrowSource
+}
+
 export const holdApi = {
   create: (data: HoldCreateRequest) =>
     api.post<{ data: Hold }>('/holds', data),
@@ -58,6 +66,9 @@ export const holdApi = {
 
   confirm: (id: number, data?: HoldConfirmRequest) =>
     api.put<{ data: Hold }>(`/holds/${id}/confirm`, data ?? {}),
+
+  pickup: (data: HoldPickupRequest) =>
+    api.post<{ data: BorrowSlip }>('/holds/pickup', data),
 
   cancel: (id: number, data?: HoldCancelRequest) =>
     api.put<{ data: Hold }>(`/holds/${id}/cancel`, data ?? {}),

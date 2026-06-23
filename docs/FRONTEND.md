@@ -150,10 +150,11 @@ frontend/src/
 ### Hold Flow (Student → Librarian)
 1. Student nhấn "Đặt mượn (Hold 24h)" trên Book Detail → `POST /api/holds`
 2. Copy được đặt `RESERVED` trong 24h
-3. Student đến quầy → Librarian xem Hold Management → nhấn "Xác nhận mượn" → `PUT /api/holds/{id}/confirm`
-4. Hệ thống tự động tạo BorrowSlip + BorrowRecord
-5. Nếu 24h không đến → Hold auto-expire → ban 7 ngày
-6. ADMIN có thể mở khóa đặt mượn cho sinh viên từ trang quản lý người dùng nếu cần xử lý ngoại lệ vận hành
+3. Student đến quầy → Librarian xem Hold Management → dùng nhóm "Nhận sách đã đặt" để lập một phiếu cho toàn bộ hold đang còn hiệu lực của sinh viên → `POST /api/holds/pickup`
+4. Nếu chỉ xử lý một hold riêng lẻ, Librarian vẫn có thể nhấn "Xác nhận mượn" → `PUT /api/holds/{id}/confirm`
+5. Hệ thống tự động tạo BorrowSlip + BorrowRecord và refresh danh sách hold, phiếu mượn, dashboard
+6. Nếu 24h không đến → Hold auto-expire → ban 7 ngày
+7. ADMIN có thể mở khóa đặt mượn cho sinh viên từ trang quản lý người dùng nếu cần xử lý ngoại lệ vận hành
 
 ### Batch Borrow Flow (Counter + Kiosk)
 1. Form tại quầy giữ nguyên sinh viên trong lúc thủ thư tìm và thêm tối đa 5 đầu sách vào danh sách chờ.

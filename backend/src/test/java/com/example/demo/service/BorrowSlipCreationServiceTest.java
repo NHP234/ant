@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.dto.request.BorrowItemRequest;
 import com.example.demo.dto.request.BorrowSlipCreateRequest;
 import com.example.demo.dto.request.HoldConfirmRequest;
+import com.example.demo.dto.request.HoldPickupRequest;
 import com.example.demo.exception.BookNotAvailableException;
 import com.example.demo.exception.HoldExpiredException;
 import com.example.demo.model.entity.Book;
@@ -17,6 +18,7 @@ import com.example.demo.model.enums.HoldStatus;
 import com.example.demo.model.enums.NotificationType;
 import com.example.demo.model.enums.Role;
 import com.example.demo.repository.BookCopyRepository;
+import com.example.demo.repository.BookHoldRepository;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.BorrowRecordRepository;
 import com.example.demo.repository.BorrowSlipRepository;
@@ -62,6 +64,7 @@ class BorrowSlipCreationServiceTest {
 
     @Mock private BorrowRecordRepository borrowRecordRepository;
     @Mock private BorrowSlipRepository borrowSlipRepository;
+    @Mock private BookHoldRepository bookHoldRepository;
     @Mock private BookRepository bookRepository;
     @Mock private BookCopyRepository bookCopyRepository;
     @Mock private UserRepository userRepository;
@@ -80,6 +83,7 @@ class BorrowSlipCreationServiceTest {
         creationService = new BorrowSlipCreationService(
                 borrowRecordRepository,
                 borrowSlipRepository,
+                bookHoldRepository,
                 bookRepository,
                 bookCopyRepository,
                 userRepository,
@@ -282,6 +286,83 @@ class BorrowSlipCreationServiceTest {
                     .hasMessageContaining("30");
 
             verifyNoInteractions(borrowSlipRepository);
+        }
+    }
+
+    @Nested
+    @DisplayName("pickupActiveHolds")
+    class PickupActiveHolds {
+
+        @Test
+        void createsOneSlipForAllActiveHoldsOfStudent() {
+            firstCopy.setStatus(CopyStatus.RESERVED);
+            Book secondBook = Book.builder().id(2L).title("Refactoring").build();
+            BookCopy secondCopy = BookCopy.builder()
+                    .id(20L)
+                    .book(secondBook)
+                    .copyNumber(1)
+                    .status(CopyStatus.RESERVED)
+                    .build();
+            BookHold firstHold = activeHold(firstCopy);
+            BookHold secondHold = BookHold.builder()
+                    .id(31L)
+                    .user(student)
+                    .copy(secondCopy)
+                    .status(HoldStatus.ACTIVE)
+                    .reservedAt(NOW.minusHours(1))
+                    .expiresAt(NOW.plusHours(1))
+                    .build();
+            when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(student));
+            when(bookHoldRepository.findActiveUnexpiredByUserIdForUpdate(
+                    1L, HoldStatus.ACTIVE, NOW))
+                    .thenReturn(List.of(firstHold, secondHold));
+            when(bookCopyRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(firstCopy));
+            when(bookCopyRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(secondCopy));
+
+            HoldPickupRequest request = new HoldPickupRequest();
+            request.setUserId(1L);
+            BorrowSlip result =
+                    creationService.pickupActiveHolds("librarian01", request);
+
+            assertThat(result.getRecords()).hasSize(2);
+            assertThat(firstCopy.getStatus()).isEqualTo(CopyStatus.BORROWED);
+            assertThat(secondCopy.getStatus()).isEqualTo(CopyStatus.BORROWED);
+            verify(borrowSlipRepository).save(result);
+            verify(borrowRecordRepository, times(2)).save(any(BorrowRecord.class));
+            verify(bookHoldLifecycleService).fulfillHold(firstHold, librarian, NOW);
+            verify(bookHoldLifecycleService).fulfillHold(secondHold, librarian, NOW);
+            ArgumentCaptor<String> titleCaptor = ArgumentCaptor.forClass(String.class);
+            ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+            verify(notificationService, times(2)).createNotification(
+                    eq(student),
+                    eq(NotificationType.HOLD_FULFILLED),
+                    titleCaptor.capture(),
+                    messageCaptor.capture());
+            assertThat(titleCaptor.getAllValues())
+                    .containsOnly("Mượn sách thành công");
+            assertThat(messageCaptor.getAllValues())
+                    .containsExactly(
+                            "Bạn đã mượn \"Clean Code\" từ đặt mượn.",
+                            "Bạn đã mượn \"Refactoring\" từ đặt mượn.");
+        }
+
+        @Test
+        void rejectsWhenStudentHasNoActiveHolds() {
+            when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(student));
+            when(bookHoldRepository.findActiveUnexpiredByUserIdForUpdate(
+                    1L, HoldStatus.ACTIVE, NOW))
+                    .thenReturn(List.of());
+
+            HoldPickupRequest request = new HoldPickupRequest();
+            request.setUserId(1L);
+
+            assertThatThrownBy(() ->
+                    creationService.pickupActiveHolds("librarian01", request))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("No active holds");
+
+            verify(borrowSlipRepository, never()).save(any());
+            verify(borrowRecordRepository, never()).save(any());
         }
     }
 

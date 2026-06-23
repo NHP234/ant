@@ -178,7 +178,7 @@ public class GlobalExceptionHandler {
    - Public: GET /api/books/**, GET /api/categories/**
    - ADMIN/LIBRARIAN: POST/PUT /api/books/**
    - ADMIN only: DELETE /api/books/**, CRUD /api/categories/**, CRUD /api/users/**, DELETE /api/users/{id}/hold-ban, POST /api/admin/seed (batch seed data)
-   - ADMIN/LIBRARIAN: POST /api/borrows, POST /api/borrow-slips cho borrower role STUDENT
+   - ADMIN/LIBRARIAN: POST /api/borrows, POST /api/borrow-slips, POST /api/holds/pickup cho borrower role STUDENT
    - STUDENT: POST /api/holds, GET /api/holds/my, GET /api/borrows/my, GET /api/borrow-slips/my, POST /api/chat
    - ADMIN/LIBRARIAN: PUT /api/borrows/{id}/return, GET /api/borrows, GET /api/borrows/overdue
    - ADMIN/LIBRARIAN có thể xem catalog/read-only qua frontend, nhưng không được impersonate sinh viên hoặc tạo hold/chat/my-borrows như sinh viên
@@ -208,14 +208,23 @@ public class GlobalExceptionHandler {
    f. BookHoldLifecycleService marks hold FULFILLED
    g. NotificationService persists the notification in the same transaction
 
-4. Direct borrow at counter (no hold): POST /api/borrows
+4. Batch pickup for held books: POST /api/holds/pickup
+   a. Librarian provides exactly one borrower identifier: userId, username or studentId
+   b. Borrower must resolve to a user with role STUDENT
+   c. Lock borrower, then active unexpired holds and their copies in stable book/copy order
+   d. Create exactly one BorrowSlip and one BorrowRecord per active unexpired hold
+   e. Set each copy.status = BORROWED, mark each hold FULFILLED and create notifications
+   f. This is the fast counter workflow when a student picks up all currently held books
+   g. PUT /api/holds/{id}/confirm remains available for confirming a single hold
+
+5. Direct borrow at counter (no hold): POST /api/borrows
    a. Librarian provides borrower identifier (username or studentId)
    b. Borrower must resolve to a user with role STUDENT
    c. Optional NFC copyId to select a specific copy
    d. If borrower has active hold for the same book, auto-fulfill it
    e. Otherwise, pick any AVAILABLE copy and proceed with borrow
 
-5. Batch borrow at counter/kiosk: POST /api/borrow-slips
+6. Batch borrow at counter/kiosk: POST /api/borrow-slips
    a. Resolve exactly one borrower identifier and lock the borrower row
    b. Reject borrower accounts that are not role STUDENT
    c. Validate the full item list before creating the slip
@@ -227,17 +236,17 @@ public class GlobalExceptionHandler {
    h. Any failure rolls back the whole transaction
    i. POST /api/borrows wraps one item around the same core workflow for compatibility
 
-6. Return: PUT /api/borrows/{id}/return
+7. Return: PUT /api/borrows/{id}/return
    a. Lock BorrowRecord, then set status = RETURNED and returnDate = now
    b. Set copy.status = AVAILABLE
    c. Send notification
 
-7. Overdue check (@Scheduled daily 00:00):
+8. Overdue check (@Scheduled daily 00:00):
    a. Lock records WHERE status=BORROWING AND slip.dueDate < NOW()
    b. Set record.status = OVERDUE
    c. Send notification
 
-8. Hold expiry (@Scheduled every 30 min):
+9. Hold expiry (@Scheduled every 30 min):
    a. Find hold IDs WHERE status=ACTIVE AND expiresAt <= NOW(), ordered by ID
    b. Process each ID in a separate transaction
    c. Re-lock User → BookHold → BookCopy and re-check status/expiry
@@ -245,7 +254,7 @@ public class GlobalExceptionHandler {
    e. Set user.holdBanUntil = now + 7 days and send notifications
    f. Failure on one hold is logged without rolling back the other holds
 
-9. Admin override:
+10. Admin override:
    a. ADMIN can call DELETE /api/users/{id}/hold-ban to clear `holdBanUntil`
    b. The endpoint is idempotent and uses a pessimistic lock on the user row
    c. The operation is audited as `CLEAR_HOLD_BAN` on entity type `USER`

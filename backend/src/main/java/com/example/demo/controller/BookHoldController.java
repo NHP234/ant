@@ -3,7 +3,9 @@ package com.example.demo.controller;
 import com.example.demo.dto.request.HoldCancelRequest;
 import com.example.demo.dto.request.HoldConfirmRequest;
 import com.example.demo.dto.request.HoldCreateRequest;
+import com.example.demo.dto.request.HoldPickupRequest;
 import com.example.demo.dto.response.ApiResponse;
+import com.example.demo.dto.response.BorrowSlipResponse;
 import com.example.demo.dto.response.HoldResponse;
 import com.example.demo.dto.response.PageResponse;
 import com.example.demo.model.enums.HoldStatus;
@@ -81,6 +83,16 @@ public class BookHoldController {
             Authentication authentication) {
         HoldResponse hold = borrowService.confirmHold(id, request, authentication.getName());
         return ResponseEntity.ok(ApiResponse.ok(hold, "Hold confirmed"));
+    }
+
+    @PostMapping("/pickup")
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
+    public ResponseEntity<ApiResponse<BorrowSlipResponse>> pickupHolds(
+            @RequestBody(required = false) HoldPickupRequest request,
+            Authentication authentication) {
+        BorrowSlipResponse slip = borrowService.pickupActiveHolds(authentication.getName(), request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(slip, "Hold pickup completed"));
     }
 
     @PutMapping("/{id}/cancel")

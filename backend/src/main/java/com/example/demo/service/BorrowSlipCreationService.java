@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.dto.request.BorrowItemRequest;
 import com.example.demo.dto.request.BorrowSlipCreateRequest;
 import com.example.demo.dto.request.HoldConfirmRequest;
+import com.example.demo.dto.request.HoldPickupRequest;
 import com.example.demo.exception.BookNotAvailableException;
 import com.example.demo.exception.BorrowLimitExceededException;
 import com.example.demo.exception.HoldExpiredException;
@@ -20,6 +21,7 @@ import com.example.demo.model.enums.HoldStatus;
 import com.example.demo.model.enums.NotificationType;
 import com.example.demo.model.enums.Role;
 import com.example.demo.repository.BookCopyRepository;
+import com.example.demo.repository.BookHoldRepository;
 import com.example.demo.repository.BookRepository;
 import com.example.demo.repository.BorrowRecordRepository;
 import com.example.demo.repository.BorrowSlipRepository;
@@ -43,6 +45,7 @@ public class BorrowSlipCreationService {
 
     private final BorrowRecordRepository borrowRecordRepository;
     private final BorrowSlipRepository borrowSlipRepository;
+    private final BookHoldRepository bookHoldRepository;
     private final BookRepository bookRepository;
     private final BookCopyRepository bookCopyRepository;
     private final UserRepository userRepository;
@@ -117,6 +120,39 @@ public class BorrowSlipCreationService {
                         "Bạn đã mượn \"%s\" từ đặt mượn.",
                         borrowCopy.getBook().getTitle()));
         return hold;
+    }
+
+    @Transactional
+    public BorrowSlip pickupActiveHolds(
+            String librarianUsername,
+            HoldPickupRequest request) {
+        User librarian = findUserOrThrow(librarianUsername);
+        User borrower = resolvePickupBorrower(request);
+        BorrowSource source = resolveBorrowSource(request);
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        List<BookHold> holds = bookHoldRepository.findActiveUnexpiredByUserIdForUpdate(
+                borrower.getId(),
+                HoldStatus.ACTIVE,
+                now);
+        if (holds.isEmpty()) {
+            throw new IllegalArgumentException("No active holds available for pickup");
+        }
+
+        BorrowSlip slip = createBorrowSlipEntity(borrower, librarian, source, now);
+        for (BookHold hold : holds) {
+            BookCopy copy = resolveCopyForHold(hold, hold.getCopy().getId());
+            createBorrowRecord(slip, copy);
+            bookHoldLifecycleService.fulfillHold(hold, librarian, now);
+            notificationService.createNotification(
+                    borrower,
+                    NotificationType.HOLD_FULFILLED,
+                    "Mượn sách thành công",
+                    String.format(
+                            "Bạn đã mượn \"%s\" từ đặt mượn.",
+                            copy.getBook().getTitle()));
+        }
+        return slip;
     }
 
     private void validateBorrowSlipRequest(BorrowSlipCreateRequest request) {
@@ -331,6 +367,45 @@ public class BorrowSlipCreationService {
         return borrower;
     }
 
+    private User resolvePickupBorrower(HoldPickupRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "Borrower identifier is required (userId, username or studentId)");
+        }
+
+        String username = normalizeIdentifier(request.getUsername());
+        String studentId = normalizeIdentifier(request.getStudentId());
+        Long userId = request.getUserId();
+        int provided = (userId != null ? 1 : 0)
+                + (username != null ? 1 : 0)
+                + (studentId != null ? 1 : 0);
+        if (provided == 0) {
+            throw new IllegalArgumentException(
+                    "Borrower identifier is required (userId, username or studentId)");
+        }
+        if (provided > 1) {
+            throw new IllegalArgumentException(
+                    "Provide only one borrower identifier");
+        }
+
+        User borrower;
+        if (userId != null) {
+            borrower = userRepository.findByIdForUpdate(userId)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("User", "id", userId));
+        } else if (username != null) {
+            borrower = userRepository.findByUsernameForUpdate(username)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("User", "username", username));
+        } else {
+            borrower = userRepository.findByStudentIdForUpdate(studentId)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("User", "studentId", studentId));
+        }
+        ensureStudentBorrower(borrower);
+        return borrower;
+    }
+
     private void ensureStudentBorrower(User borrower) {
         if (borrower.getRole() != Role.STUDENT) {
             throw new IllegalArgumentException("Borrower must be a student");
@@ -356,6 +431,12 @@ public class BorrowSlipCreationService {
     }
 
     private BorrowSource resolveBorrowSource(HoldConfirmRequest request) {
+        return request == null || request.getSource() == null
+                ? BorrowSource.COUNTER
+                : request.getSource();
+    }
+
+    private BorrowSource resolveBorrowSource(HoldPickupRequest request) {
         return request == null || request.getSource() == null
                 ? BorrowSource.COUNTER
                 : request.getSource();

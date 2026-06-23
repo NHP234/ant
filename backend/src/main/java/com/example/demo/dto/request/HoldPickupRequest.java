@@ -1,0 +1,15 @@
+package com.example.demo.dto.request;
+
+import com.example.demo.model.enums.BorrowSource;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class HoldPickupRequest {
+
+    private Long userId;
+    private String username;
+    private String studentId;
+    private BorrowSource source;
+}

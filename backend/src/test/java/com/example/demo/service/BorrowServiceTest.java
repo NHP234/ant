@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.dto.request.BorrowRequest;
 import com.example.demo.dto.request.BorrowSlipCreateRequest;
 import com.example.demo.dto.request.HoldConfirmRequest;
+import com.example.demo.dto.request.HoldPickupRequest;
 import com.example.demo.dto.response.BorrowRecordResponse;
 import com.example.demo.dto.response.BorrowSlipResponse;
 import com.example.demo.dto.response.HoldResponse;
@@ -122,6 +123,21 @@ class BorrowServiceTest {
         when(bookHoldMapper.toResponse(hold)).thenReturn(mapped);
 
         HoldResponse result = borrowService.confirmHold(30L, request, "librarian01");
+
+        assertThat(result).isSameAs(mapped);
+    }
+
+    @Test
+    void pickupActiveHoldsDelegatesWorkflowAndMapsBorrowSlip() {
+        HoldPickupRequest request = new HoldPickupRequest();
+        BorrowSlip slip = BorrowSlip.builder().id(300L).build();
+        BorrowSlipResponse mapped = BorrowSlipResponse.builder().id(300L).build();
+        when(borrowSlipCreationService.pickupActiveHolds("librarian01", request))
+                .thenReturn(slip);
+        when(borrowSlipMapper.toResponse(slip)).thenReturn(mapped);
+
+        BorrowSlipResponse result =
+                borrowService.pickupActiveHolds("librarian01", request);
 
         assertThat(result).isSameAs(mapped);
     }

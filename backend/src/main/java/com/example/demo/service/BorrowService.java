@@ -5,6 +5,7 @@ import com.example.demo.dto.request.BorrowItemRequest;
 import com.example.demo.dto.request.BorrowRequest;
 import com.example.demo.dto.request.BorrowSlipCreateRequest;
 import com.example.demo.dto.request.HoldConfirmRequest;
+import com.example.demo.dto.request.HoldPickupRequest;
 import com.example.demo.dto.response.BorrowRecordResponse;
 import com.example.demo.dto.response.BorrowSlipResponse;
 import com.example.demo.dto.response.HoldResponse;
@@ -79,6 +80,17 @@ public class BorrowService {
                 request,
                 librarianUsername);
         return bookHoldMapper.toResponse(hold);
+    }
+
+    @Transactional
+    @Auditable(action = "BORROW", entityType = "BORROW_SLIP")
+    public BorrowSlipResponse pickupActiveHolds(
+            String librarianUsername,
+            HoldPickupRequest request) {
+        BorrowSlip slip = borrowSlipCreationService.pickupActiveHolds(
+                librarianUsername,
+                request);
+        return borrowSlipMapper.toResponse(slip);
     }
 
     @Transactional

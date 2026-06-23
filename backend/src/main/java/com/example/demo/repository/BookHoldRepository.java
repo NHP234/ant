@@ -60,6 +60,21 @@ public interface BookHoldRepository extends JpaRepository<BookHold, Long> {
             HoldStatus status
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT h
+            FROM BookHold h
+            JOIN FETCH h.copy c
+            JOIN FETCH c.book b
+            WHERE h.user.id = :userId
+              AND h.status = :status
+              AND h.expiresAt > :now
+            ORDER BY b.id, c.id
+            """)
+    List<BookHold> findActiveUnexpiredByUserIdForUpdate(@Param("userId") Long userId,
+                                                        @Param("status") HoldStatus status,
+                                                        @Param("now") LocalDateTime now);
+
     @Query("""
             SELECT h.id
             FROM BookHold h
