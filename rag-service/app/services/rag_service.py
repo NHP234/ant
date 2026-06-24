@@ -28,6 +28,8 @@ SEARCH_STOPWORDS = {
     "cua",
     "cuon",
     "dau",
+    "chu",
+    "de",
     "duoc",
     "find",
     "gia",

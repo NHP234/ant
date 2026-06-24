@@ -20,6 +20,7 @@ class MockEmbeddingFunction:
 
 def test_extract_lexical_terms_keeps_specific_title_and_author_tokens():
     assert _extract_lexical_terms("co sach nao ve lego chima khong") == ["lego", "chima"]
+    assert _extract_lexical_terms("co sach nao ve chu de lego chima khong") == ["lego", "chima"]
     assert _extract_lexical_terms("co sach nao cua tac gia tracey west khong") == ["tracey", "west"]
     assert _extract_lexical_terms("sach ve lego noi chung thi sao thu vien co khong") == ["lego"]
 
