@@ -95,6 +95,18 @@ class FakeRagService:
         ]
 
 
+class FakeEmptyRagService:
+    def __init__(self):
+        self.questions = []
+
+    def search_books(self, question, n_results=5):
+        self.questions.append(question)
+        return "", []
+
+    def get_book_by_title(self, title):
+        return "", []
+
+
 class FakeLlmService:
     def __init__(self):
         self.prompts = []
@@ -156,6 +168,28 @@ def test_orchestrator_answers_contextual_author_question_without_llm():
     assert source_books[0]["author"] == "Tracey West"
     assert rag_service.title_lookups == ["LEGO Legends of Chima: Origins: A Starter Handbook"]
     assert llm_service.prompts == []
+
+
+def test_orchestrator_does_not_ask_llm_to_suggest_books_without_sources():
+    classifier = FakeClassifier()
+    rag_service = FakeEmptyRagService()
+    llm_service = FakeLlmService()
+    orchestrator = ChatOrchestrator(classifier, rag_service)
+    orchestrator.llm_service = llm_service
+
+    answer, intent, confidence, source_books = asyncio.run(
+        orchestrator.route_and_process(
+            question="co sach nao noi ve cau be bi bo roi roi phieu luu gap lai gia dinh khong",
+            jwt_token="token",
+            chat_history=[],
+        )
+    )
+
+    assert intent == "BOOK_SEARCH"
+    assert confidence == 0.95
+    assert source_books == []
+    assert llm_service.prompts == []
+    assert "chưa tìm thấy" in answer
 
 
 def test_contextual_question_does_not_treat_noi_as_no_reference():

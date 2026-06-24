@@ -158,6 +158,14 @@ def build_direct_author_answer(question: str, source_books: List[dict], title: s
     return f'Tác giả của **{book.get("title") or title}** là {author}.'
 
 
+def build_no_book_matches_answer() -> str:
+    return (
+        "Tôi chưa tìm thấy đầu sách phù hợp trong thư viện cho mô tả này. "
+        "Bạn có thể thử hỏi lại bằng tên sách, tên tác giả, hoặc một vài từ khóa ngắn hơn "
+        "như thể loại, nhân vật chính hay chủ đề nổi bật."
+    )
+
+
 class ChatOrchestrator:
     def __init__(self, classifier: IntentClassifier, rag_service: RAGService):
         self.classifier = classifier
@@ -233,13 +241,19 @@ class ChatOrchestrator:
                     direct_answer = build_direct_author_answer(question, source_books, contextual_title)
                     if direct_answer:
                         answer = direct_answer
+                    elif not source_books:
+                        answer = build_no_book_matches_answer()
                     else:
                         prompt = BOOK_DETAIL_PROMPT.format(context=context, question=prompt_question)
                         answer = self.llm_service.generate_response(prompt, chat_history)
                 else:
                     context, source_books = self.rag_service.search_books(contextual_question, n_results=5)
-                    prompt = BOOK_SEARCH_PROMPT.format(context=context, question=prompt_question)
-                    answer = self.llm_service.generate_response(prompt, chat_history)
+                    if not source_books:
+                        logger.info("BOOK_SEARCH returned no source books. Skipping LLM to avoid unsupported suggestions.")
+                        answer = build_no_book_matches_answer()
+                    else:
+                        prompt = BOOK_SEARCH_PROMPT.format(context=context, question=prompt_question)
+                        answer = self.llm_service.generate_response(prompt, chat_history)
 
             elif intent == "BORROW_STATUS":
                 logger.info("Running BORROW_STATUS pipeline.")
