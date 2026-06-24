@@ -100,3 +100,8 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("RAG Service đang dừng hoạt động...")
+    if hasattr(app.state, "rag_service") and app.state.rag_service:
+        try:
+            app.state.rag_service.close()
+        except Exception as e:
+            logger.error(f"Lỗi khi đóng RAG Service: {str(e)}")

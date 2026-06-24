@@ -4,6 +4,7 @@ import re
 import chromadb
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2.pool import ThreadedConnectionPool
 from sentence_transformers import SentenceTransformer
 
 from app.config import settings
@@ -194,6 +195,12 @@ class RAGService:
         os.makedirs(self.persist_dir, exist_ok=True)
         
         try:
+            logger.info("Initializing PostgreSQL Connection Pool...")
+            self.db_pool = ThreadedConnectionPool(
+                minconn=1,
+                maxconn=20,
+                dsn=settings.database_url
+            )
             logger.info(f"Đang khởi tạo ChromaDB Persistent Client tại: {self.persist_dir}")
             self.client = chromadb.PersistentClient(path=self.persist_dir)
             
@@ -210,6 +217,14 @@ class RAGService:
         except Exception as e:
             logger.error(f"Lỗi khi khởi tạo ChromaDB hoặc Embedding Model: {str(e)}")
             raise e
+
+    def close(self):
+        """
+        Close all active database connections in the pool.
+        """
+        if hasattr(self, "db_pool") and self.db_pool:
+            logger.info("Closing PostgreSQL connection pool...")
+            self.db_pool.closeall()
 
     def get_books_count(self) -> int:
         """
@@ -343,10 +358,13 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
         """
 
         try:
-            with psycopg2.connect(settings.database_url) as connection:
+            connection = self.db_pool.getconn()
+            try:
                 with connection.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute(query, params)
                     rows = cursor.fetchall()
+            finally:
+                self.db_pool.putconn(connection)
         except Exception as e:
             logger.warning("Lexical PostgreSQL book search failed; falling back to Chroma only: %s", str(e))
             return []

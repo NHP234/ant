@@ -48,7 +48,7 @@ class LLMService:
             self.deepseek_model,
         )
 
-    def generate_response(
+    async def generate_response(
         self,
         prompt: str,
         chat_history: list[str] | None = None,
@@ -64,10 +64,17 @@ class LLMService:
                 f"Nội dung prompt yêu cầu:\n{prompt[:300]}..."
             )
 
-        full_prompt = self._build_full_prompt(prompt, chat_history or [])
+        messages = [
+            {
+                "role": "system",
+                "content": "Bạn là trợ lý thư viện thông minh và vô cùng thân thiện của hệ thống Awaken Ant Library."
+            }
+        ]
+        messages.extend(self._parse_chat_history_to_messages(chat_history or []))
+        messages.append({"role": "user", "content": prompt})
 
         try:
-            return self._generate_with_deepseek(full_prompt)
+            return await self._generate_with_deepseek(messages)
         except httpx.HTTPStatusError as error:
             status_code = error.response.status_code
             logger.error(
@@ -84,27 +91,27 @@ class LLMService:
             logger.error("Lỗi khi gọi DeepSeek API: %s", str(e))
             return "Trợ lý AI đang gặp sự cố kết nối. Bạn vui lòng thử lại sau."
 
-    def _generate_with_deepseek(self, full_prompt: str) -> str:
+    async def _generate_with_deepseek(self, messages: list[dict]) -> str:
         logger.info(
             "Đang gửi request lên DeepSeek API (%s)...",
             self.deepseek_model,
         )
-        response = httpx.post(
-            f"{self.deepseek_base_url}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {self.deepseek_api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": self.deepseek_model,
-                "messages": [{"role": "user", "content": full_prompt}],
-                "thinking": {"type": "disabled"},
-                "temperature": 0.3,
-                "max_tokens": settings.llm_max_tokens,
-                "stream": False,
-            },
-            timeout=settings.llm_request_timeout_seconds,
-        )
+        async with httpx.AsyncClient(timeout=settings.llm_request_timeout_seconds) as client:
+            response = await client.post(
+                f"{self.deepseek_base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.deepseek_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.deepseek_model,
+                    "messages": messages,
+                    "thinking": {"type": "disabled"},
+                    "temperature": 0.3,
+                    "max_tokens": settings.llm_max_tokens,
+                    "stream": False,
+                },
+            )
         response.raise_for_status()
         content = response.json()["choices"][0]["message"]["content"]
         return self._clean_response_text(content) if content else self._empty_response_message()
@@ -120,14 +127,25 @@ class LLMService:
         text = re.sub(r"(?<!_)_(?!_)", "", text)
         return text.strip()
 
-    def _build_full_prompt(self, prompt: str, chat_history: list[str]) -> str:
-        if not chat_history:
-            return prompt
-        history_text = "\n".join(chat_history)
-        return (
-            f"Lịch sử hội thoại trước đó:\n{history_text}\n\n"
-            f"Yêu cầu hiện tại:\n{prompt}"
-        )
+    def _parse_chat_history_to_messages(self, chat_history: list[str]) -> list[dict]:
+        messages = []
+        for msg in chat_history:
+            msg = msg.strip()
+            if not msg:
+                continue
+            
+            if msg.lower().startswith(("user:", "sinh viên:")):
+                content = re.sub(r"^(user|sinh viên)\s*:\s*", "", msg, flags=re.IGNORECASE).strip()
+                messages.append({"role": "user", "content": content})
+            elif msg.lower().startswith(("bot:", "trợ lý:")):
+                content = re.sub(r"^(bot|trợ lý)\s*:\s*", "", msg, flags=re.IGNORECASE).strip()
+                messages.append({"role": "assistant", "content": content})
+            else:
+                role = "user"
+                if messages and messages[-1]["role"] == "user":
+                    role = "assistant"
+                messages.append({"role": role, "content": msg})
+        return messages
 
     def _empty_response_message(self) -> str:
         return "Rất tiếc, tôi không thể xử lý câu trả lời lúc này."

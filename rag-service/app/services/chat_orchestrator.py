@@ -262,7 +262,7 @@ class ChatOrchestrator:
                         answer = build_no_book_matches_answer()
                     else:
                         prompt = BOOK_DETAIL_PROMPT.format(context=context, question=prompt_question)
-                        answer = self.llm_service.generate_response(prompt, chat_history)
+                        answer = await self.llm_service.generate_response(prompt, chat_history)
                 else:
                     context, source_books = self.rag_service.search_books(contextual_question, n_results=5)
                     if not source_books:
@@ -270,7 +270,7 @@ class ChatOrchestrator:
                         answer = build_no_book_matches_answer()
                     else:
                         prompt = BOOK_SEARCH_PROMPT.format(context=context, question=prompt_question)
-                        answer = self.llm_service.generate_response(prompt, chat_history)
+                        answer = await self.llm_service.generate_response(prompt, chat_history)
                         if answer_says_no_book_matches(answer):
                             logger.info(
                                 "BOOK_SEARCH answer says no match despite source books. "
@@ -283,19 +283,19 @@ class ChatOrchestrator:
                 borrows = await self.api_query_service.get_user_borrows(jwt_token)
                 context = self.api_query_service.build_borrow_context(borrows)
                 prompt = BORROW_STATUS_PROMPT.format(context=context, question=prompt_question)
-                answer = self.llm_service.generate_response(prompt, chat_history)
+                answer = await self.llm_service.generate_response(prompt, chat_history)
 
             elif intent == "HOLD_STATUS":
                 logger.info("Running HOLD_STATUS pipeline.")
                 holds = await self.api_query_service.get_user_holds(jwt_token)
                 context = self.api_query_service.build_hold_context(holds)
                 prompt = HOLD_STATUS_PROMPT.format(context=context, question=prompt_question)
-                answer = self.llm_service.generate_response(prompt, chat_history)
+                answer = await self.llm_service.generate_response(prompt, chat_history)
 
             else:
                 logger.info("Running GENERAL_CHAT pipeline.")
                 prompt = GENERAL_CHAT_PROMPT.format(question=prompt_question)
-                answer = self.llm_service.generate_response(prompt, chat_history)
+                answer = await self.llm_service.generate_response(prompt, chat_history)
 
         except Exception as exc:
             logger.error("Pipeline %s failed: %s", intent, str(exc))

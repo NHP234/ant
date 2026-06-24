@@ -20,3 +20,9 @@ class Settings(BaseSettings):
     )
 
 settings = Settings()
+
+if settings.env.lower() == "production":
+    if not settings.internal_api_key or settings.internal_api_key == "SuperSecretInternalApiKey123!":
+        raise ValueError(
+            "INTERNAL_API_KEY must be configured and changed from the default value in production!"
+        )

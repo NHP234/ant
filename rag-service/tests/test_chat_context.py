@@ -130,7 +130,7 @@ class FakeLlmService:
     def __init__(self):
         self.prompts = []
 
-    def generate_response(self, prompt, chat_history=None):
+    async def generate_response(self, prompt, chat_history=None):
         self.prompts.append(prompt)
         return "Đây là sách phiêu lưu dành cho thiếu nhi."
 
@@ -139,7 +139,7 @@ class FakeNoBookLlmService:
     def __init__(self):
         self.prompts = []
 
-    def generate_response(self, prompt, chat_history=None):
+    async def generate_response(self, prompt, chat_history=None):
         self.prompts.append(prompt)
         return "Hiện chưa tìm thấy cuốn sách nào phù hợp với yêu cầu này."
 

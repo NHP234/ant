@@ -95,9 +95,10 @@ User question + chat_history + JWT token
 | Vector Database | ChromaDB (embedded) | Không cần server riêng, dễ deploy |
 | Embedding Model | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Hỗ trợ tiếng Việt xuất sắc, nhẹ (~130MB), chạy CPU tốt |
 | Lexical Retrieval | PostgreSQL + `unaccent` + ranking trong Python | Ưu tiên match chính xác theo tên sách, tác giả, thể loại, mô tả trước khi dùng vector fallback |
-| LLM | DeepSeek API (`deepseek-v4-flash`) | Chi phí thấp, OpenAI-compatible, phù hợp cho demo ổn định |
+| LLM | DeepSeek API (`deepseek-v4-flash`) | Chi phí thấp, OpenAI-compatible, kết nối bất đồng bộ (Async) |
 | Vietnamese NLP | Biểu diễn ngữ nghĩa (Dense Vectors) | Tự động phân tách từ bằng WordPiece/Subword của Transformer |
-| HTTP Client | httpx | Async, gọi Spring Boot APIs |
+| HTTP Client / LLM Caller | httpx (AsyncClient) | Async, gọi Spring Boot APIs và DeepSeek API để tránh chặn (block) Event Loop |
+| DB Connection Pool | ThreadedConnectionPool (psycopg2) | Quản lý kết nối PostgreSQL hiệu quả, tránh cạn kiệt tài nguyên |
 | Containerization | Docker | Đồng nhất môi trường |
 
 ---
@@ -543,6 +544,8 @@ Authorization: Bearer <jwt_token>   // Bắt buộc — dùng để gọi Spring
 ```
 
 RAG service nhận cả `chat_history` và `chatHistory` để tương thích với Spring Boot/Frontend. Trước khi phân loại intent và truy xuất dữ liệu, orchestrator sẽ dùng lịch sử hội thoại gần nhất để bổ sung ngữ cảnh cho câu hỏi nối tiếp như "sách này về chủ đề gì?", ưu tiên tên sách xuất hiện trong dòng `Sách: ...` của câu trả lời trước đó. Với câu hỏi chi tiết về cuốn đã nhắc (`tác giả là ai`, `chủ đề gì`, `thể loại gì`, `nói về gì`), service lookup chính xác theo title trước; riêng câu hỏi tác giả được trả lời trực tiếp từ metadata để tránh LLM gợi ý sách ngẫu nhiên. Câu hỏi đã bổ sung ngữ cảnh chỉ dùng cho routing/search; prompt gửi LLM vẫn giữ cả câu hỏi gốc để câu trả lời tự nhiên.
+
+Để chống Prompt Injection và bảo mật cho luồng hội thoại, lịch sử hội thoại (`chat_history`) được bóc tách và phân phối thành mảng tin nhắn (`messages`) với các role `user` và `assistant` riêng biệt dựa trên tiền tố `"User: "` và `"Bot: "`. Hệ thống tuyệt đối không ghép chuỗi thô (plain text) chat history vào tin nhắn `user` cuối cùng, giúp DeepSeek hiểu rõ ranh giới ngữ cảnh.
 
 `source_books` from RAG only contains retrieval metadata: `book_id`, `title`, `author`, and `relevance_score`. Cover images are not stored in ChromaDB; Spring Boot enriches `coverImageUrl` from PostgreSQL before returning `/api/chat` to the frontend.
 
