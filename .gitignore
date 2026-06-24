@@ -49,6 +49,12 @@ docker-compose.override.yml
 # Logs
 *.log
 
+# Deployment backups
+deploy-backups/
+*.pgdump
+postgres-*.dump
+chroma-*.tar.gz
+
 # Design files
 *.pen
 

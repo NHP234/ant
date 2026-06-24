@@ -44,7 +44,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       APP_RAG_SERVICE_URL: http://rag-service:8000
-      APP_RAG_INTERNAL_KEY: SuperSecretInternalApiKey123!
+      APP_RAG_INTERNAL_KEY: ${INTERNAL_API_KEY:-SuperSecretInternalApiKey123!}
+      NFC_API_KEY: ${NFC_API_KEY:-ant-library-nfc-secret-key-2026}
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,7 +62,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-flash}
-      - INTERNAL_API_KEY=SuperSecretInternalApiKey123!
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-SuperSecretInternalApiKey123!}
       - CHROMA_PERSIST_DIR=/data/chroma
       - ENV=production
       - PYTHONUNBUFFERED=1
