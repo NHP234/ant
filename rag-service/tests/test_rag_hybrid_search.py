@@ -83,6 +83,37 @@ def test_vector_relevance_threshold_filters_weak_sources():
     assert not _is_relevant_vector_match(0.55)
 
 
+def test_search_books_uses_normalized_query_for_lexical_search():
+    service = RAGService.__new__(RAGService)
+    calls = []
+
+    service.get_books_count = lambda: 1
+
+    def fake_lexical_search(question, limit):
+        calls.append(question)
+        if question == "lego chima":
+            return [
+                (
+                    "Ten sach: LEGO Legends of Chima: Origins: A Starter Handbook",
+                    {
+                        "book_id": 5639,
+                        "title": "LEGO Legends of Chima: Origins: A Starter Handbook",
+                        "author": "Tracey West",
+                        "relevance_score": 0.94,
+                    },
+                )
+            ]
+        return []
+
+    service._search_books_lexically = fake_lexical_search
+    service._search_books_chroma_only = lambda question, n_results: ("", [])
+
+    _, source_books = service.search_books("co sach nao lien quan toi lego chima khong", n_results=5)
+
+    assert calls[0] == "lego chima"
+    assert source_books[0]["book_id"] == 5639
+
+
 def test_search_books_prefers_lexical_matches_and_deduplicates():
     service = RAGService.__new__(RAGService)
     service.persist_dir = ""

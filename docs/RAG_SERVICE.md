@@ -1,7 +1,7 @@
 # RAG Service — AI Chatbot Thư viện Awaken Ant Library
 
 > Microservice Python (FastAPI) cung cấp chatbot AI thông minh cho sinh viên.
-> Kết hợp **Intent Classification (SentenceTransformer + Calibrated SVM)** + **Hybrid Retrieval (PostgreSQL lexical + ChromaDB semantic)** + **Direct API queries** + **DeepSeek LLM**.
+> Kết hợp **Intent Classification (SentenceTransformer + Calibrated SVM)** + **Query Normalization** + **Hybrid Retrieval (PostgreSQL lexical + ChromaDB semantic)** + **Direct API queries** + **DeepSeek LLM**.
 
 ## 1. Mục đích & Phạm vi
 
@@ -55,6 +55,7 @@ User question + chat_history + JWT token
 └──────────────────────────────┘
      |
      ├── BOOK_SEARCH ──────────> [RAG Pipeline]
+     │                              ├── Query normalization
      │                              ├── PostgreSQL lexical lookup
      │                              ├── ChromaDB semantic fallback
      │                              ├── Merge + dedupe by book_id
@@ -294,19 +295,23 @@ def ingest_books(books: list[dict]):
 def search_books(question: str, n_results: int = 5) -> tuple[str, list[dict]]:
     """
     Tìm sách bằng hybrid retrieval:
-    1. Trích các lexical terms có ý nghĩa từ câu hỏi.
-    2. Tra PostgreSQL theo title/author/category/description đã normalize.
-    3. Rank/filter candidate trong Python để tránh match sai theo substring.
-    4. Nếu lexical chưa đủ mạnh, fallback sang ChromaDB semantic search.
-    5. Merge kết quả và dedupe theo book_id.
+    1. Normalize câu hỏi tự nhiên thành cụm tìm kiếm gọn hơn.
+    2. Trích các lexical terms có ý nghĩa từ câu hỏi đã normalize.
+    3. Tra PostgreSQL theo title/author/category/description đã normalize.
+    4. Rank/filter candidate trong Python để tránh match sai theo substring.
+    5. Nếu lexical chưa đủ mạnh, fallback sang ChromaDB semantic search bằng query đã normalize.
+    6. Merge kết quả và dedupe theo book_id.
     """
-    lexical_matches = _search_books_lexically(question, limit=n_results)
+    book_query = normalize_book_search_query(question)
+    lexical_matches = _search_books_lexically(book_query.normalized, limit=n_results)
+    if book_query.changed:
+        lexical_matches.extend(_search_books_lexically(book_query.original, limit=n_results))
 
     if lexical_matches:
         vector_context, vector_sources = "", []
     else:
         vector_context, vector_sources = _search_books_chroma_only(
-            question,
+            book_query.normalized,
             n_results=n_results,
         )
 
@@ -462,6 +467,7 @@ rag-service/
 │   │   └── admin.py             # GET /api/health, full + single-book ingest endpoints
 │   ├── services/
 │   │   ├── intent_classifier.py # SentenceTransformer embeddings + Calibrated SVM
+│   │   ├── query_normalizer.py  # Cleanup natural-language book search questions
 │   │   ├── rag_service.py       # PostgreSQL lexical + ChromaDB semantic retrieval
 │   │   ├── api_query_service.py # Call Spring Boot APIs
 │   │   ├── llm_service.py       # DeepSeek API client
@@ -513,7 +519,7 @@ RAG service nhận cả `chat_history` và `chatHistory` để tương thích v�
 
 `source_books` from RAG only contains retrieval metadata: `book_id`, `title`, `author`, and `relevance_score`. Cover images are not stored in ChromaDB; Spring Boot enriches `coverImageUrl` from PostgreSQL before returning `/api/chat` to the frontend.
 
-Book search uses hybrid retrieval: the RAG service first performs a lightweight PostgreSQL lexical lookup over normalized title, author, category, and description terms, then merges those matches ahead of ChromaDB semantic results with `book_id` deduplication. The PostgreSQL step fetches broad candidates with any meaningful query term, then ranks and filters them in Python so filler words in natural questions do not make the lookup fail. Multi-token lexical queries must match as a phrase or within the same field to avoid combining unrelated fragments such as a title token and a broad category token. ChromaDB fallback also filters weak vector matches before returning `source_books`. This keeps exact-ish queries such as `lego chima` or `tracey west` from being displaced by semantically similar but wrong vector matches, while broad topic questions still use ChromaDB.
+Book search uses hybrid retrieval: the RAG service first normalizes natural-language question frames such as `co sach nao`, `lien quan toi`, `chu de ve`, or `noi dung ve` into the core search phrase. It then performs a lightweight PostgreSQL lexical lookup over normalized title, author, category, and description terms, trying the normalized query before the original query. The PostgreSQL step fetches broad candidates with any meaningful query term, then ranks and filters them in Python so filler words in natural questions do not make the lookup fail. Multi-token lexical queries must match as a phrase or within the same field to avoid combining unrelated fragments such as a title token and a broad category token. If lexical retrieval is not strong enough, ChromaDB semantic fallback runs against the normalized query and filters weak vector matches before returning `source_books`. This keeps exact-ish queries such as `lego chima` or `tracey west` from being displaced by semantically similar but wrong vector matches, while broad topic questions still use ChromaDB.
 
 ```json
 // Response — BOOK_SEARCH
@@ -717,6 +723,7 @@ volumes:
 ### Phase 3: RAG Pipeline (Tuần 11 — ngày 3-5)
 - [x] Implement ingestion script (PostgreSQL → ChromaDB)
 - [x] Implement hybrid search (PostgreSQL lexical + ChromaDB semantic fallback)
+- [x] Implement query normalization before lexical/vector retrieval
 - [x] Prompt templates cho BOOK_SEARCH
 - [x] LLM service dùng DeepSeek API
 - [x] Test RAG end-to-end
@@ -765,7 +772,7 @@ volumes:
 | DeepSeek hết số dư hoặc rate limit | Hiển thị lỗi thân thiện và theo dõi Usage/Billing để nạp thêm hạn mức |
 | SVM accuracy thấp | Thêm training data, tune hyperparams, dùng LLM-based classification fallback |
 | ChromaDB embedding chậm | Batch ingestion, chỉ re-ingest sách mới/thay đổi |
-| Tiếng Việt không chính xác | Dùng SentenceTransformer multilingual cho phân loại/tìm kiếm ngữ nghĩa; bổ sung training data và stopword/domain terms khi gặp câu hỏi mới |
+| Tiếng Việt không chính xác | Dùng SentenceTransformer multilingual cho phân loại/tìm kiếm ngữ nghĩa; bổ sung training data và query normalization theo các mẫu câu hỏi nghiệp vụ khi gặp cách hỏi mới |
 | JWT expired khi gọi Spring Boot | Forward nguyên JWT từ frontend, để Spring Boot tự validate |
 
 ## Status: ✅ Đã hoàn thành

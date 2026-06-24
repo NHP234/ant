@@ -1,13 +1,13 @@
 import os
 import logging
 import re
-import unicodedata
 import chromadb
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from sentence_transformers import SentenceTransformer
 
 from app.config import settings
+from app.services.query_normalizer import normalize_book_search_query, normalize_search_text
 
 logger = logging.getLogger("rag-service.rag")
 
@@ -65,10 +65,7 @@ def _normalize_title(title: str) -> str:
 
 
 def _normalize_search_text(value: str) -> str:
-    ascii_text = unicodedata.normalize("NFKD", value or "")
-    ascii_text = "".join(char for char in ascii_text if not unicodedata.combining(char))
-    normalized = re.sub(r"[^a-zA-Z0-9]+", " ", ascii_text.lower())
-    return re.sub(r"\s+", " ", normalized).strip()
+    return normalize_search_text(value)
 
 
 def _extract_lexical_terms(question: str, limit: int = 8) -> list[str]:
@@ -426,8 +423,25 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
             logger.warning("ChromaDB is empty. Ingest books before searching.")
             return "", []
 
+        book_query = normalize_book_search_query(question)
+        if book_query.changed:
+            logger.info(
+                "Normalized book search query. original='%s', normalized='%s'",
+                book_query.original,
+                book_query.normalized,
+            )
+
         logger.info("Searching books for question: '%s'...", question)
-        lexical_matches = self._search_books_lexically(question, limit=n_results)
+        lexical_matches = self._search_books_lexically(book_query.normalized, limit=n_results)
+        if book_query.changed:
+            lexical_matches.extend(self._search_books_lexically(book_query.original, limit=n_results))
+        lexical_matches.sort(
+            key=lambda match: (
+                -match[1].get("relevance_score", 0.0),
+                match[1].get("book_id", 0),
+            )
+        )
+
         decisive_lexical_match = (
             bool(lexical_matches)
             and lexical_matches[0][1].get("relevance_score", 0.0) >= 0.9
@@ -442,7 +456,7 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
             vector_context, vector_sources = "", []
         else:
             vector_context, vector_sources = self._search_books_chroma_only(
-                question,
+                book_query.normalized,
                 n_results=max(n_results, n_results + len(lexical_matches)),
             )
 
