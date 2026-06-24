@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.models.request import ChatRequest
 from app.services.chat_orchestrator import (
     ChatOrchestrator,
+    answer_says_no_book_matches,
     build_contextual_question,
     extract_latest_book_title,
 )
@@ -107,6 +108,24 @@ class FakeEmptyRagService:
         return "", []
 
 
+class FakeRagWithSearchSources:
+    def search_books(self, question, n_results=5):
+        return (
+            "Ten sach: Bong Hong Vang Va Binh Minh Mua\nTac gia: Konstantin Paustovsky",
+            [
+                {
+                    "book_id": 101,
+                    "title": "Bong Hong Vang Va Binh Minh Mua",
+                    "author": "Konstantin Paustovsky",
+                    "relevance_score": 0.72,
+                }
+            ],
+        )
+
+    def get_book_by_title(self, title):
+        return "", []
+
+
 class FakeLlmService:
     def __init__(self):
         self.prompts = []
@@ -114,6 +133,15 @@ class FakeLlmService:
     def generate_response(self, prompt, chat_history=None):
         self.prompts.append(prompt)
         return "Đây là sách phiêu lưu dành cho thiếu nhi."
+
+
+class FakeNoBookLlmService:
+    def __init__(self):
+        self.prompts = []
+
+    def generate_response(self, prompt, chat_history=None):
+        self.prompts.append(prompt)
+        return "Hiện chưa tìm thấy cuốn sách nào phù hợp với yêu cầu này."
 
 
 def test_orchestrator_routes_contextual_detail_question_to_exact_title_lookup():
@@ -190,6 +218,53 @@ def test_orchestrator_does_not_ask_llm_to_suggest_books_without_sources():
     assert source_books == []
     assert llm_service.prompts == []
     assert "chưa tìm thấy" in answer
+
+
+def test_orchestrator_drops_sources_when_llm_says_no_book_matches():
+    classifier = FakeClassifier()
+    rag_service = FakeRagWithSearchSources()
+    llm_service = FakeNoBookLlmService()
+    orchestrator = ChatOrchestrator(classifier, rag_service)
+    orchestrator.llm_service = llm_service
+
+    answer, intent, confidence, source_books = asyncio.run(
+        orchestrator.route_and_process(
+            question="tim sach ve bong ban",
+            jwt_token="token",
+            chat_history=[],
+        )
+    )
+
+    assert intent == "BOOK_SEARCH"
+    assert confidence == 0.95
+    assert "chưa tìm thấy" in answer
+    assert source_books == []
+    assert len(llm_service.prompts) == 1
+
+
+def test_orchestrator_keeps_sources_when_llm_uses_search_results():
+    classifier = FakeClassifier()
+    rag_service = FakeRagWithSearchSources()
+    llm_service = FakeLlmService()
+    orchestrator = ChatOrchestrator(classifier, rag_service)
+    orchestrator.llm_service = llm_service
+
+    _, intent, _, source_books = asyncio.run(
+        orchestrator.route_and_process(
+            question="tim sach ve bong ban",
+            jwt_token="token",
+            chat_history=[],
+        )
+    )
+
+    assert intent == "BOOK_SEARCH"
+    assert source_books[0]["book_id"] == 101
+
+
+def test_no_book_match_guard_detects_chua_co_cuon_sach_nao():
+    assert answer_says_no_book_matches(
+        'Hiện tại thư viện chưa có cuốn sách nào có nội dung đúng như "Đồ chơi kỳ diệu".'
+    )
 
 
 def test_contextual_question_does_not_treat_noi_as_no_reference():

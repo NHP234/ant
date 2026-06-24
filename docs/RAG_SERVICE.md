@@ -292,50 +292,77 @@ def ingest_books(books: list[dict]):
 
 ```python
 # rag_service.py
-def search_books(question: str, n_results: int = 5) -> tuple[str, list[dict]]:
-    """
-    Tìm sách bằng hybrid retrieval:
-    1. Normalize câu hỏi tự nhiên thành cụm tìm kiếm gọn hơn.
-    2. Trích các lexical terms có ý nghĩa từ câu hỏi đã normalize.
-    3. Tra PostgreSQL theo title/author/category/description đã normalize.
-    4. Rank/filter candidate trong Python để tránh match sai theo substring.
-    5. Nếu lexical chưa đủ mạnh, fallback sang ChromaDB semantic search bằng query đã normalize.
-    6. Merge kết quả và dedupe theo book_id.
-    """
-    book_query = normalize_book_search_query(question)
-    lexical_matches = _search_books_lexically(book_query.normalized, limit=n_results)
-    if book_query.changed:
-        lexical_matches.extend(_search_books_lexically(book_query.original, limit=n_results))
+    def search_books(self, question: str, n_results: int = 5) -> tuple[str, list[dict]]:
+        """
+        Tìm sách bằng hybrid retrieval:
+        1. Normalize câu hỏi tự nhiên thành cụm tìm kiếm gọn hơn (NormalizedBookQuery).
+        2. Tra PostgreSQL (lexical) bằng query đã loại bỏ dấu/viết thường (book_query.lexical).
+        3. Tra PostgreSQL (lexical) bằng query gốc nếu có thay đổi trong bước chuẩn hóa.
+        4. Sắp xếp/lọc trùng các match lexical.
+        5. Nếu không có match lexical đủ mạnh, fallback sang ChromaDB semantic search bằng query đã giữ nguyên dấu và viết hoa (book_query.normalized).
+        6. Lọc và gộp kết quả, giới hạn tối đa n_results.
+        """
+        if self.get_books_count() == 0:
+            return "", []
 
-    if lexical_matches:
-        vector_context, vector_sources = "", []
-    else:
-        vector_context, vector_sources = _search_books_chroma_only(
-            book_query.normalized,
-            n_results=n_results,
+        book_query = normalize_book_search_query(question)
+        lexical_matches = self._search_books_lexically(book_query.lexical, limit=n_results)
+        if book_query.changed:
+            lexical_matches.extend(self._search_books_lexically(normalize_search_text(book_query.original), limit=n_results))
+        lexical_matches.sort(
+            key=lambda match: (
+                -match[1].get("relevance_score", 0.0),
+                match[1].get("book_id", 0),
+            )
         )
 
-    merged_documents = []
-    source_books = []
-    seen_book_ids = set()
+        decisive_lexical_match = (
+            bool(lexical_matches)
+            and lexical_matches[0][1].get("relevance_score", 0.0) >= 0.9
+        )
+        if decisive_lexical_match:
+            lexical_matches = [
+                match
+                for match in lexical_matches
+                if match[1].get("relevance_score", 0.0) >= 0.9
+            ]
+        if lexical_matches:
+            vector_context, vector_sources = "", []
+        else:
+            vector_context, vector_sources = self._search_books_chroma_only(
+                book_query.normalized,
+                n_results=max(n_results, n_results + len(lexical_matches)),
+            )
 
-    for document, source in lexical_matches:
-        if source["book_id"] in seen_book_ids:
-            continue
-        merged_documents.append(document)
-        source_books.append(source)
-        seen_book_ids.add(source["book_id"])
+        merged_documents = []
+        source_books = []
+        seen_book_ids = set()
 
-    vector_documents = [doc for doc in vector_context.split("\n\n---\n\n") if doc.strip()]
-    for index, source in enumerate(vector_sources):
-        if len(source_books) >= n_results or source["book_id"] in seen_book_ids:
-            continue
-        if index < len(vector_documents):
-            merged_documents.append(vector_documents[index])
-        source_books.append(source)
-        seen_book_ids.add(source["book_id"])
+        for document, source in lexical_matches:
+            book_id = source["book_id"]
+            if book_id in seen_book_ids:
+                continue
+            merged_documents.append(document)
+            source_books.append(source)
+            seen_book_ids.add(book_id)
 
-    return "\n\n---\n\n".join(merged_documents), source_books
+        vector_documents = [doc for doc in vector_context.split("\n\n---\n\n") if doc.strip()]
+        for index, source in enumerate(vector_sources):
+            if len(source_books) >= n_results:
+                break
+            book_id = source["book_id"]
+            if book_id in seen_book_ids:
+                continue
+            if index < len(vector_documents):
+                merged_documents.append(vector_documents[index])
+            source_books.append(source)
+            seen_book_ids.add(book_id)
+
+        if not source_books:
+            return "", []
+
+        context = "\n\n---\n\n".join(merged_documents)
+        return context, source_books
 ```
 
 Ghi chú hiện trạng:

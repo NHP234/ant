@@ -12,9 +12,21 @@ from app.data.prompts import (
 from app.services.api_query_service import APIQueryService
 from app.services.intent_classifier import IntentClassifier
 from app.services.llm_service import LLMService
+from app.services.query_normalizer import normalize_search_text
 from app.services.rag_service import RAGService
 
 logger = logging.getLogger("rag-service.orchestrator")
+
+NO_BOOK_MATCH_PATTERNS = (
+    "chua tim thay",
+    "khong tim thay",
+    "khong co dau sach",
+    "chua co dau sach",
+    "khong co sach phu hop",
+    "chua co sach phu hop",
+    "khong co cuon sach nao",
+    "chua co cuon sach nao",
+)
 
 CONTEXT_REFERENCE_TERMS = (
     "sách này",
@@ -166,6 +178,11 @@ def build_no_book_matches_answer() -> str:
     )
 
 
+def answer_says_no_book_matches(answer: str) -> bool:
+    normalized = normalize_search_text(answer)
+    return any(pattern in normalized for pattern in NO_BOOK_MATCH_PATTERNS)
+
+
 class ChatOrchestrator:
     def __init__(self, classifier: IntentClassifier, rag_service: RAGService):
         self.classifier = classifier
@@ -254,6 +271,12 @@ class ChatOrchestrator:
                     else:
                         prompt = BOOK_SEARCH_PROMPT.format(context=context, question=prompt_question)
                         answer = self.llm_service.generate_response(prompt, chat_history)
+                        if answer_says_no_book_matches(answer):
+                            logger.info(
+                                "BOOK_SEARCH answer says no match despite source books. "
+                                "Dropping source_books to keep response consistent."
+                            )
+                            source_books = []
 
             elif intent == "BORROW_STATUS":
                 logger.info("Running BORROW_STATUS pipeline.")

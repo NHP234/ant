@@ -11,7 +11,7 @@ from app.services.query_normalizer import normalize_book_search_query, normalize
 
 logger = logging.getLogger("rag-service.rag")
 
-VECTOR_RELEVANCE_THRESHOLD = 0.57
+VECTOR_RELEVANCE_THRESHOLD = 0.53
 
 SEARCH_STOPWORDS = {
     "a",
@@ -19,7 +19,6 @@ SEARCH_STOPWORDS = {
     "ai",
     "anh",
     "author",
-    "ban",
     "book",
     "books",
     "cho",
@@ -432,9 +431,9 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
             )
 
         logger.info("Searching books for question: '%s'...", question)
-        lexical_matches = self._search_books_lexically(book_query.normalized, limit=n_results)
+        lexical_matches = self._search_books_lexically(book_query.lexical, limit=n_results)
         if book_query.changed:
-            lexical_matches.extend(self._search_books_lexically(book_query.original, limit=n_results))
+            lexical_matches.extend(self._search_books_lexically(normalize_search_text(book_query.original), limit=n_results))
         lexical_matches.sort(
             key=lambda match: (
                 -match[1].get("relevance_score", 0.0),

@@ -23,6 +23,7 @@ def test_extract_lexical_terms_keeps_specific_title_and_author_tokens():
     assert _extract_lexical_terms("co sach nao ve chu de lego chima khong") == ["lego", "chima"]
     assert _extract_lexical_terms("co sach nao cua tac gia tracey west khong") == ["tracey", "west"]
     assert _extract_lexical_terms("sach ve lego noi chung thi sao thu vien co khong") == ["lego"]
+    assert _extract_lexical_terms("tim sach ve bong ban") == ["bong", "ban"]
 
 
 def test_lexical_scoring_avoids_substring_false_positive():
@@ -78,9 +79,41 @@ def test_lexical_scoring_requires_multi_token_evidence():
     ) > 0
 
 
+def test_lexical_scoring_does_not_match_table_tennis_by_bong_only():
+    terms = ["bong", "ban"]
+
+    assert _score_lexical_book(
+        {
+            "title": "Bong Hong Vang Va Binh Minh Mua",
+            "author": "Konstantin Paustovsky",
+            "description": "",
+            "categories": [],
+        },
+        terms,
+    ) == 0
+    assert _score_lexical_book(
+        {
+            "title": "Clones from the Future",
+            "author": "Casey Bong",
+            "description": "",
+            "categories": [],
+        },
+        terms,
+    ) == 0
+    assert _score_lexical_book(
+        {
+            "title": "Ky thuat bong ban co ban",
+            "author": "Nguyen Van A",
+            "description": "Huong dan choi bong ban",
+            "categories": ["The thao"],
+        },
+        terms,
+    ) > 0
+
+
 def test_vector_relevance_threshold_filters_weak_sources():
-    assert _is_relevant_vector_match(0.57)
-    assert not _is_relevant_vector_match(0.55)
+    assert _is_relevant_vector_match(0.54)
+    assert not _is_relevant_vector_match(0.51)
 
 
 def test_search_books_uses_normalized_query_for_lexical_search():
