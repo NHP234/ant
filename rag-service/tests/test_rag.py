@@ -10,7 +10,7 @@ from app.services.rag_service import RAGService
 
 class MockEmbeddingFunction:
     def __call__(self, input: list[str]) -> list[list[float]]:
-        return [[0.1] * 384 for _ in input]
+        return [[0.1] * 1024 for _ in input]
 
 
 def test_rag_service_ops():

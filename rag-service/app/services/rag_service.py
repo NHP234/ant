@@ -178,15 +178,57 @@ def _is_relevant_vector_match(relevance: float) -> bool:
     return relevance >= VECTOR_RELEVANCE_THRESHOLD
 
 class SentenceTransformerEmbeddingFunction:
-    def __init__(self, model_name: str = 'paraphrase-multilingual-MiniLM-L12-v2'):
-        logger.info(f"Đang tải Embedding Model: {model_name} (khoảng 130MB, có hỗ trợ tiếng Việt)...")
-        # Sử dụng CPU để chạy ổn định trên mọi môi trường
-        self.model = SentenceTransformer(model_name, device='cpu')
+    def __init__(self, model_name: str = 'BAAI/bge-m3'):
+        logger.info(f"Đang tải Embedding Model: {model_name} (khoảng 2.2GB, BGE-M3)...")
+        import torch
+        import os
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        logger.info(f"Sử dụng thiết bị: {device}")
+        if device == 'cpu':
+            num_threads = int(os.environ.get("OMP_NUM_THREADS", 6))
+            torch.set_num_threads(num_threads)
+            logger.info(f"Cấu hình PyTorch CPU threads: {torch.get_num_threads()}")
+        self.model = SentenceTransformer(model_name, device=device)
+        if device == 'cuda':
+            logger.info("Chuyển mô hình sang half-precision (float16) để tiết kiệm VRAM...")
+            self.model = self.model.half()
         logger.info("Tải Embedding Model thành công!")
 
     def __call__(self, input: list[str]) -> list[list[float]]:
         # Thực hiện encode và chuyển kết quả thành list các số thực float
-        embeddings = self.model.encode(input, convert_to_numpy=True)
+        import torch
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        
+        if device == 'cuda':
+            try:
+                # Chạy mặc định với batch_size=16
+                embeddings = self.model.encode(input, batch_size=16, convert_to_numpy=True)
+                torch.cuda.empty_cache()
+            except RuntimeError as e:
+                if "out of memory" in str(e).lower():
+                    logger.warning("Phát hiện CUDA Out of Memory! Đang dọn dẹp cache và chạy lại với batch_size=2 để tiết kiệm bộ nhớ...")
+                    torch.cuda.empty_cache()
+                    try:
+                        embeddings = self.model.encode(input, batch_size=2, convert_to_numpy=True)
+                        torch.cuda.empty_cache()
+                    except RuntimeError as e2:
+                        if "out of memory" in str(e2).lower():
+                            logger.warning("Vẫn bị CUDA OOM khi chạy với batch_size=2! Tự động chuyển sang chạy bằng CPU cho lô này để đảm bảo an toàn...")
+                            torch.cuda.empty_cache()
+                            # Tạm thời chuyển model sang CPU để encode lô này
+                            self.model = self.model.to('cpu')
+                            embeddings = self.model.encode(input, batch_size=16, convert_to_numpy=True)
+                            # Sau đó trả model về lại GPU CUDA
+                            self.model = self.model.to('cuda')
+                            self.model = self.model.half()
+                            torch.cuda.empty_cache()
+                        else:
+                            raise e2
+                else:
+                    raise e
+        else:
+            embeddings = self.model.encode(input, convert_to_numpy=True)
+            
         return embeddings.tolist()
 
 class RAGService:
@@ -252,14 +294,17 @@ class RAGService:
         for book in books:
             categories_str = ", ".join(book.get("categories", [])) if isinstance(book.get("categories"), list) else str(book.get("categories", ""))
             
-            # Xây dựng văn bản mô tả phong phú (Rich Text Document)
+            # Sử dụng mô tả đầy đủ theo yêu cầu của người dùng để tránh giảm chất lượng tìm kiếm RAG
+            raw_desc = book.get('description', 'Chưa có mô tả chi tiết cho cuốn sách này.') or 'Chưa có mô tả chi tiết cho cuốn sách này.'
+            
+            # Xây dựng văn bản mô tả phong phú (Rich Text Document) đầy đủ thông tin
             doc = f"""
 Tên sách: {book['title']}
 Tác giả: {book['author']}
 Thể loại: {categories_str}
 Nhà xuất bản: {book.get('publisher', 'N/A')}
 Năm xuất bản: {book.get('publishYear', 'N/A')}
-Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sách này.')}
+Mô tả: {raw_desc}
 """.strip()
             
             documents.append(doc)
@@ -322,40 +367,27 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
         if not terms:
             return []
 
-        where_clause = " OR ".join(["search_text LIKE %s" for _ in terms])
-        rank_clause = " + ".join(["CASE WHEN search_text LIKE %s THEN 1 ELSE 0 END" for _ in terms])
-        like_params = [f"%{term}%" for term in terms]
-        params = like_params + like_params
-        query = f"""
-            WITH book_data AS (
-                SELECT
-                    b.id,
-                    b.title,
-                    COALESCE(string_agg(DISTINCT auth.name, ', '), '') AS author,
-                    b.publisher,
-                    b.publish_year AS "publishYear",
-                    COALESCE(b.description, '') AS description,
-                    COALESCE(string_agg(DISTINCT c.name, ','), '') AS categories,
-                    lower(unaccent(concat_ws(
-                        ' ',
-                        b.title,
-                        COALESCE(string_agg(DISTINCT auth.name, ', '), ''),
-                        COALESCE(b.description, ''),
-                        COALESCE(string_agg(DISTINCT c.name, ','), '')
-                    ))) AS search_text
-                FROM books b
-                LEFT JOIN book_authors ba ON b.id = ba.book_id
-                LEFT JOIN authors auth ON ba.author_id = auth.id
-                LEFT JOIN book_categories bc ON b.id = bc.book_id
-                LEFT JOIN categories c ON bc.category_id = c.id
-                GROUP BY b.id
-            )
-            SELECT id, title, author, publisher, "publishYear", description, categories
-            FROM book_data
-            WHERE {where_clause}
-            ORDER BY ({rank_clause}) DESC, id
+        search_query = " ".join(terms)
+        query = """
+            SELECT
+                b.id,
+                b.title,
+                COALESCE(string_agg(DISTINCT auth.name, ', '), '') AS author,
+                b.publisher,
+                b.publish_year AS "publishYear",
+                COALESCE(b.description, '') AS description,
+                COALESCE(string_agg(DISTINCT c.name, ','), '') AS categories
+            FROM books b
+            LEFT JOIN book_authors ba ON b.id = ba.book_id
+            LEFT JOIN authors auth ON ba.author_id = auth.id
+            LEFT JOIN book_categories bc ON b.id = bc.book_id
+            LEFT JOIN categories c ON bc.category_id = c.id
+            WHERE b.search_vector @@ plainto_tsquery('vietnamese', %s)
+            GROUP BY b.id
+            ORDER BY ts_rank_cd(b.search_vector, plainto_tsquery('vietnamese', %s)) DESC, b.id
             LIMIT 200
         """
+        params = (search_query, search_query)
 
         try:
             connection = self.db_pool.getconn()
@@ -385,14 +417,14 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
             matches.append((_format_book_document(book), _source_from_book(book, relevance)))
         return matches
 
-    def _search_books_chroma_only(self, question: str, n_results: int = 5) -> tuple[str, list[dict]]:
+    def _search_books_chroma_only(self, question: str, n_results: int = 5) -> list[tuple[str, dict]]:
         """
         Tìm kiếm các sách liên quan nhất trong vector database bằng cosine similarity.
-        Trả về: (context_str, source_books_list)
+        Trả về: list[tuple[document_text, source_dict]]
         """
         if self.get_books_count() == 0:
             logger.warning("ChromaDB đang trống rỗng. Hãy nạp sách trước!")
-            return "", []
+            return []
             
         logger.info(f"Đang tìm kiếm sách khớp với câu hỏi: '{question}'...")
         results = self.collection.query(
@@ -402,10 +434,9 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
         )
         
         if not results or not results["documents"] or not results["documents"][0]:
-            return "", []
+            return []
             
-        source_books = []
-        relevant_documents = []
+        matches = []
         documents = results["documents"][0]
         metadatas = results["metadatas"][0]
         distances = results["distances"][0]
@@ -418,22 +449,20 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
             if not _is_relevant_vector_match(relevance):
                 continue
             
-            relevant_documents.append(documents[i])
-            source_books.append({
+            source = {
                 "book_id": meta["book_id"],
                 "title": meta["title"],
                 "author": meta["author"],
                 "relevance_score": round(relevance, 2)
-            })
+            }
+            matches.append((documents[i], source))
             
-        # Ghép các documents thành một chuỗi context ngăn cách bởi dấu phân tách
-        context = "\n\n---\n\n".join(relevant_documents)
-        logger.info(f"Tìm thấy {len(source_books)} sách liên quan trong ChromaDB.")
-        return context, source_books
+        logger.info(f"Tìm thấy {len(matches)} sách liên quan trong ChromaDB.")
+        return matches
 
     def search_books(self, question: str, n_results: int = 5) -> tuple[str, list[dict]]:
         """
-        Search books with a lexical PostgreSQL pass first, then Chroma semantic search.
+        Search books with hybrid search using Reciprocal Rank Fusion (RRF).
         Returns: (context_str, source_books_list)
         """
         if self.get_books_count() == 0:
@@ -448,67 +477,70 @@ Mô tả: {book.get('description', 'Chưa có mô tả chi tiết cho cuốn sá
                 book_query.normalized,
             )
 
-        logger.info("Searching books for question: '%s'...", question)
-        lexical_matches = self._search_books_lexically(book_query.lexical, limit=n_results)
+        logger.info("Performing hybrid search for question: '%s'...", question)
+
+        # 1. Lexical Search
+        lexical_raw = self._search_books_lexically(book_query.lexical, limit=n_results * 2)
         if book_query.changed:
-            lexical_matches.extend(self._search_books_lexically(normalize_search_text(book_query.original), limit=n_results))
-        lexical_matches.sort(
-            key=lambda match: (
-                -match[1].get("relevance_score", 0.0),
-                match[1].get("book_id", 0),
-            )
-        )
+            lexical_raw.extend(self._search_books_lexically(normalize_search_text(book_query.original), limit=n_results * 2))
 
-        decisive_lexical_match = (
-            bool(lexical_matches)
-            and lexical_matches[0][1].get("relevance_score", 0.0) >= 0.9
-        )
-        if decisive_lexical_match:
-            lexical_matches = [
-                match
-                for match in lexical_matches
-                if match[1].get("relevance_score", 0.0) >= 0.9
-            ]
-        if lexical_matches:
-            vector_context, vector_sources = "", []
-        else:
-            vector_context, vector_sources = self._search_books_chroma_only(
-                book_query.normalized,
-                n_results=max(n_results, n_results + len(lexical_matches)),
-            )
+        # Sort and deduplicate lexical matches to form a single ranked lexical list
+        lexical_raw.sort(key=lambda match: (-match[1].get("relevance_score", 0.0)))
+        lexical_ranked = []
+        seen_lexical = set()
+        for doc, source in lexical_raw:
+            bid = source["book_id"]
+            if bid not in seen_lexical:
+                seen_lexical.add(bid)
+                lexical_ranked.append((doc, source))
 
-        merged_documents = []
-        source_books = []
-        seen_book_ids = set()
+        # 2. Semantic Search (ChromaDB + BGE-M3)
+        semantic_ranked = self._search_books_chroma_only(book_query.normalized, n_results=n_results * 2)
 
-        for document, source in lexical_matches:
-            book_id = source["book_id"]
-            if book_id in seen_book_ids:
-                continue
-            merged_documents.append(document)
-            source_books.append(source)
-            seen_book_ids.add(book_id)
+        # 3. Reciprocal Rank Fusion (RRF) with constant k=60
+        k = 60.0
+        scores = {}  # book_id -> {"doc": doc, "source": source, "rrf_score": score}
 
-        vector_documents = [doc for doc in vector_context.split("\n\n---\n\n") if doc.strip()]
-        for index, source in enumerate(vector_sources):
-            if len(source_books) >= n_results:
-                break
-            book_id = source["book_id"]
-            if book_id in seen_book_ids:
-                continue
-            if index < len(vector_documents):
-                merged_documents.append(vector_documents[index])
-            source_books.append(source)
-            seen_book_ids.add(book_id)
+        for rank, (doc, source) in enumerate(lexical_ranked, start=1):
+            bid = source["book_id"]
+            if bid not in scores:
+                scores[bid] = {
+                    "doc": doc,
+                    "source": source.copy(),
+                    "rrf_score": 0.0
+                }
+            scores[bid]["rrf_score"] += 1.0 / (k + rank)
+
+        for rank, (doc, source) in enumerate(semantic_ranked, start=1):
+            bid = source["book_id"]
+            if bid not in scores:
+                scores[bid] = {
+                    "doc": doc,
+                    "source": source.copy(),
+                    "rrf_score": 0.0
+                }
+            else:
+                # Keep the maximum relevance score if a book appears in both lists
+                existing_score = scores[bid]["source"]["relevance_score"]
+                new_score = source["relevance_score"]
+                if new_score > existing_score:
+                    scores[bid]["source"]["relevance_score"] = new_score
+            scores[bid]["rrf_score"] += 1.0 / (k + rank)
+
+        # Sort by combined RRF score descending
+        sorted_results = sorted(scores.values(), key=lambda item: -item["rrf_score"])
+        top_results = sorted_results[:n_results]
+
+        merged_documents = [item["doc"] for item in top_results]
+        source_books = [item["source"] for item in top_results]
 
         if not source_books:
             return "", []
 
         context = "\n\n---\n\n".join(merged_documents)
         logger.info(
-            "Hybrid book search found %s lexical and %s vector matches; returning %s books.",
-            len(lexical_matches),
-            len(vector_sources),
+            "Hybrid book search completed: merged %s candidates into %s final books.",
+            len(scores),
             len(source_books),
         )
         return context, source_books

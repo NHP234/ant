@@ -64,13 +64,23 @@ services:
       - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-flash}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-SuperSecretInternalApiKey123!}
       - CHROMA_PERSIST_DIR=/data/chroma
+      - HF_HOME=/data/huggingface
       - ENV=production
       - PYTHONUNBUFFERED=1
+      - OMP_NUM_THREADS=6
+      - MKL_NUM_THREADS=6
     volumes:
       - rag_data:/data
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   frontend:
     build: ./frontend

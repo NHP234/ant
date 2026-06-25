@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
 
 # Thiết lập thư mục làm việc
 WORKDIR /app

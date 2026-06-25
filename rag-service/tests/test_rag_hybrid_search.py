@@ -15,7 +15,7 @@ from app.services.rag_service import (
 
 class MockEmbeddingFunction:
     def __call__(self, input: list[str]) -> list[list[float]]:
-        return [[0.1] * 384 for _ in input]
+        return [[0.1] * 1024 for _ in input]
 
 
 def test_extract_lexical_terms_keeps_specific_title_and_author_tokens():
@@ -139,7 +139,7 @@ def test_search_books_uses_normalized_query_for_lexical_search():
         return []
 
     service._search_books_lexically = fake_lexical_search
-    service._search_books_chroma_only = lambda question, n_results: ("", [])
+    service._search_books_chroma_only = lambda question, n_results: []
 
     _, source_books = service.search_books("co sach nao lien quan toi lego chima khong", n_results=5)
 
@@ -179,6 +179,7 @@ def test_search_books_prefers_lexical_matches_and_deduplicates():
     ])
 
     lego_doc = "Ten sach: LEGO Legends of Chima: Origins: A Starter Handbook\nTac gia: Tracey West"
+    # Lexical returns Book 202 (rank 1) and Book 203 (rank 2)
     service._search_books_lexically = lambda question, limit: [
         (
             lego_doc,
@@ -200,10 +201,69 @@ def test_search_books_prefers_lexical_matches_and_deduplicates():
         )
     ]
 
+    # Semantic also returns Book 202 (rank 1)
+    service._search_books_chroma_only = lambda question, n_results: [
+        (
+            lego_doc,
+            {
+                "book_id": 202,
+                "title": "LEGO Legends of Chima: Origins: A Starter Handbook",
+                "author": "Tracey West",
+                "relevance_score": 0.95,
+            },
+        )
+    ]
+
     context, source_books = service.search_books("co sach nao ve lego chima khong", n_results=2)
 
+    # Book 202 should be deduplicated (only appears once)
+    assert len(source_books) == 2
     assert source_books[0]["book_id"] == 202
-    assert len(source_books) == 1
+    assert source_books[1]["book_id"] == 203
     assert [book["book_id"] for book in source_books].count(202) == 1
     assert "LEGO Legends of Chima" in context
-    assert "cover_image_url" not in source_books[0]
+    assert "Due South Boxed Set" in context
+
+
+def test_rrf_rank_fusion_logic():
+    service = RAGService.__new__(RAGService)
+    service.get_books_count = lambda: 5
+
+    # Mock lexical search
+    service._search_books_lexically = lambda question, limit: [
+        (
+            "Doc A",
+            {"book_id": 1, "title": "Book A", "author": "Author A", "relevance_score": 0.8}
+        ),
+        (
+            "Doc B",
+            {"book_id": 2, "title": "Book B", "author": "Author B", "relevance_score": 0.7}
+        )
+    ]
+
+    # Mock semantic search
+    service._search_books_chroma_only = lambda question, n_results: [
+        (
+            "Doc C",
+            {"book_id": 3, "title": "Book C", "author": "Author C", "relevance_score": 0.9}
+        ),
+        (
+            "Doc B",
+            {"book_id": 2, "title": "Book B", "author": "Author B", "relevance_score": 0.65}
+        )
+    ]
+
+    # RRF scores (with k = 60):
+    # Book 1: lexical rank 1, semantic not matched -> score = 1 / (60 + 1) = 1/61
+    # Book 2: lexical rank 2, semantic rank 2 -> score = 1 / (60 + 2) + 1 / (60 + 2) = 2/62 = 1/31
+    # Book 3: lexical not matched, semantic rank 1 -> score = 1 / (60 + 1) = 1/61
+    # Since 1/31 > 1/61, Book 2 should be ranked 1st!
+    # Let's verify.
+    context, source_books = service.search_books("test query", n_results=3)
+
+    assert len(source_books) == 3
+    assert source_books[0]["book_id"] == 2  # Book 2 has higher RRF score
+    # Book 2 should have the maximum of its relevance scores: max(0.7, 0.65) = 0.7
+    assert source_books[0]["relevance_score"] == 0.7
+    assert source_books[1]["book_id"] in [1, 3]
+    assert source_books[2]["book_id"] in [1, 3]

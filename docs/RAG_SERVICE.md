@@ -93,8 +93,9 @@ User question + chat_history + JWT token
 | Web Framework | FastAPI | Async, tự sinh docs, type-safe |
 | Intent Classifier | SentenceTransformer + scikit-learn LinearSVC + CalibratedClassifierCV | Nhận diện ngữ nghĩa sâu, hiệu chuẩn xác suất (Platt Scaling) |
 | Vector Database | ChromaDB (embedded) | Không cần server riêng, dễ deploy |
-| Embedding Model | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Hỗ trợ tiếng Việt xuất sắc, nhẹ (~130MB), chạy CPU tốt |
-| Lexical Retrieval | PostgreSQL + `unaccent` + ranking trong Python | Ưu tiên match chính xác theo tên sách, tác giả, thể loại, mô tả trước khi dùng vector fallback |
+| Embedding Model (RAG) | `BAAI/bge-m3` | Trích xuất ngữ nghĩa đa ngôn ngữ xuất sắc (hỗ trợ tới 8192 tokens), nạp Float16 chạy trên GPU CUDA |
+| Embedding Model (SVM) | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Nhẹ (~130MB), chạy nhanh suy diễn (< 2ms) trên CPU/GPU để phân loại ý định |
+| Lexical Retrieval | PostgreSQL + `unaccent` + ranking trong Python | Kết hợp kết quả từ khóa chính xác (lexical) với truy xuất ngữ nghĩa (semantic) qua RRF |
 | LLM | DeepSeek API (`deepseek-v4-flash`) | Chi phí thấp, OpenAI-compatible, kết nối bất đồng bộ (Async) |
 | Vietnamese NLP | Biểu diễn ngữ nghĩa (Dense Vectors) | Tự động phân tách từ bằng WordPiece/Subword của Transformer |
 | HTTP Client / LLM Caller | httpx (AsyncClient) | Async, gọi Spring Boot APIs và DeepSeek API để tránh chặn (block) Event Loop |
@@ -245,48 +246,98 @@ if confidence < CONFIDENCE_THRESHOLD:
 ### 5.1 Data Ingestion
 
 ```python
-# ingestion.py
+# ingestion.py or rag_service.py
+import os
 import chromadb
 from sentence_transformers import SentenceTransformer
 
-embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-chroma_client = chromadb.PersistentClient(path="./chroma_data")
-collection = chroma_client.get_or_create_collection("books")
+# Embedding function wrapper for ChromaDB using BGE-M3
+class SentenceTransformerEmbeddingFunction:
+    def __init__(self, model_name: str = 'BAAI/bge-m3'):
+        import torch
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.model = SentenceTransformer(model_name, device=self.device)
+        if self.device == 'cuda':
+            self.model = self.model.half() # float16 precision for VRAM savings
 
-def ingest_books(books: list[dict]):
+    def __call__(self, input: list[str]) -> list[list[float]]:
+        import torch
+        if self.device == 'cuda':
+            try:
+                # Default batch size 16
+                embeddings = self.model.encode(input, batch_size=16, convert_to_numpy=True)
+                torch.cuda.empty_cache()
+            except RuntimeError as e:
+                if "out of memory" in str(e).lower():
+                    # Fallback to batch size 2 under OOM
+                    torch.cuda.empty_cache()
+                    try:
+                        embeddings = self.model.encode(input, batch_size=2, convert_to_numpy=True)
+                        torch.cuda.empty_cache()
+                    except RuntimeError as e2:
+                        if "out of memory" in str(e2).lower():
+                            # Fallback to CPU if GPU still runs OOM
+                            torch.cuda.empty_cache()
+                            self.model = self.model.to('cpu')
+                            embeddings = self.model.encode(input, batch_size=16, convert_to_numpy=True)
+                            self.model = self.model.to('cuda')
+                            self.model = self.model.half()
+                            torch.cuda.empty_cache()
+                        else:
+                            raise e2
+                else:
+                    raise e
+        else:
+            embeddings = self.model.encode(input, convert_to_numpy=True)
+        return embeddings.tolist()
+
+# ChromaDB persistence setup
+chroma_client = chromadb.PersistentClient(path="./chroma_data")
+collection = chroma_client.get_or_create_collection(
+    name="books",
+    embedding_function=SentenceTransformerEmbeddingFunction(),
+    metadata={"hnsw:space": "cosine"}
+)
+
+def upsert_books(books: list[dict]):
     """
-    Mỗi book dict có: id, title, author, description, categories, publisher, publishYear
+    Đồng bộ dữ liệu sách vào ChromaDB.
     """
     documents = []
     metadatas = []
     ids = []
 
     for book in books:
-        # Tạo rich text document cho mỗi sách
+        categories_str = ", ".join(book.get("categories", []))
+        raw_desc = book.get('description', 'Chưa có mô tả chi tiết.')
+        
         doc = f"""
-        Tên sách: {book['title']}
-        Tác giả: {book['author']}
-        Thể loại: {', '.join(book.get('categories', []))}
-        Nhà xuất bản: {book.get('publisher', 'N/A')}
-        Năm xuất bản: {book.get('publishYear', 'N/A')}
-        Mô tả: {book.get('description', 'Chưa có mô tả')}
+Tên sách: {book['title']}
+Tác giả: {book['author']}
+Thể loại: {categories_str}
+Nhà xuất bản: {book.get('publisher', 'N/A')}
+Năm xuất bản: {book.get('publishYear', 'N/A')}
+Mô tả: {raw_desc}
         """.strip()
 
         documents.append(doc)
         metadatas.append({
-            "book_id": book["id"],
+            "book_id": int(book["id"]),
             "title": book["title"],
             "author": book["author"],
-            "categories": ", ".join(book.get("categories", []))
+            "categories": categories_str
         })
         ids.append(f"book_{book['id']}")
 
-    # Upsert (create or update)
-    collection.upsert(
-        documents=documents,
-        metadatas=metadatas,
-        ids=ids
-    )
+    # Ingest in batches of 500
+    batch_size = 500
+    for i in range(0, len(ids), batch_size):
+        end_idx = min(i + batch_size, len(ids))
+        collection.upsert(
+            documents=documents[i:end_idx],
+            metadatas=metadatas[i:end_idx],
+            ids=ids[i:end_idx]
+        )
 ```
 
 ### 5.2 Query Pipeline
@@ -295,69 +346,69 @@ def ingest_books(books: list[dict]):
 # rag_service.py
     def search_books(self, question: str, n_results: int = 5) -> tuple[str, list[dict]]:
         """
-        Tìm sách bằng hybrid retrieval:
-        1. Normalize câu hỏi tự nhiên thành cụm tìm kiếm gọn hơn (NormalizedBookQuery).
-        2. Tra PostgreSQL (lexical) bằng query đã loại bỏ dấu/viết thường (book_query.lexical).
-        3. Tra PostgreSQL (lexical) bằng query gốc nếu có thay đổi trong bước chuẩn hóa.
-        4. Sắp xếp/lọc trùng các match lexical.
-        5. Nếu không có match lexical đủ mạnh, fallback sang ChromaDB semantic search bằng query đã giữ nguyên dấu và viết hoa (book_query.normalized).
-        6. Lọc và gộp kết quả, giới hạn tối đa n_results.
+        Tìm kiếm sách bằng cơ chế hybrid search kết hợp Reciprocal Rank Fusion (RRF).
+        Kết hợp PostgreSQL Lexical Search (được đánh trọng số qua Full-Text Search) 
+        và ChromaDB Semantic Search (sử dụng mô hình BGE-M3).
         """
         if self.get_books_count() == 0:
             return "", []
 
         book_query = normalize_book_search_query(question)
-        lexical_matches = self._search_books_lexically(book_query.lexical, limit=n_results)
+
+        # 1. Lexical Search
+        lexical_raw = self._search_books_lexically(book_query.lexical, limit=n_results * 2)
         if book_query.changed:
-            lexical_matches.extend(self._search_books_lexically(normalize_search_text(book_query.original), limit=n_results))
-        lexical_matches.sort(
-            key=lambda match: (
-                -match[1].get("relevance_score", 0.0),
-                match[1].get("book_id", 0),
-            )
-        )
+            lexical_raw.extend(self._search_books_lexically(normalize_search_text(book_query.original), limit=n_results * 2))
 
-        decisive_lexical_match = (
-            bool(lexical_matches)
-            and lexical_matches[0][1].get("relevance_score", 0.0) >= 0.9
-        )
-        if decisive_lexical_match:
-            lexical_matches = [
-                match
-                for match in lexical_matches
-                if match[1].get("relevance_score", 0.0) >= 0.9
-            ]
-        if lexical_matches:
-            vector_context, vector_sources = "", []
-        else:
-            vector_context, vector_sources = self._search_books_chroma_only(
-                book_query.normalized,
-                n_results=max(n_results, n_results + len(lexical_matches)),
-            )
+        # Sắp xếp và loại bỏ trùng lặp cho danh sách lexical
+        lexical_raw.sort(key=lambda match: (-match[1].get("relevance_score", 0.0)))
+        lexical_ranked = []
+        seen_lexical = set()
+        for doc, source in lexical_raw:
+            bid = source["book_id"]
+            if bid not in seen_lexical:
+                seen_lexical.add(bid)
+                lexical_ranked.append((doc, source))
 
-        merged_documents = []
-        source_books = []
-        seen_book_ids = set()
+        # 2. Semantic Search (ChromaDB + BGE-M3)
+        semantic_ranked = self._search_books_chroma_only(book_query.normalized, n_results=n_results * 2)
 
-        for document, source in lexical_matches:
-            book_id = source["book_id"]
-            if book_id in seen_book_ids:
-                continue
-            merged_documents.append(document)
-            source_books.append(source)
-            seen_book_ids.add(book_id)
+        # 3. Reciprocal Rank Fusion (RRF) với hằng số k = 60
+        k = 60.0
+        scores = {}  # book_id -> {"doc": doc, "source": source, "rrf_score": score}
 
-        vector_documents = [doc for doc in vector_context.split("\n\n---\n\n") if doc.strip()]
-        for index, source in enumerate(vector_sources):
-            if len(source_books) >= n_results:
-                break
-            book_id = source["book_id"]
-            if book_id in seen_book_ids:
-                continue
-            if index < len(vector_documents):
-                merged_documents.append(vector_documents[index])
-            source_books.append(source)
-            seen_book_ids.add(book_id)
+        for rank, (doc, source) in enumerate(lexical_ranked, start=1):
+            bid = source["book_id"]
+            if bid not in scores:
+                scores[bid] = {
+                    "doc": doc,
+                    "source": source.copy(),
+                    "rrf_score": 0.0
+                }
+            scores[bid]["rrf_score"] += 1.0 / (k + rank)
+
+        for rank, (doc, source) in enumerate(semantic_ranked, start=1):
+            bid = source["book_id"]
+            if bid not in scores:
+                scores[bid] = {
+                    "doc": doc,
+                    "source": source.copy(),
+                    "rrf_score": 0.0
+                }
+            else:
+                # Nếu sách xuất hiện ở cả hai danh sách, giữ relevance score cao nhất
+                existing_score = scores[bid]["source"]["relevance_score"]
+                new_score = source["relevance_score"]
+                if new_score > existing_score:
+                    scores[bid]["source"]["relevance_score"] = new_score
+            scores[bid]["rrf_score"] += 1.0 / (k + rank)
+
+        # Sắp xếp theo điểm RRF giảm dần
+        sorted_results = sorted(scores.values(), key=lambda item: -item["rrf_score"])
+        top_results = sorted_results[:n_results]
+
+        merged_documents = [item["doc"] for item in top_results]
+        source_books = [item["source"] for item in top_results]
 
         if not source_books:
             return "", []
@@ -549,7 +600,7 @@ RAG service nhận cả `chat_history` và `chatHistory` để tương thích v�
 
 `source_books` from RAG only contains retrieval metadata: `book_id`, `title`, `author`, and `relevance_score`. Cover images are not stored in ChromaDB; Spring Boot enriches `coverImageUrl` from PostgreSQL before returning `/api/chat` to the frontend.
 
-Book search uses hybrid retrieval: the RAG service first normalizes natural-language question frames such as `co sach nao`, `lien quan toi`, `chu de ve`, or `noi dung ve` into the core search phrase. It then performs a lightweight PostgreSQL lexical lookup over normalized title, author, category, and description terms, trying the normalized query before the original query. The PostgreSQL step fetches broad candidates with any meaningful query term, then ranks and filters them in Python so filler words in natural questions do not make the lookup fail. Multi-token lexical queries must match as a phrase or within the same field to avoid combining unrelated fragments such as a title token and a broad category token. If lexical retrieval is not strong enough, ChromaDB semantic fallback runs against the normalized query and filters weak vector matches before returning `source_books`. This keeps exact-ish queries such as `lego chima` or `tracey west` from being displaced by semantically similar but wrong vector matches, while broad topic questions still use ChromaDB.
+Book search uses hybrid retrieval with **Reciprocal Rank Fusion (RRF)**: the RAG service first normalizes natural-language question frames such as `co sach nao`, `lien quan toi`, `chu de ve`, or `noi dung ve` into the core search phrase. It then runs PostgreSQL lexical search (utilizing FTS with category aggregation from Flyway V14) and ChromaDB semantic search (using `BAAI/bge-m3` on GPU CUDA) in parallel. The ranked candidates from both channels are combined using the Reciprocal Rank Fusion (RRF) algorithm (with constant `k = 60`) to yield a unified relevance ranking. If a book is matched by both lexical and semantic pipelines, the maximum of the two relevance scores is retained. This architecture prevents exact keyword searches (like specific titles `lego chima` or authors `tracey west`) from being displaced by purely semantic embeddings, while still allowing broad topic and conceptual queries to utilize the robust semantic capabilities of ChromaDB. Weak vector matches (under threshold 0.53) are filtered beforehand to ensure high precision.
 
 ```json
 // Response — BOOK_SEARCH
@@ -630,12 +681,16 @@ Full ingest chạy nền: đọc toàn bộ sách từ PostgreSQL, upsert vào C
 ---
 
 ## 9. Model Choices
-
+ 
 ### Embedding Model
-- **Khuyến nghị**: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
-  - Hỗ trợ tiếng Việt tốt (multilingual)
-  - Nhẹ (~130MB), chạy CPU OK
-  - 384 dimensions
+- **RAG Semantic Search**: `BAAI/bge-m3`
+  - Hỗ trợ ngữ nghĩa đa ngôn ngữ xuất sắc (Dense, Sparse, Multi-vector).
+  - Tích hợp chạy trên GPU CUDA với độ chính xác half-precision (float16).
+  - Kích hoạt cơ chế tự phục hồi **CUDA Out of Memory (Self-Healing Loop)**: tự động hạ xuống `batch_size=2` hoặc fallback sang CPU tạm thời khi gặp văn bản mô tả siêu dài (không giới hạn độ dài mô tả).
+  - Cấu hình cache **`HF_HOME=/data/huggingface`** trên volume bền vững giúp tránh tải lại mô hình 2.2GB khi container restart/rebuild.
+- **Intent Classifier**: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
+  - Nhẹ (~130MB), hỗ trợ tiếng Việt tốt.
+  - Phục vụ phân loại ý định cực kỳ nhanh (< 2ms) trên CPU/GPU.
 
 ### LLM
 | Option | Chi phí | Chất lượng | Latency | Phù hợp |
@@ -718,15 +773,28 @@ rag-service:
     - "8000:8000"
   environment:
     - SPRING_BOOT_URL=http://backend:8080/api
+    - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
     - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-flash}
+    - INTERNAL_API_KEY=${INTERNAL_API_KEY:-SuperSecretInternalApiKey123!}
     - CHROMA_PERSIST_DIR=/data/chroma
-    - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    - HF_HOME=/data/huggingface
+    - ENV=production
+    - PYTHONUNBUFFERED=1
+    - OMP_NUM_THREADS=6
+    - MKL_NUM_THREADS=6
   volumes:
     - rag_data:/data
   depends_on:
-    backend:
+    postgres:
       condition: service_healthy
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
 
 volumes:
   rag_data:

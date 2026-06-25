@@ -92,7 +92,23 @@ def sync_postgres_to_chroma(rag_service) -> int:
         return 0
         
     start_time = time.time()
-    rag_service.upsert_books(books)
+    
+    # Lọc bỏ các sách đã có sẵn vector trong ChromaDB để tránh việc encode lại từ đầu
+    try:
+        existing_results = rag_service.collection.get(include=[])
+        existing_ids = set(existing_results.get("ids") or [])
+        logger.info(f"Tìm thấy {len(existing_ids)} cuốn sách đã có vector trong ChromaDB.")
+        
+        books_to_ingest = [
+            b for b in books 
+            if f"book_{b['id']}" not in existing_ids
+        ]
+        logger.info(f"Số lượng sách cần sinh vector mới: {len(books_to_ingest)} / {len(books)} cuốn.")
+    except Exception as e:
+        logger.warning(f"Lỗi khi kiểm tra ID cũ từ ChromaDB, tiến hành nạp lại toàn bộ: {str(e)}")
+        books_to_ingest = books
+        
+    rag_service.upsert_books(books_to_ingest)
     stale_count = rag_service.delete_books_not_in([book["id"] for book in books])
     duration = time.time() - start_time
     logger.info(
