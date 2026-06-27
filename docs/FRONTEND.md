@@ -112,7 +112,7 @@ frontend/src/
 | Frontend Type | Backend DTO | File |
 |---|---|---|
 | `AuthResponse` | `AuthResponse.java` (nested `UserInfo`) | `api/auth.ts` |
-| `Book` | `BookResponse.java` (`totalCopies`, `availableCopies`) | `api/books.ts` |
+| `Book` | `BookResponse.java` (`totalCopies`, `availableCopies`, `coverImageUrl`) | `api/books.ts` |
 | `Category` | `CategoryResponse.java` | `api/books.ts` |
 | `PageResponse<T>` | `PageResponse.java` (field: `page`, not `number`) | `api/books.ts` |
 | `BorrowRecord` | `BorrowRecordResponse.java` (+`copyId`, `copyNumber`) | `api/borrows.ts` |

@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { bookApi, type Book, type BookCreateRequest } from '@/api/books'
+import { useState, useEffect } from 'react'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
+import { bookApi, categoryApi, type Book, type BookCreateRequest } from '@/api/books'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,6 +16,31 @@ interface BookFormDialogProps {
 
 export default function BookFormDialog({ open, onOpenChange, editingBook, onEditingChange }: BookFormDialogProps) {
   const queryClient = useQueryClient()
+  const [selectedCatIds, setSelectedCatIds] = useState<number[]>([])
+  const [catSearch, setCatSearch] = useState('')
+
+  const { data: categoriesResponse } = useQuery({
+    queryKey: ['categories', 'all'],
+    queryFn: () => categoryApi.getAll(),
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const categories = categoriesResponse?.data?.data || []
+  const filteredCategories = categories.filter((c) =>
+    c.name.toLowerCase().includes(catSearch.toLowerCase())
+  )
+
+  useEffect(() => {
+    if (open) {
+      if (editingBook) {
+        setSelectedCatIds(editingBook.categories?.map((c) => c.id) || [])
+      } else {
+        setSelectedCatIds([])
+      }
+      setCatSearch('')
+    }
+  }, [editingBook, open])
 
   const createMutation = useMutation({
     mutationFn: (data: BookCreateRequest) => bookApi.create(data),
@@ -49,6 +74,8 @@ export default function BookFormDialog({ open, onOpenChange, editingBook, onEdit
       publisher: form.get('publisher') as string || undefined,
       publishYear: form.get('publishYear') ? Number(form.get('publishYear')) : undefined,
       description: form.get('description') as string || undefined,
+      coverImageUrl: form.get('coverImageUrl') as string || undefined,
+      categoryIds: selectedCatIds,
       quantity: Number(form.get('quantity')) || 1,
     }
 
@@ -104,6 +131,56 @@ export default function BookFormDialog({ open, onOpenChange, editingBook, onEdit
               <Label htmlFor="publishYear">Năm XB</Label>
               <Input id="publishYear" name="publishYear" type="number" defaultValue={editingBook?.publishYear ?? ''} />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="coverImageUrl">Đường dẫn ảnh bìa (URL)</Label>
+            <Input id="coverImageUrl" name="coverImageUrl" defaultValue={editingBook?.coverImageUrl ?? ''} />
+          </div>
+          <div className="space-y-2">
+            <Label>Danh mục sách</Label>
+            <Input
+              placeholder="Tìm kiếm danh mục..."
+              value={catSearch}
+              onChange={(e) => setCatSearch(e.target.value)}
+              className="mb-2"
+            />
+            <div className="border rounded-md p-2 h-36 overflow-y-auto space-y-1">
+              {filteredCategories.length === 0 ? (
+                <div className="text-xs text-muted-foreground p-1">Không tìm thấy danh mục nào</div>
+              ) : (
+                filteredCategories.map((c) => {
+                  const isChecked = selectedCatIds.includes(c.id)
+                  return (
+                    <label
+                      key={c.id}
+                      className="flex items-center space-x-2 p-1 rounded hover:bg-muted cursor-pointer text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          if (isChecked) {
+                            setSelectedCatIds(selectedCatIds.filter((id) => id !== c.id))
+                          } else {
+                            setSelectedCatIds([...selectedCatIds, c.id])
+                          }
+                        }}
+                        className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                      />
+                      <span>{c.name}</span>
+                    </label>
+                  )
+                })
+              )}
+            </div>
+            {selectedCatIds.length > 0 && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Đã chọn: {selectedCatIds
+                  .map((id) => categories.find((c) => c.id === id)?.name)
+                  .filter(Boolean)
+                  .join(', ')}
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Mô tả</Label>
