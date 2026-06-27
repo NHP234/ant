@@ -211,7 +211,9 @@ db/migration/
 ├── V10__drop_borrow_records_user_id.sql          # remove denormalized user_id from borrow_records
 ├── V11__add_book_holds_and_hold_ban.sql          # book_holds + hold_ban_until
 ├── V12__update_borrow_source_to_counter.sql      # default borrow source to COUNTER
-└── V13__add_authors_table.sql                     # authors, book_authors (Many-to-Many authors)
+├── V13__add_authors_table.sql                     # authors, book_authors (Many-to-Many authors)
+├── V14__add_categories_to_fts.sql                 # category weight C + description weight D in search_vector
+└── V15__refresh_fts_on_category_name_update.sql   # refresh book search vectors when category names change
 ```
 
 ## Seed Data (V7)

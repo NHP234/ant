@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import re
 from typing import List, Tuple
 
@@ -8,6 +8,7 @@ from app.data.prompts import (
     BORROW_STATUS_PROMPT,
     GENERAL_CHAT_PROMPT,
     HOLD_STATUS_PROMPT,
+    QUERY_REWRITE_PROMPT,
 )
 from app.services.api_query_service import APIQueryService
 from app.services.intent_classifier import IntentClassifier
@@ -28,153 +29,14 @@ NO_BOOK_MATCH_PATTERNS = (
     "chua co cuon sach nao",
 )
 
-CONTEXT_REFERENCE_TERMS = (
-    "sách này",
-    "cuốn này",
-    "quyển này",
-    "truyện này",
-    "tác phẩm này",
-    "nó",
-)
-
-BOOK_DETAIL_TERMS = (
-    "tác giả",
-    "ai viết",
-    "của ai",
-    "nói về",
-    "chủ đề gì",
-    "thể loại",
-    "mô tả",
-    "nội dung",
-    "isbn",
-    "nhà xuất bản",
-    "năm xuất bản",
-)
-
-AUTHOR_TERMS = (
-    "tác giả",
-    "ai viết",
-    "của ai",
-)
-
-
-def _mentions_previous_book(question: str) -> bool:
-    normalized = question.lower()
-    return any(
-        re.search(rf"(?<!\w){re.escape(term)}(?!\w)", normalized)
-        for term in CONTEXT_REFERENCE_TERMS
-    )
-
-
-def _is_book_detail_question(question: str) -> bool:
-    normalized = question.lower()
-    return any(term in normalized for term in BOOK_DETAIL_TERMS)
-
-
-def _is_author_question(question: str) -> bool:
-    normalized = question.lower()
-    return any(term in normalized for term in AUTHOR_TERMS)
-
-
-def _clean_title_candidate(candidate: str) -> str:
-    title = re.sub(r"^[\s\-:*_`\"']+|[\s\-:*_`\"'.]+$", "", candidate.strip())
-    return re.sub(r"\s+", " ", title)
-
-
-def _is_plausible_book_title(candidate: str) -> bool:
-    normalized = candidate.strip().lower()
-    if len(normalized) < 3:
-        return False
-    if re.fullmatch(r"[\d\s:/\-.]+", normalized):
-        return False
-    if re.search(r"\d{1,2}/\d{1,2}/\d{4}", normalized):
-        return False
-    rejected_prefixes = (
-        "sách",
-        "trạng thái",
-        "hạn",
-        "hạn nhận",
-        "hạn đến nhận",
-        "ngày",
-        "trước",
-        "yêu cầu",
-    )
-    return not normalized.startswith(rejected_prefixes)
-
-
-def _extract_explicit_book_title(message: str) -> str | None:
-    for line in reversed(message.splitlines()):
-        plain_line = re.sub(r"[*_`]+", "", line)
-        plain_line = re.sub(r"^\s*(?:User|Bot|Sinh viên|Trợ lý)\s*:\s*", "", plain_line, flags=re.IGNORECASE)
-        match = re.match(
-            r"^\s*[-•]?\s*(?:S[áa]ch|T[êe]n s[áa]ch)\s*:\s*(.+?)\s*$",
-            plain_line,
-            re.IGNORECASE,
-        )
-        if not match:
-            continue
-        title = _clean_title_candidate(match.group(1))
-        if _is_plausible_book_title(title):
-            return title
-    return None
-
-
-def extract_latest_book_title(chat_history: List[str] | None) -> str | None:
-    if not chat_history:
-        return None
-
-    for message in reversed(chat_history):
-        title = _extract_explicit_book_title(message)
-        if title:
-            return title
-
-    quoted_pattern = re.compile(r'"([^"\n]{3,180})"')
-    markdown_pattern = re.compile(r"\*{1,2}([^*\n]{3,180})\*{1,2}")
-
-    for message in reversed(chat_history):
-        matches = quoted_pattern.findall(message)
-        for match in reversed(matches):
-            title = _clean_title_candidate(match)
-            if _is_plausible_book_title(title):
-                return title
-
-        matches = markdown_pattern.findall(message)
-        for match in reversed(matches):
-            title = _clean_title_candidate(match)
-            if _is_plausible_book_title(title):
-                return title
-
-    return None
-
-
-def build_contextual_question(question: str, chat_history: List[str] | None) -> str:
-    if not _mentions_previous_book(question):
-        return question
-
-    latest_title = extract_latest_book_title(chat_history)
-    if not latest_title:
-        return question
-
-    return f'Đang hỏi về sách "{latest_title}". {question}'
-
-
-def build_direct_author_answer(question: str, source_books: List[dict], title: str) -> str | None:
-    if not _is_author_question(question) or not source_books:
-        return None
-
-    book = source_books[0]
-    author = book.get("author")
-    if not author:
-        return None
-
-    return f'Tác giả của **{book.get("title") or title}** là {author}.'
+# Legacy heuristics removed. History is now processed using LLM Query Rewrite.
 
 
 def build_no_book_matches_answer() -> str:
     return (
-        "Tôi chưa tìm thấy đầu sách phù hợp trong thư viện cho mô tả này. "
-        "Bạn có thể thử hỏi lại bằng tên sách, tên tác giả, hoặc một vài từ khóa ngắn hơn "
-        "như thể loại, nhân vật chính hay chủ đề nổi bật."
+        "TÃ´i chÆ°a tÃ¬m tháº¥y Ä‘áº§u sÃ¡ch phÃ¹ há»£p trong thÆ° viá»‡n cho mÃ´ táº£ nÃ y. "
+        "Báº¡n cÃ³ thá»ƒ thá»­ há»i láº¡i báº±ng tÃªn sÃ¡ch, tÃªn tÃ¡c giáº£, hoáº·c má»™t vÃ i tá»« khÃ³a ngáº¯n hÆ¡n "
+        "nhÆ° thá»ƒ loáº¡i, nhÃ¢n váº­t chÃ­nh hay chá»§ Ä‘á» ná»•i báº­t."
     )
 
 
@@ -191,6 +53,27 @@ class ChatOrchestrator:
         self.llm_service = LLMService()
         self.confidence_threshold = 0.5
 
+    async def build_contextual_question(self, question: str, chat_history: List[str]) -> str:
+        if not chat_history:
+            return question
+
+        history_str = "\n".join(chat_history[-4:])
+        prompt = QUERY_REWRITE_PROMPT.format(chat_history=history_str, question=question)
+
+        try:
+            rewritten = await self.llm_service.generate_response(prompt)
+            rewritten_clean = rewritten.strip()
+            if rewritten_clean != question:
+                logger.info(
+                    "Contextualized chat question. original='%s', contextual='%s'",
+                    question,
+                    rewritten_clean,
+                )
+            return rewritten_clean
+        except Exception as exc:
+            logger.error("Failed to rewrite query via LLM: %s. Using original question.", str(exc))
+            return question
+
     async def route_and_process(
         self,
         question: str,
@@ -198,21 +81,11 @@ class ChatOrchestrator:
         chat_history: List[str] | None = None,
     ) -> Tuple[str, str, float, List[dict]]:
         chat_history = chat_history or []
-        contextual_title = (
-            extract_latest_book_title(chat_history)
-            if _mentions_previous_book(question) and _is_book_detail_question(question)
-            else None
-        )
-        contextual_question = build_contextual_question(question, chat_history)
-        if contextual_question != question:
-            logger.info(
-                "Contextualized chat question. original='%s', contextual='%s'",
-                question,
-                contextual_question,
-            )
+        contextual_question = await self.build_contextual_question(question, chat_history)
+
         prompt_question = (
-            f'Câu hỏi gốc: "{question}"\n'
-            f"Câu hỏi đã bổ sung ngữ cảnh: {contextual_question}"
+            f'CÃ¢u há»i gá»‘c: "{question}"\n'
+            f"CÃ¢u há»i Ä‘Ã£ bá»• sung ngá»¯ cáº£nh: {contextual_question}"
             if contextual_question != question
             else question
         )
@@ -241,42 +114,25 @@ class ChatOrchestrator:
             )
             intent = "GENERAL_CHAT"
 
-        if contextual_title:
-            logger.info("Forcing BOOK_SEARCH for contextual book detail follow-up.")
-            intent = "BOOK_SEARCH"
-            confidence = max(confidence, self.confidence_threshold)
-
         source_books = []
         answer = ""
 
         try:
             if intent == "BOOK_SEARCH":
                 logger.info("Running BOOK_SEARCH pipeline.")
-                if contextual_title:
-                    logger.info("Running BOOK_DETAIL flow for title: '%s'.", contextual_title)
-                    context, source_books = self.rag_service.get_book_by_title(contextual_title)
-                    direct_answer = build_direct_author_answer(question, source_books, contextual_title)
-                    if direct_answer:
-                        answer = direct_answer
-                    elif not source_books:
-                        answer = build_no_book_matches_answer()
-                    else:
-                        prompt = BOOK_DETAIL_PROMPT.format(context=context, question=prompt_question)
-                        answer = await self.llm_service.generate_response(prompt, chat_history)
+                context, source_books = self.rag_service.search_books(contextual_question, n_results=5)
+                if not source_books:
+                    logger.info("BOOK_SEARCH returned no source books. Skipping LLM to avoid unsupported suggestions.")
+                    answer = build_no_book_matches_answer()
                 else:
-                    context, source_books = self.rag_service.search_books(contextual_question, n_results=5)
-                    if not source_books:
-                        logger.info("BOOK_SEARCH returned no source books. Skipping LLM to avoid unsupported suggestions.")
-                        answer = build_no_book_matches_answer()
-                    else:
-                        prompt = BOOK_SEARCH_PROMPT.format(context=context, question=prompt_question)
-                        answer = await self.llm_service.generate_response(prompt, chat_history)
-                        if answer_says_no_book_matches(answer):
-                            logger.info(
-                                "BOOK_SEARCH answer says no match despite source books. "
-                                "Dropping source_books to keep response consistent."
-                            )
-                            source_books = []
+                    prompt = BOOK_SEARCH_PROMPT.format(context=context, question=prompt_question)
+                    answer = await self.llm_service.generate_response(prompt, chat_history)
+                    if answer_says_no_book_matches(answer):
+                        logger.info(
+                            "BOOK_SEARCH answer says no match despite source books. "
+                            "Dropping source_books to keep response consistent."
+                        )
+                        source_books = []
 
             elif intent == "BORROW_STATUS":
                 logger.info("Running BORROW_STATUS pipeline.")
@@ -300,8 +156,8 @@ class ChatOrchestrator:
         except Exception as exc:
             logger.error("Pipeline %s failed: %s", intent, str(exc))
             answer = (
-                "Xin lỗi bạn, trợ lý thư viện đang gặp trục trặc kỹ thuật nhỏ "
-                "khi xử lý yêu cầu này. Vui lòng thử lại sau."
+                "Xin lá»—i báº¡n, trá»£ lÃ½ thÆ° viá»‡n Ä‘ang gáº·p trá»¥c tráº·c ká»¹ thuáº­t nhá» "
+                "khi xá»­ lÃ½ yÃªu cáº§u nÃ y. Vui lÃ²ng thá»­ láº¡i sau."
             )
 
         return answer, intent, confidence, source_books

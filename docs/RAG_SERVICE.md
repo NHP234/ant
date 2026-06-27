@@ -41,7 +41,7 @@ User question + chat_history + JWT token
 [FastAPI endpoint: POST /api/chat]
      |
      v
-[Contextual question builder]
+[LLM Query Rewriter (DeepSeek)]
      |
      v
 ┌──────────────────────────────┐
@@ -57,7 +57,7 @@ User question + chat_history + JWT token
      ├── BOOK_SEARCH ──────────> [RAG Pipeline]
      │                              ├── Query normalization
      │                              ├── PostgreSQL lexical lookup
-     │                              ├── ChromaDB semantic fallback
+     │                              ├── ChromaDB semantic retrieval
      │                              ├── Merge + dedupe by book_id
      │                              ├── Build prompt + context
      │                              ├── Call DeepSeek
@@ -93,9 +93,9 @@ User question + chat_history + JWT token
 | Web Framework | FastAPI | Async, tự sinh docs, type-safe |
 | Intent Classifier | SentenceTransformer + scikit-learn LinearSVC + CalibratedClassifierCV | Nhận diện ngữ nghĩa sâu, hiệu chuẩn xác suất (Platt Scaling) |
 | Vector Database | ChromaDB (embedded) | Không cần server riêng, dễ deploy |
-| Embedding Model (RAG) | `BAAI/bge-m3` | Trích xuất ngữ nghĩa đa ngôn ngữ xuất sắc (hỗ trợ tới 8192 tokens), nạp Float16 chạy trên GPU CUDA |
+| Embedding Model (RAG) | `BAAI/bge-m3` | Trích xuất ngữ nghĩa đa ngôn ngữ; chạy CUDA/float16 khi host có NVIDIA GPU, mặc định chạy CPU trên VPS thường |
 | Embedding Model (SVM) | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Nhẹ (~130MB), chạy nhanh suy diễn (< 2ms) trên CPU/GPU để phân loại ý định |
-| Lexical Retrieval | PostgreSQL + `unaccent` + ranking trong Python | Kết hợp kết quả từ khóa chính xác (lexical) với truy xuất ngữ nghĩa (semantic) qua RRF |
+| Lexical Retrieval | PostgreSQL FTS + `unaccent` + `ts_rank_cd` + scoring trong Python | Kết hợp kết quả từ khóa chính xác (lexical) với truy xuất ngữ nghĩa (semantic) qua RRF |
 | LLM | DeepSeek API (`deepseek-v4-flash`) | Chi phí thấp, OpenAI-compatible, kết nối bất đồng bộ (Async) |
 | Vietnamese NLP | Biểu diễn ngữ nghĩa (Dense Vectors) | Tự động phân tách từ bằng WordPiece/Subword của Transformer |
 | HTTP Client / LLM Caller | httpx (AsyncClient) | Async, gọi Spring Boot APIs và DeepSeek API để tránh chặn (block) Event Loop |
@@ -594,13 +594,13 @@ rag-service/
 Authorization: Bearer <jwt_token>   // Bắt buộc — dùng để gọi Spring Boot APIs
 ```
 
-RAG service nhận cả `chat_history` và `chatHistory` để tương thích với Spring Boot/Frontend. Trước khi phân loại intent và truy xuất dữ liệu, orchestrator sẽ dùng lịch sử hội thoại gần nhất để bổ sung ngữ cảnh cho câu hỏi nối tiếp như "sách này về chủ đề gì?", ưu tiên tên sách xuất hiện trong dòng `Sách: ...` của câu trả lời trước đó. Với câu hỏi chi tiết về cuốn đã nhắc (`tác giả là ai`, `chủ đề gì`, `thể loại gì`, `nói về gì`), service lookup chính xác theo title trước; riêng câu hỏi tác giả được trả lời trực tiếp từ metadata để tránh LLM gợi ý sách ngẫu nhiên. Câu hỏi đã bổ sung ngữ cảnh chỉ dùng cho routing/search; prompt gửi LLM vẫn giữ cả câu hỏi gốc để câu trả lời tự nhiên.
+RAG service nhận cả `chat_history` và `chatHistory` để tương thích với Spring Boot/Frontend. Trước khi phân loại intent và truy xuất dữ liệu, orchestrator dùng **LLM Query Rewrite** để viết lại câu hỏi nối tiếp thành câu hỏi độc lập dựa trên tối đa 4 tin nhắn gần nhất. Ví dụ câu "sách này tác giả là ai?" sẽ được viết lại kèm tên sách đã nhắc trong lịch sử nếu ngữ cảnh đủ rõ. Câu hỏi đã viết lại dùng cho routing/search; prompt gửi LLM vẫn giữ cả câu hỏi gốc và câu hỏi đã bổ sung ngữ cảnh để câu trả lời tự nhiên nhưng không mất tham chiếu.
 
 Để chống Prompt Injection và bảo mật cho luồng hội thoại, lịch sử hội thoại (`chat_history`) được bóc tách và phân phối thành mảng tin nhắn (`messages`) với các role `user` và `assistant` riêng biệt dựa trên tiền tố `"User: "` và `"Bot: "`. Hệ thống tuyệt đối không ghép chuỗi thô (plain text) chat history vào tin nhắn `user` cuối cùng, giúp DeepSeek hiểu rõ ranh giới ngữ cảnh.
 
 `source_books` from RAG only contains retrieval metadata: `book_id`, `title`, `author`, and `relevance_score`. Cover images are not stored in ChromaDB; Spring Boot enriches `coverImageUrl` from PostgreSQL before returning `/api/chat` to the frontend.
 
-Book search uses hybrid retrieval with **Reciprocal Rank Fusion (RRF)**: the RAG service first normalizes natural-language question frames such as `co sach nao`, `lien quan toi`, `chu de ve`, or `noi dung ve` into the core search phrase. It then runs PostgreSQL lexical search (utilizing FTS with category aggregation from Flyway V14) and ChromaDB semantic search (using `BAAI/bge-m3` on GPU CUDA) in parallel. The ranked candidates from both channels are combined using the Reciprocal Rank Fusion (RRF) algorithm (with constant `k = 60`) to yield a unified relevance ranking. If a book is matched by both lexical and semantic pipelines, the maximum of the two relevance scores is retained. This architecture prevents exact keyword searches (like specific titles `lego chima` or authors `tracey west`) from being displaced by purely semantic embeddings, while still allowing broad topic and conceptual queries to utilize the robust semantic capabilities of ChromaDB. Weak vector matches (under threshold 0.53) are filtered beforehand to ensure high precision.
+Book search uses hybrid retrieval with **Reciprocal Rank Fusion (RRF)**: the RAG service first normalizes natural-language question frames such as `co sach nao`, `lien quan toi`, `chu de ve`, `noi dung ve`, or `co noi dung` into the core search phrase. It then runs both retrieval channels: PostgreSQL lexical search (FTS with category aggregation from Flyway V14/V15) and ChromaDB semantic search (using `BAAI/bge-m3`; CUDA when available, CPU otherwise). The ranked candidates from both channels are combined using the Reciprocal Rank Fusion (RRF) algorithm (with constant `k = 60`) to yield a unified relevance ranking. If a book is matched by both lexical and semantic pipelines, the maximum of the two relevance scores is retained. This architecture prevents exact keyword searches (like specific titles `lego chima` or authors `tracey west`) from being displaced by purely semantic embeddings, while still allowing broad topic and conceptual queries to utilize the robust semantic capabilities of ChromaDB. Weak vector matches (under threshold 0.53) are filtered beforehand to ensure high precision.
 
 ```json
 // Response — BOOK_SEARCH
@@ -685,9 +685,11 @@ Full ingest chạy nền: đọc toàn bộ sách từ PostgreSQL, upsert vào C
 ### Embedding Model
 - **RAG Semantic Search**: `BAAI/bge-m3`
   - Hỗ trợ ngữ nghĩa đa ngôn ngữ xuất sắc (Dense, Sparse, Multi-vector).
-  - Tích hợp chạy trên GPU CUDA với độ chính xác half-precision (float16).
-  - Kích hoạt cơ chế tự phục hồi **CUDA Out of Memory (Self-Healing Loop)**: tự động hạ xuống `batch_size=2` hoặc fallback sang CPU tạm thời khi gặp văn bản mô tả siêu dài (không giới hạn độ dài mô tả).
+  - Hệ thống hiện dùng BGE-M3 ở chế độ dense embedding thuần cho ChromaDB; lexical retrieval do PostgreSQL FTS xử lý.
+  - Nếu host có NVIDIA GPU và Docker GPU runtime, model chạy trên CUDA với half-precision (float16). Trên DigitalOcean Droplet thường không có GPU, service chạy CPU với cấu hình thread giới hạn.
+  - Kích hoạt cơ chế tự phục hồi **CUDA Out of Memory (Self-Healing Loop)** khi chạy trên GPU: tự động hạ xuống `batch_size=2` hoặc fallback sang CPU tạm thời khi gặp văn bản mô tả siêu dài.
   - Cấu hình cache **`HF_HOME=/data/huggingface`** trên volume bền vững giúp tránh tải lại mô hình 2.2GB khi container restart/rebuild.
+  - Khi đổi embedding model hoặc dùng lại Chroma volume cũ từ model khác, cần recreate collection/clear ChromaDB rồi full ingest lại để tránh lỗi sai kích thước vector.
 - **Intent Classifier**: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
   - Nhẹ (~130MB), hỗ trợ tiếng Việt tốt.
   - Phục vụ phân loại ý định cực kỳ nhanh (< 2ms) trên CPU/GPU.
@@ -788,13 +790,16 @@ rag-service:
   depends_on:
     postgres:
       condition: service_healthy
-  deploy:
-    resources:
-      reservations:
-        devices:
-          - driver: nvidia
-            count: all
-            capabilities: [gpu]
+
+# Optional only for machines with NVIDIA GPU + Docker GPU runtime.
+# DigitalOcean Basic/Premium CPU Droplets should omit this block and run BGE-M3 on CPU.
+# deploy:
+#   resources:
+#     reservations:
+#       devices:
+#         - driver: nvidia
+#           count: all
+#           capabilities: [gpu]
 
 volumes:
   rag_data:
@@ -820,7 +825,7 @@ volumes:
 
 ### Phase 3: RAG Pipeline (Tuần 11 — ngày 3-5)
 - [x] Implement ingestion script (PostgreSQL → ChromaDB)
-- [x] Implement hybrid search (PostgreSQL lexical + ChromaDB semantic fallback)
+- [x] Implement hybrid search (PostgreSQL lexical + ChromaDB semantic retrieval + RRF)
 - [x] Implement query normalization before lexical/vector retrieval
 - [x] Prompt templates cho BOOK_SEARCH
 - [x] LLM service dùng DeepSeek API

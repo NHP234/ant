@@ -34,3 +34,9 @@ def test_normalize_book_search_query_removes_leading_user_pronoun():
     q = normalize_book_search_query("bạn có sách nào về lego chima không?")
     assert q.normalized == "lego chima"
     assert q.lexical == "lego chima"
+
+
+def test_normalize_book_search_query_removes_bare_content_frame():
+    q = normalize_book_search_query("tìm sách có nội dung người ngoài hành tinh xâm chiếm trái đất")
+    assert q.normalized == "người ngoài hành tinh xâm chiếm trái đất"
+    assert q.lexical == "nguoi ngoai hanh tinh xam chiem trai dat"

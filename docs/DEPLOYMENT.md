@@ -11,6 +11,8 @@ Recommended Droplet:
 - At least 2 vCPU / 4 GB RAM
 - Disk large enough for Docker images, PostgreSQL dump and Chroma data
 
+The normal DigitalOcean Basic/Premium Droplet is CPU-only. The RAG service can still run BGE-M3 on CPU; GPU configuration is only relevant if you explicitly provision a DigitalOcean GPU Droplet or another host with NVIDIA GPU support.
+
 Firewall:
 
 - Inbound: SSH `22`, HTTP `80`, HTTPS `443`
@@ -87,6 +89,8 @@ Archive ChromaDB volume:
 docker run --rm -v ant_rag_data:/data -v ${PWD}\deploy-backups:/backup alpine sh -lc "tar -czf /backup/chroma.tar.gz -C /data ."
 ```
 
+If the embedding model has changed, do not reuse an old Chroma archive produced by the previous model. Restore PostgreSQL first, start the stack, then run a full RAG ingest so ChromaDB is rebuilt with vectors from the current embedding model.
+
 Copy backups to VPS:
 
 ```powershell
@@ -116,6 +120,8 @@ Restore ChromaDB:
 docker volume create awaken-ant-rag-data
 docker run --rm -v awaken-ant-rag-data:/data -v "$PWD":/backup alpine sh -lc "rm -rf /data/* && tar -xzf /backup/chroma.tar.gz -C /data"
 ```
+
+Skip this restore step when changing embedding models. In that case, let the RAG service create a fresh Chroma directory and trigger full ingestion after the database restore.
 
 Start the full stack:
 

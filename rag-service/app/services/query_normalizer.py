@@ -28,6 +28,7 @@ QUESTION_FRAME_PATTERNS = (
 
 RELATION_FRAME_PATTERNS = (
     # Accented
+    r"\bcó\s+nội\s+dung\b",
     r"\bcó\s+nội\s+dung\s+(?:về|liên\s+quan\s+(?:tới|đến|về))\b",
     r"\bnội\s+dung\s+(?:về|liên\s+quan\s+(?:tới|đến|về))\b",
     r"\bcó\s+chủ\s+đề\s+(?:về|liên\s+quan\s+(?:tới|đến|về))\b",
@@ -36,6 +37,7 @@ RELATION_FRAME_PATTERNS = (
     r"\bnói\s+về\b",
     r"\bvề\b",
     # Unaccented
+    r"\bco\s+noi\s+dung\b",
     r"\bco\s+noi\s+dung\s+(?:ve|lien\s+quan\s+(?:toi|den|ve))\b",
     r"\bnoi\s+dung\s+(?:ve|lien\s+quan\s+(?:toi|den|ve))\b",
     r"\bco\s+chu\s+de\s+(?:ve|lien\s+quan\s+(?:toi|den|ve))\b",

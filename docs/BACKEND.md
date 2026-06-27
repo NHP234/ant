@@ -339,5 +339,5 @@ Category API notes:
 - `BorrowService` giữ vai trò facade cho controller để API và audit annotation không thay đổi. Service này chuyển toàn bộ tạo phiếu, validate batch, chọn copy và fulfill hold sang `BorrowSlipCreationService`; `BorrowSlipService` chỉ phụ trách truy vấn.
 - Admin account tự động tạo qua DataInitializer (username/password từ application.yml)
 - Due date mặc định 14 ngày, max borrows 5, configurable trong application.yml
-- Full-text search: tsvector + GIN index, Vietnamese text config, unaccent, weighted ranking (title > author > description)
+- Full-text search: tsvector + GIN index, Vietnamese text config, unaccent, weighted ranking (title A > author B > category C > description D)
 - Overdue scheduler chạy 00:00 mỗi ngày, tự động chuyển BORROWING → OVERDUE
