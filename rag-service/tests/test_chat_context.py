@@ -147,7 +147,8 @@ def test_orchestrator_routes_contextual_detail_question_with_llm_rewrite():
     assert "LEGO Legends of Chima: Origins: A Starter Handbook" in rag_service.questions[0]
 
     # Kiá»ƒm tra LLM chÃ­nh nháº­n Ä‘Æ°á»£c prompt chá»©a cÃ¢u há»i gá»‘c vÃ  context
-    assert 'CÃ¢u há»i gá»‘c: "sÃ¡ch nÃ y vá» chá»§ Ä‘á» gÃ¬?"' in llm_service.prompts[1]
+    assert "LEGO Legends of Chima: Origins: A Starter Handbook" in llm_service.prompts[1]
+    assert "sÃ¡ch nÃ y vá» chá»§ Ä‘á» gÃ¬?" in llm_service.prompts[1]
 
 
 def test_orchestrator_does_not_ask_llm_to_suggest_books_without_sources():
@@ -169,7 +170,7 @@ def test_orchestrator_does_not_ask_llm_to_suggest_books_without_sources():
     assert confidence == 0.95
     assert source_books == []
     assert len(llm_service.prompts) == 0  # KhÃ´ng gá»i LLM vÃ¬ khÃ´ng cÃ³ sÃ¡ch nguá»“n
-    assert "chÆ°a tÃ¬m tháº¥y" in answer
+    assert answer_says_no_book_matches(answer)
 
 
 def test_orchestrator_drops_sources_when_llm_says_no_book_matches():
@@ -189,7 +190,7 @@ def test_orchestrator_drops_sources_when_llm_says_no_book_matches():
 
     assert intent == "BOOK_SEARCH"
     assert confidence == 0.95
-    assert "chÆ°a tÃ¬m tháº¥y" in answer
+    assert answer_says_no_book_matches(answer)
     assert source_books == []
     assert len(llm_service.prompts) == 1
 

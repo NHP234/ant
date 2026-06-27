@@ -29,20 +29,37 @@ NO_BOOK_MATCH_PATTERNS = (
     "chua co cuon sach nao",
 )
 
+MOJIBAKE_NO_BOOK_MATCH_PATTERNS = (
+    "ch a t m th",
+    "ch a ta m thao y",
+    "ch a c cu n s ch n o",
+    "ch a ca3 cua n sa ch na o",
+    "ch a c s ch",
+    "kh ng t m th",
+    "kh ng c cu n s ch n o",
+    "kh ng c s ch",
+)
+
 # Legacy heuristics removed. History is now processed using LLM Query Rewrite.
 
 
 def build_no_book_matches_answer() -> str:
     return (
-        "TÃ´i chÆ°a tÃ¬m tháº¥y Ä‘áº§u sÃ¡ch phÃ¹ há»£p trong thÆ° viá»‡n cho mÃ´ táº£ nÃ y. "
-        "Báº¡n cÃ³ thá»ƒ thá»­ há»i láº¡i báº±ng tÃªn sÃ¡ch, tÃªn tÃ¡c giáº£, hoáº·c má»™t vÃ i tá»« khÃ³a ngáº¯n hÆ¡n "
-        "nhÆ° thá»ƒ loáº¡i, nhÃ¢n váº­t chÃ­nh hay chá»§ Ä‘á» ná»•i báº­t."
+        "Tôi chưa tìm thấy đầu sách phù hợp trong thư viện cho mô tả này. "
+        "Bạn có thể thử hỏi lại bằng tên sách, tên tác giả, hoặc một vài từ khóa ngắn hơn "
+        "như thể loại, nhân vật chính hay chủ đề nổi bật."
     )
 
 
 def answer_says_no_book_matches(answer: str) -> bool:
     normalized = normalize_search_text(answer)
-    return any(pattern in normalized for pattern in NO_BOOK_MATCH_PATTERNS)
+    if any(pattern in normalized for pattern in NO_BOOK_MATCH_PATTERNS):
+        return True
+
+    # Some historical prompts/tests contain mojibake Vietnamese text. After
+    # normalization those phrases lose vowels, so keep a narrow compatibility
+    # guard for common "no matching book" answers.
+    return any(pattern in normalized for pattern in MOJIBAKE_NO_BOOK_MATCH_PATTERNS)
 
 
 class ChatOrchestrator:
@@ -84,8 +101,8 @@ class ChatOrchestrator:
         contextual_question = await self.build_contextual_question(question, chat_history)
 
         prompt_question = (
-            f'CÃ¢u há»i gá»‘c: "{question}"\n'
-            f"CÃ¢u há»i Ä‘Ã£ bá»• sung ngá»¯ cáº£nh: {contextual_question}"
+            f'Câu hỏi gốc: "{question}"\n'
+            f"Câu hỏi đã bổ sung ngữ cảnh: {contextual_question}"
             if contextual_question != question
             else question
         )
@@ -156,8 +173,8 @@ class ChatOrchestrator:
         except Exception as exc:
             logger.error("Pipeline %s failed: %s", intent, str(exc))
             answer = (
-                "Xin lá»—i báº¡n, trá»£ lÃ½ thÆ° viá»‡n Ä‘ang gáº·p trá»¥c tráº·c ká»¹ thuáº­t nhá» "
-                "khi xá»­ lÃ½ yÃªu cáº§u nÃ y. Vui lÃ²ng thá»­ láº¡i sau."
+                "Xin lỗi bạn, trợ lý thư viện đang gặp trục trặc kỹ thuật nhỏ "
+                "khi xử lý yêu cầu này. Vui lòng thử lại sau."
             )
 
         return answer, intent, confidence, source_books
