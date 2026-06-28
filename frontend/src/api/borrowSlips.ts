@@ -34,8 +34,8 @@ export const borrowSlipApi = {
   getMySlips: (page = 0, size = 10) =>
     api.get<{ data: PageResponse<BorrowSlip> }>('/borrow-slips/my', { params: { page, size } }),
 
-  getAll: (page = 0, size = 10) =>
-    api.get<{ data: PageResponse<BorrowSlip> }>('/borrow-slips', { params: { page, size } }),
+  getAll: (page = 0, size = 10, search?: string) =>
+    api.get<{ data: PageResponse<BorrowSlip> }>('/borrow-slips', { params: { page, size, search } }),
 
   getById: (id: number) =>
     api.get<{ data: BorrowSlip }>(`/borrow-slips/${id}`),

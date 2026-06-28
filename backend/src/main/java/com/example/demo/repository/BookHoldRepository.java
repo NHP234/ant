@@ -21,6 +21,12 @@ public interface BookHoldRepository extends JpaRepository<BookHold, Long> {
 
     Page<BookHold> findByUserIdAndStatusInOrderByCreatedAtDesc(Long userId, Collection<HoldStatus> statuses, Pageable pageable);
 
+    @Query("SELECT h FROM BookHold h WHERE " +
+           "LOWER(h.user.fullName) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(h.user.studentId) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(h.user.username) LIKE LOWER(CONCAT('%', :q, '%'))")
+    Page<BookHold> searchByBorrower(@Param("q") String q, Pageable pageable);
+
     @Query("""
             SELECT COUNT(h)
             FROM BookHold h

@@ -32,7 +32,10 @@ public class BorrowSlipService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<BorrowSlipResponse> getAllSlips(Pageable pageable) {
+    public PageResponse<BorrowSlipResponse> getAllSlips(String search, Pageable pageable) {
+        if (search != null && !search.trim().isEmpty()) {
+            return mapPage(borrowSlipRepository.searchByBorrower(search.trim(), pageable));
+        }
         return mapPage(borrowSlipRepository.findAll(pageable));
     }
 

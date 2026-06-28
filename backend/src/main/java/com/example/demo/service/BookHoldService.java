@@ -165,7 +165,10 @@ public class BookHoldService {
     }
 
     @Transactional(readOnly = true)
-    public Page<HoldResponse> getAllHolds(Pageable pageable) {
+    public Page<HoldResponse> getAllHolds(String search, Pageable pageable) {
+        if (search != null && !search.trim().isEmpty()) {
+            return bookHoldRepository.searchByBorrower(search.trim(), pageable).map(bookHoldMapper::toResponse);
+        }
         return bookHoldRepository.findAll(pageable).map(bookHoldMapper::toResponse);
     }
 

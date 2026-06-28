@@ -58,8 +58,8 @@ export const holdApi = {
       },
     }),
 
-  getAll: (page = 0, size = 10) =>
-    api.get<{ data: PageResponse<Hold> }>('/holds', { params: { page, size } }),
+  getAll: (page = 0, size = 10, search?: string) =>
+    api.get<{ data: PageResponse<Hold> }>('/holds', { params: { page, size, search } }),
 
   getById: (id: number) =>
     api.get<{ data: Hold }>(`/holds/${id}`),

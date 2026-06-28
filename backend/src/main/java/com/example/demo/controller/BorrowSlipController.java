@@ -50,8 +50,9 @@ public class BorrowSlipController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<ApiResponse<PageResponse<BorrowSlipResponse>>> getAllSlips(
+            @RequestParam(required = false) String search,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.ok(borrowSlipService.getAllSlips(pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(borrowSlipService.getAllSlips(search, pageable)));
     }
 
     @GetMapping("/{id}")

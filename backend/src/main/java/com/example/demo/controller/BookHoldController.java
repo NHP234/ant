@@ -63,8 +63,9 @@ public class BookHoldController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<ApiResponse<PageResponse<HoldResponse>>> getAllHolds(
+            @RequestParam(required = false) String search,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<HoldResponse> page = bookHoldService.getAllHolds(pageable);
+        Page<HoldResponse> page = bookHoldService.getAllHolds(search, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page, page.getContent())));
     }
 
