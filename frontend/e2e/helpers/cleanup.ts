@@ -10,7 +10,13 @@ const testBookWhere = `
   OR title LIKE 'E2E_%'
   OR title LIKE 'Role Navigation Book%'
   OR title LIKE 'Counter Borrow Book%'
+  OR title LIKE 'Duplicate Counter Book%'
   OR title LIKE 'Playwright Book%'
+  OR title LIKE 'NFC Assignment Test Book%'
+  OR title LIKE 'Batch Borrow First Book%'
+  OR title LIKE 'Batch Borrow Second Book%'
+  OR title LIKE 'Kiosk First Book%'
+  OR title LIKE 'Kiosk Second Book%'
   OR title = 'E2E Test Book'
 `
 
@@ -181,7 +187,7 @@ DELETE FROM book_authors WHERE book_id IN (SELECT id FROM e2e_test_books);
 DELETE FROM books WHERE id IN (SELECT id FROM e2e_test_books);
 
 DELETE FROM authors a
-WHERE (a.name LIKE 'E2E %' OR a.name LIKE 'E2E_%' OR a.name IN ('Role Navigation Author', 'Counter Borrow Author', 'Playwright Author', 'E2E Author'))
+WHERE (a.name LIKE 'E2E %' OR a.name LIKE 'E2E_%' OR a.name IN ('Role Navigation Author', 'Counter Borrow Author', 'Playwright Author', 'E2E Author', 'NFC Test Author', 'First Author', 'Second Author'))
   AND NOT EXISTS (SELECT 1 FROM book_authors ba WHERE ba.author_id = a.id);
 
 DELETE FROM categories WHERE id IN (SELECT id FROM e2e_test_categories);

@@ -11,6 +11,10 @@ interface TestUser {
   role: 'ADMIN' | 'LIBRARIAN' | 'STUDENT'
 }
 
+function uniqueIsbn(prefix: string) {
+  return `${prefix}-${Date.now().toString().slice(-10)}${Math.random().toString(36).slice(2, 4)}`.slice(0, 20)
+}
+
 async function createLoginSession(request: APIRequestContext, user: TestUser | typeof ADMIN, role: TestUser['role']) {
   const res = await request.post(`${API_BASE}/auth/login`, {
     data: { username: user.username, password: user.password },
@@ -66,7 +70,7 @@ test.describe('Role based staff navigation', () => {
     const bookRes = await apiCreateBook(request, adminToken, {
       title: `E2E Role Navigation Book ${suffix}`,
       author: 'E2E Role Navigation Author',
-      isbn: `E2E-ROLE-${suffix}`,
+      isbn: uniqueIsbn('E2E-ROL'),
       quantity: 1,
     })
     testBookId = bookRes.data.id
