@@ -55,8 +55,8 @@ export interface BookUpdateRequest {
 }
 
 export const bookApi = {
-  getAll: (page = 0, size = 10) =>
-    api.get<{ data: PageResponse<Book> }>('/books', { params: { page, size } }),
+  getAll: (page = 0, size = 10, sort?: string) =>
+    api.get<{ data: PageResponse<Book> }>('/books', { params: { page, size, sort } }),
 
   getById: (id: number) =>
     api.get<{ data: Book }>(`/books/${id}`),

@@ -124,7 +124,7 @@ export default function BookCatalogPage() {
 
   const { data: latestData, isLoading: latestLoading } = useQuery({
     queryKey: ['books', 'latest'],
-    queryFn: () => bookApi.getAll(0, 10),
+    queryFn: () => bookApi.getAll(0, 10, 'id,desc'),
     staleTime: 5 * 60 * 1000,
   })
 
