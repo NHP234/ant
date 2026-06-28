@@ -1,7 +1,7 @@
 import asyncio
 import os
 import sys
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import httpx
 
@@ -97,12 +97,12 @@ def test_clean_response_text_removes_markdown_emphasis_artifacts():
     service = LLMService(deepseek_api_key="")
 
     result = service._clean_response_text(
-        "1. **TÃªn sÃ¡ch:** _Clean Code_\n**TÃ¡c giáº£:** Robert C. Martin"
+        "1. **Tên sách:** _Clean Code_\n**Tác giả:** Robert C. Martin"
     )
 
     assert "*" not in result
     assert "_" not in result
-    assert "TÃªn sÃ¡ch:" in result
+    assert "Tên sách:" in result
     assert "Clean Code" in result
 
 

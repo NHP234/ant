@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import os
 import sys
 
@@ -14,12 +14,12 @@ from app.services.chat_orchestrator import (
 def test_chat_request_accepts_camel_case_history():
     request = ChatRequest.model_validate(
         {
-            "question": "sÃ¡ch nÃ y vá» chá»§ Ä‘á» gÃ¬?",
-            "chatHistory": ["Bot: - SÃ¡ch: *Clean Code*"],
+            "question": "sách này về chủ đề gì?",
+            "chatHistory": ["Bot: - Sách: *Clean Code*"],
         }
     )
 
-    assert request.chat_history == ["Bot: - SÃ¡ch: *Clean Code*"]
+    assert request.chat_history == ["Bot: - Sách: *Clean Code*"]
 
 
 class FakeClassifier:
@@ -39,7 +39,7 @@ class FakeRagService:
 
     def search_books(self, question, n_results=5):
         self.questions.append(question)
-        return "TÃªn sÃ¡ch: LEGO Legends of Chima\nMÃ´ táº£: Adventure story.", [
+        return "Tên sách: LEGO Legends of Chima\nMô tả: Adventure story.", [
             {
                 "book_id": 1,
                 "title": "LEGO Legends of Chima: Origins: A Starter Handbook",
@@ -79,13 +79,18 @@ class FakeLlmService:
 
     async def generate_response(self, prompt, chat_history=None):
         self.prompts.append(prompt)
-        # Náº¿u lÃ  prompt viáº¿t láº¡i cÃ¢u há»i (QUERY_REWRITE_PROMPT)
-        if "Lá»‹ch sá»­ cuá»™c trÃ² chuyá»‡n" in prompt or "CÃ¢u há»i Ä‘á»™c láº­p viáº¿t láº¡i:" in prompt or "QUERY_REWRITE_PROMPT" in prompt:
-            if "sÃ¡ch nÃ y vá» chá»§ Ä‘á» gÃ¬?" in prompt:
-                return 'Äang há»i vá» sÃ¡ch "LEGO Legends of Chima: Origins: A Starter Handbook". sÃ¡ch nÃ y vá» chá»§ Ä‘á» gÃ¬?'
-            return "CÃ¢u há»i Ä‘Ã£ Ä‘Æ°á»£c viáº¿t láº¡i"
-        # Prompt sinh cÃ¢u tráº£ lá»i chÃ­nh
-        return "ÄÃ¢y lÃ  sÃ¡ch phiÃªu lÆ°u dÃ nh cho thiáº¿u nhi."
+        if (
+            "Lịch sử cuộc trò chuyện" in prompt
+            or "Câu hỏi độc lập viết lại:" in prompt
+            or "QUERY_REWRITE_PROMPT" in prompt
+        ):
+            if "sách này về chủ đề gì?" in prompt:
+                return (
+                    'Đang hỏi về sách "LEGO Legends of Chima: Origins: A Starter Handbook". '
+                    "sách này về chủ đề gì?"
+                )
+            return "Câu hỏi đã được viết lại"
+        return "Đây là sách phiêu lưu dành cho thiếu nhi."
 
 
 class FakeNoBookLlmService:
@@ -94,9 +99,9 @@ class FakeNoBookLlmService:
 
     async def generate_response(self, prompt, chat_history=None):
         self.prompts.append(prompt)
-        if "Lá»‹ch sá»­ cuá»™c trÃ² chuyá»‡n" in prompt or "QUERY_REWRITE_PROMPT" in prompt:
+        if "Lịch sử cuộc trò chuyện" in prompt or "QUERY_REWRITE_PROMPT" in prompt:
             return prompt
-        return "Hiá»‡n chÆ°a tÃ¬m tháº¥y cuá»‘n sÃ¡ch nÃ o phÃ¹ há»£p vá»›i yÃªu cáº§u nÃ y."
+        return "Hiện chưa tìm thấy cuốn sách nào phù hợp với yêu cầu này."
 
 
 def test_build_contextual_question_calls_llm():
@@ -106,15 +111,15 @@ def test_build_contextual_question_calls_llm():
     orchestrator = ChatOrchestrator(classifier, rag_service)
     orchestrator.llm_service = llm_service
 
-    history = ["Bot: - SÃ¡ch: *LEGO Legends of Chima: Origins: A Starter Handbook*"]
+    history = ["Bot: - Sách: *LEGO Legends of Chima: Origins: A Starter Handbook*"]
 
     rewritten = asyncio.run(
-        orchestrator.build_contextual_question("sÃ¡ch nÃ y vá» chá»§ Ä‘á» gÃ¬?", history)
+        orchestrator.build_contextual_question("sách này về chủ đề gì?", history)
     )
 
     assert "LEGO Legends of Chima: Origins: A Starter Handbook" in rewritten
     assert len(llm_service.prompts) == 1
-    assert "sÃ¡ch nÃ y vá» chá»§ Ä‘á» gÃ¬?" in llm_service.prompts[0]
+    assert "sách này về chủ đề gì?" in llm_service.prompts[0]
 
 
 def test_orchestrator_routes_contextual_detail_question_with_llm_rewrite():
@@ -124,31 +129,29 @@ def test_orchestrator_routes_contextual_detail_question_with_llm_rewrite():
     orchestrator = ChatOrchestrator(classifier, rag_service)
     orchestrator.llm_service = llm_service
     history = [
-        "Bot: - SÃ¡ch: *LEGO Legends of Chima: Origins: A Starter Handbook*"
+        "Bot: - Sách: *LEGO Legends of Chima: Origins: A Starter Handbook*"
     ]
 
     answer, intent, confidence, source_books = asyncio.run(
         orchestrator.route_and_process(
-            question="sÃ¡ch nÃ y vá» chá»§ Ä‘á» gÃ¬?",
+            question="sách này về chủ đề gì?",
             jwt_token="token",
             chat_history=history,
         )
     )
 
-    assert answer == "ÄÃ¢y lÃ  sÃ¡ch phiÃªu lÆ°u dÃ nh cho thiáº¿u nhi."
+    assert answer == "Đây là sách phiêu lưu dành cho thiếu nhi."
     assert intent == "BOOK_SEARCH"
     assert confidence == 0.95
     assert source_books[0]["title"] == "LEGO Legends of Chima: Origins: A Starter Handbook"
 
-    # Äáº£m báº£o Classifier nháº­n diá»‡n trÃªn cÃ¢u há»i Ä‘Ã£ Ä‘Æ°á»£c viáº¿t láº¡i
+    # Classifier và RAG đều nhận câu hỏi đã được viết lại theo ngữ cảnh.
     assert "LEGO Legends of Chima: Origins: A Starter Handbook" in classifier.questions[0]
-
-    # Äáº£m báº£o RAG Service tÃ¬m kiáº¿m theo cÃ¢u há»i Ä‘Ã£ viáº¿t láº¡i
     assert "LEGO Legends of Chima: Origins: A Starter Handbook" in rag_service.questions[0]
 
-    # Kiá»ƒm tra LLM chÃ­nh nháº­n Ä‘Æ°á»£c prompt chá»©a cÃ¢u há»i gá»‘c vÃ  context
+    # Prompt trả lời chính vẫn giữ câu hỏi gốc và context sách.
     assert "LEGO Legends of Chima: Origins: A Starter Handbook" in llm_service.prompts[1]
-    assert "sÃ¡ch nÃ y vá» chá»§ Ä‘á» gÃ¬?" in llm_service.prompts[1]
+    assert "sách này về chủ đề gì?" in llm_service.prompts[1]
 
 
 def test_orchestrator_does_not_ask_llm_to_suggest_books_without_sources():
@@ -169,7 +172,7 @@ def test_orchestrator_does_not_ask_llm_to_suggest_books_without_sources():
     assert intent == "BOOK_SEARCH"
     assert confidence == 0.95
     assert source_books == []
-    assert len(llm_service.prompts) == 0  # KhÃ´ng gá»i LLM vÃ¬ khÃ´ng cÃ³ sÃ¡ch nguá»“n
+    assert len(llm_service.prompts) == 0
     assert answer_says_no_book_matches(answer)
 
 
@@ -216,5 +219,5 @@ def test_orchestrator_keeps_sources_when_llm_uses_search_results():
 
 def test_no_book_match_guard_detects_chua_co_cuon_sach_nao():
     assert answer_says_no_book_matches(
-        'Hiá»‡n táº¡i thÆ° viá»‡n chÆ°a cÃ³ cuá»‘n sÃ¡ch nÃ o cÃ³ ná»™i dung Ä‘Ãºng nhÆ° "Äá»“ chÆ¡i ká»³ diá»‡u".'
+        'Hiện tại thư viện chưa có cuốn sách nào có nội dung đúng như "Đồ chơi kỳ diệu".'
     )

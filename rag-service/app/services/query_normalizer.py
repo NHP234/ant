@@ -81,14 +81,13 @@ def normalize_search_text(value: str) -> str:
 def normalize_semantic_query(question: str) -> str:
     cleaned = (question or "").strip()
     cleaned = re.sub(r"\s+", " ", cleaned)
-    
+
     normalized = f" {cleaned} "
     for pattern in LEADING_FILLER_PATTERNS + QUESTION_FRAME_PATTERNS + RELATION_FRAME_PATTERNS:
         normalized = re.sub(pattern, " ", normalized, flags=re.IGNORECASE)
         normalized = re.sub(r"\s+", " ", normalized)
 
     result = normalized.strip()
-    # Strip trailing punctuation from the end of the query string
     result = re.sub(r"[?.,!;:\s]+$", "", result)
     return result or cleaned
 
@@ -96,10 +95,10 @@ def normalize_semantic_query(question: str) -> str:
 def normalize_book_search_query(question: str) -> NormalizedBookQuery:
     if not question:
         return NormalizedBookQuery(original="", normalized="", lexical="")
-        
+
     normalized = normalize_semantic_query(question)
     lexical = normalize_search_text(normalized)
-    
+
     return NormalizedBookQuery(
         original=question,
         normalized=normalized,
