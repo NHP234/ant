@@ -161,7 +161,26 @@ Manual smoke test:
 - Librarian/admin picks up held books and creates one borrow slip.
 - Return a borrowed copy.
 
-## 6. NFC After Web Deploy
+## 6. Optional Demo Data
+
+Demo users and active holds should be seeded through the REST API, not Flyway, because holds are live business state and must reserve book copies consistently.
+
+Run this from the local project root after the deployed stack is healthy:
+
+```powershell
+$env:ADMIN_PASSWORD="your-production-admin-password"
+python scripts/seed_demo_users_and_holds.py --api-base https://YOUR_DOMAIN/api
+```
+
+For local Docker:
+
+```powershell
+python scripts/seed_demo_users_and_holds.py --api-base http://localhost:8080/api
+```
+
+The script is idempotent: existing demo users are skipped and students that already have an `ACTIVE` hold are not given another one. See `scripts/README_DEMO_DATA.md` for details.
+
+## 7. NFC After Web Deploy
 
 The deployment does not require ESP32 to call the VPS on day one.
 
@@ -171,7 +190,7 @@ After HTTPS is stable, update firmware:
 - Use `WiFiClientSecure` with `setInsecure()` for demo speed, or configure a root CA for stricter TLS.
 - Keep the local/web fallback ready for defense day.
 
-## 7. Rollback
+## 8. Rollback
 
 Keep local backup files until defense is complete:
 
