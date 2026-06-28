@@ -1,13 +1,10 @@
-import { test, expect } from '@playwright/test'
+import { test } from '@playwright/test'
 import { STUDENT } from '../fixtures/test-data'
-import { apiRegister, apiLogin } from '../helpers/api'
+import { apiRegister } from '../helpers/api'
 
 test.describe('Notifications', () => {
-  let studentToken: string
-
   test.beforeAll(async ({ request }) => {
     await apiRegister(request, STUDENT)
-    studentToken = await apiLogin(request, STUDENT.username, STUDENT.password)
   })
 
   test('student sees notification count and marks as read', async ({ page }) => {

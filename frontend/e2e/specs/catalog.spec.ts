@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { STUDENT } from '../fixtures/test-data'
-import { apiRegister, apiGetBooks } from '../helpers/api'
+import { apiGetBooks, apiRegister } from '../helpers/api'
 
 test.describe('Catalog & Book Detail', () => {
   test.beforeAll(async ({ request }) => {
@@ -42,7 +42,7 @@ test.describe('Catalog & Book Detail', () => {
 
   test('hold a book from detail page', async ({ page, request }) => {
     const booksRes = await apiGetBooks(request)
-    const book = booksRes.data.content.find((b: any) => b.availableCopies > 0)
+    const book = booksRes.data.content.find((item: { availableCopies: number }) => item.availableCopies > 0)
     if (!book) return
 
     await page.goto('/login')

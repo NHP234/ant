@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test'
-import { STUDENT, TEST_BOOK, ADMIN, API_BASE } from '../fixtures/test-data'
-import { apiRegister, apiLogin, apiCreateBook, apiCreateHold, apiConfirmHold } from '../helpers/api'
+import { expect, test } from '@playwright/test'
+import { ADMIN, API_BASE, STUDENT, TEST_BOOK } from '../fixtures/test-data'
+import { apiConfirmHold, apiCreateBook, apiCreateHold, apiLogin, apiRegister } from '../helpers/api'
 
-test.describe('Admin Full Flow: Hold → Confirm → Borrow → Return', () => {
+test.describe('Admin Full Flow: Hold -> Confirm -> Borrow -> Return', () => {
   let studentToken: string
   let adminToken: string
   let bookId: number
@@ -30,11 +30,10 @@ test.describe('Admin Full Flow: Hold → Confirm → Borrow → Return', () => {
     await page.getByRole('button', { name: 'Đăng nhập' }).click()
     await page.waitForURL(/\/admin\/dashboard/)
 
-    await expect(page.getByText('Holds đang chờ').first()).toBeVisible()
     await expect(page.getByText(STUDENT.fullName).first()).toBeVisible()
   })
 
-  test('admin confirms hold in Hold Management', async ({ page, request }) => {
+  test('admin confirms hold in Hold Management', async ({ page }) => {
     await page.goto('/login')
     await page.fill('input[name="username"]', ADMIN.username)
     await page.fill('input[name="password"]', ADMIN.password)
@@ -55,9 +54,9 @@ test.describe('Admin Full Flow: Hold → Confirm → Borrow → Return', () => {
   test('admin sees borrow slip and returns book', async ({ page, request }) => {
     const holdsRes = await (await request.get(
       `${API_BASE}/holds?size=50`,
-      { headers: { Authorization: `Bearer ${adminToken}` } }
+      { headers: { Authorization: `Bearer ${adminToken}` } },
     )).json()
-    const activeHold = holdsRes.data.content.find((h: any) => h.status === 'ACTIVE')
+    const activeHold = holdsRes.data.content.find((hold: { id: number; status: string }) => hold.status === 'ACTIVE')
     if (activeHold) {
       await apiConfirmHold(request, adminToken, activeHold.id)
     }

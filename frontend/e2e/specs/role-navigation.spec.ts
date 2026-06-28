@@ -45,18 +45,18 @@ test.describe('Role based staff navigation', () => {
     const adminToken = await apiLogin(request, ADMIN.username, ADMIN.password)
 
     const librarian: TestUser = {
-      username: `role_librarian_${suffix}`,
+      username: `e2e_role_librarian_${suffix}`,
       password: 'Test@123456',
-      email: `role_librarian_${suffix}@test.com`,
-      fullName: 'Role Test Librarian',
+      email: `e2e_role_librarian_${suffix}@test.local`,
+      fullName: 'E2E Role Test Librarian',
       role: 'LIBRARIAN',
     }
     const student: TestUser = {
-      username: `role_student_${suffix}`,
+      username: `e2e_role_student_${suffix}`,
       password: 'Test@123456',
-      email: `role_student_${suffix}@test.com`,
-      fullName: 'Role Test Student',
-      studentId: `ROLE${suffix}`,
+      email: `e2e_role_student_${suffix}@test.local`,
+      fullName: 'E2E Role Test Student',
+      studentId: `E2EROLE${suffix}`,
       role: 'STUDENT',
     }
 
@@ -64,9 +64,9 @@ test.describe('Role based staff navigation', () => {
     await apiCreateUser(request, adminToken, student)
 
     const bookRes = await apiCreateBook(request, adminToken, {
-      title: `Role Navigation Book ${suffix}`,
-      author: 'Role Navigation Author',
-      isbn: `979-${suffix}`,
+      title: `E2E Role Navigation Book ${suffix}`,
+      author: 'E2E Role Navigation Author',
+      isbn: `E2E-ROLE-${suffix}`,
       quantity: 1,
     })
     testBookId = bookRes.data.id
@@ -107,14 +107,14 @@ test.describe('Role based staff navigation', () => {
   test('librarian does not see book delete action', async ({ page }) => {
     await loginWithSession(page, librarianSession)
     await page.goto('/librarian/books')
-    await page.getByTestId('book-management-search').fill(`Role Navigation Book ${suffix}`)
+    await page.getByTestId('book-management-search').fill(`E2E Role Navigation Book ${suffix}`)
     await expect(page.getByTestId(`delete-book-${testBookId}`)).toHaveCount(0)
   })
 
   test('admin sees book delete action', async ({ page }) => {
     await loginWithSession(page, adminSession)
     await page.goto('/admin/books')
-    await page.getByTestId('book-management-search').fill(`Role Navigation Book ${suffix}`)
+    await page.getByTestId('book-management-search').fill(`E2E Role Navigation Book ${suffix}`)
     await expect(page.getByTestId(`delete-book-${testBookId}`)).toBeVisible()
   })
 

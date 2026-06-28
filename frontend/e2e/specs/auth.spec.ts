@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test'
-import { STUDENT, ADMIN } from '../fixtures/test-data'
+import { expect, test } from '@playwright/test'
+import { ADMIN, STUDENT } from '../fixtures/test-data'
 import { apiRegister } from '../helpers/api'
 
 test.describe('Authentication', () => {
@@ -12,7 +12,7 @@ test.describe('Authentication', () => {
     await page.getByRole('button', { name: 'Đăng nhập' }).click()
 
     await expect(page).toHaveURL(/\/browse/, { timeout: 10000 })
-    await expect(page.getByRole('heading', { name: 'Duyệt sách' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Khám phá' })).toBeVisible()
   })
 
   test('login as admin redirects to dashboard', async ({ page }) => {
@@ -22,7 +22,7 @@ test.describe('Authentication', () => {
     await page.getByRole('button', { name: 'Đăng nhập' }).click()
 
     await expect(page).toHaveURL(/\/admin\/dashboard/, { timeout: 10000 })
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Tổng quan/ })).toBeVisible()
   })
 
   test('login as student redirects to browse', async ({ page }) => {
@@ -32,6 +32,6 @@ test.describe('Authentication', () => {
     await page.getByRole('button', { name: 'Đăng nhập' }).click()
 
     await expect(page).toHaveURL(/\/browse/, { timeout: 10000 })
-    await expect(page.getByRole('heading', { name: 'Duyệt sách' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Khám phá' })).toBeVisible()
   })
 })

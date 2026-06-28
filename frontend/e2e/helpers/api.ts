@@ -1,6 +1,17 @@
 import type { APIRequestContext } from '@playwright/test'
 import { API_BASE } from '../fixtures/test-data'
 
+async function parseJsonResponse(res: { ok: () => boolean; status: () => number; statusText: () => string; text: () => Promise<string> }) {
+  const text = await res.text()
+  const body = text ? JSON.parse(text) : null
+
+  if (!res.ok()) {
+    throw new Error(`API request failed: ${res.status()} ${res.statusText()} ${text}`)
+  }
+
+  return body
+}
+
 export async function apiLogin(
   request: APIRequestContext,
   username: string,
@@ -9,7 +20,7 @@ export async function apiLogin(
   const res = await request.post(`${API_BASE}/auth/login`, {
     data: { username, password },
   })
-  const body = await res.json()
+  const body = await parseJsonResponse(res)
   return body.data.accessToken
 }
 
@@ -24,7 +35,7 @@ export async function apiRegister(
   },
 ) {
   const res = await request.post(`${API_BASE}/auth/register`, { data })
-  return res.json()
+  return parseJsonResponse(res)
 }
 
 export async function apiCreateBook(
@@ -41,7 +52,7 @@ export async function apiCreateBook(
     data,
     headers: { Authorization: `Bearer ${token}` },
   })
-  return res.json()
+  return parseJsonResponse(res)
 }
 
 export async function apiCreateCategory(
@@ -53,7 +64,7 @@ export async function apiCreateCategory(
     data: { name },
     headers: { Authorization: `Bearer ${token}` },
   })
-  return res.json()
+  return parseJsonResponse(res)
 }
 
 export async function apiCreateUser(
@@ -72,7 +83,7 @@ export async function apiCreateUser(
     data,
     headers: { Authorization: `Bearer ${token}` },
   })
-  return res.json()
+  return parseJsonResponse(res)
 }
 
 export async function apiCreateHold(
@@ -84,12 +95,12 @@ export async function apiCreateHold(
     data: { bookId },
     headers: { Authorization: `Bearer ${token}` },
   })
-  return res.json()
+  return parseJsonResponse(res)
 }
 
 export async function apiGetBooks(request: APIRequestContext) {
   const res = await request.get(`${API_BASE}/books?size=50`)
-  return res.json()
+  return parseJsonResponse(res)
 }
 
 export async function apiGetHolds(
@@ -99,7 +110,7 @@ export async function apiGetHolds(
   const res = await request.get(`${API_BASE}/holds`, {
     headers: { Authorization: `Bearer ${token}` },
   })
-  return res.json()
+  return parseJsonResponse(res)
 }
 
 export async function apiConfirmHold(
@@ -111,5 +122,5 @@ export async function apiConfirmHold(
     headers: { Authorization: `Bearer ${token}` },
     data: {},
   })
-  return res.json()
+  return parseJsonResponse(res)
 }
