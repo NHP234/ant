@@ -20,9 +20,40 @@ Firewall:
 
 Domain:
 
-- Buy or claim a domain from a registrar outside DigitalOcean.
-- Create an `A` record pointing the domain to the Droplet public IP.
+- Buy or claim a domain from a registrar outside DigitalOcean, for example Namecheap.
+- Create an `A` record pointing the domain or subdomain to the Droplet public IP.
 - DigitalOcean DNS can manage the zone, but DigitalOcean is not the domain registrar.
+
+Current deployed Droplet:
+
+- Public IPv4: `209.97.163.46`
+- Current temporary mode: `APP_DOMAIN=:80`, which serves the app over plain HTTP by IP.
+- Final HTTPS mode: set `APP_DOMAIN` to the real domain, then restart Caddy/full Compose stack.
+
+Namecheap DNS quick setup:
+
+1. Open Namecheap `Domain List` -> select the domain -> `Manage`.
+2. Confirm the domain uses Namecheap DNS, then open `Advanced DNS`.
+3. Add one of these host records:
+   - Root domain: `A Record`, Host `@`, Value `209.97.163.46`, TTL `Automatic`.
+   - Subdomain: `A Record`, Host `library` or `app`, Value `209.97.163.46`, TTL `Automatic`.
+   - Optional `www`: `CNAME Record`, Host `www`, Value `@` for root domain usage.
+4. Wait for DNS propagation, then verify from your machine:
+
+```powershell
+nslookup YOUR_DOMAIN
+```
+
+After DNS resolves to `209.97.163.46`, update VPS `.env.production`:
+
+```bash
+cd /root/awaken-ant
+sed -i 's/^APP_DOMAIN=.*/APP_DOMAIN=YOUR_DOMAIN/' .env.production
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=100 caddy
+```
+
+Caddy will request and renew HTTPS certificates automatically when ports `80` and `443` are reachable.
 
 ## 2. Server Setup
 
@@ -187,7 +218,8 @@ The deployment does not require ESP32 to call the VPS on day one.
 After HTTPS is stable, update firmware:
 
 - `API_URL = "https://YOUR_DOMAIN/api/nfc/scan"`
-- Use `WiFiClientSecure` with `setInsecure()` for demo speed, or configure a root CA for stricter TLS.
+- The firmware supports HTTPS with `WiFiClientSecure.setInsecure()` for demo speed, or a root CA for stricter TLS.
+- `API_KEY` must match `NFC_API_KEY` in VPS `.env.production`.
 - Keep the local/web fallback ready for defense day.
 
 ## 8. Rollback

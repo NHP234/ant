@@ -196,3 +196,21 @@ Endpoint này nhận request trực tiếp từ ESP32 qua Wi-Fi.
   - Giá thành rẻ hơn đáng kể.
   - ESP32 hoạt động độc lập qua mạng Wi-Fi, không cần cắm dây trực tiếp vào máy tính thủ thư.
   - Mang tính chất hệ thống phân tán (IoT Node -> API Gateway) chuẩn mực hơn so với chạy script Python cục bộ.
+
+## Firmware HTTPS Config For VPS Demo
+
+The firmware in `nfc-firmware/src/main.cpp` supports both local HTTP and deployed HTTPS URLs.
+
+Local LAN testing:
+
+```cpp
+constexpr char API_URL[] = "http://YOUR_COMPUTER_LAN_IP:8080/api/nfc/scan";
+```
+
+DigitalOcean/domain deployment:
+
+```cpp
+constexpr char API_URL[] = "https://YOUR_DOMAIN/api/nfc/scan";
+```
+
+For the HTTPS demo path, the ESP32 uses `WiFiClientSecure.setInsecure()` so it can call the Caddy HTTPS endpoint without bundling a root CA certificate. This is acceptable for defense/demo convenience. For production-grade firmware, replace it with `secureClient.setCACert(...)`.
