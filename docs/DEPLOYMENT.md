@@ -27,8 +27,8 @@ Domain:
 Current deployed Droplet:
 
 - Public IPv4: `209.97.163.46`
-- Current temporary mode: `APP_DOMAIN=:80`, which serves the app over plain HTTP by IP.
-- Final HTTPS mode: set `APP_DOMAIN` to the real domain, then restart Caddy/full Compose stack.
+- Production domain: `awakenant.app`
+- Current mode: `APP_DOMAIN=awakenant.app`; Caddy serves HTTPS and redirects HTTP to HTTPS.
 
 Namecheap DNS quick setup:
 
@@ -44,7 +44,7 @@ Namecheap DNS quick setup:
 nslookup YOUR_DOMAIN
 ```
 
-After DNS resolves to `209.97.163.46`, update VPS `.env.production`:
+After DNS resolves to `209.97.163.46`, update VPS `.env.production` if the domain changes:
 
 ```bash
 cd /root/awaken-ant
