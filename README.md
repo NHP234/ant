@@ -1,5 +1,7 @@
 # Hướng dẫn Cài đặt & Vận hành Hệ thống Quản lý Thư viện Thông minh (Awaken Ant)
 
+**Mô tả đề tài:** Hệ thống quản lý mượn trả sách thư viện thông minh tích hợp nhận diện NFC phần cứng qua trạm Kiosk tự phục vụ, kết hợp chatbot hỏi đáp và gợi ý sách theo ngữ cảnh dựa trên mô hình RAG (Retrieval-Augmented Generation).
+
 Hệ thống tích hợp đầy đủ các dịch vụ: **Backend Spring Boot 4.0.3**, **Frontend Vite/React**, **RAG AI Chatbot (FastAPI + ChromaDB)**, và **Đầu đọc NFC phần cứng (ESP32 + RC522)**.
 
 Tài liệu này hướng dẫn chi tiết cách cài đặt, cấu hình và khởi chạy toàn bộ hệ thống trên cả môi trường cục bộ (Local) và máy chủ sản xuất (Production VPS).
