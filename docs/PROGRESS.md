@@ -10,8 +10,8 @@
 | Tháng 1: Backend nền tảng | ✅ Done | Tuần 1-4 |
 | Tháng 2: Backend nâng cao + FE | ✅ Done | Tuần 5-8 |
 | Tháng 3: Frontend + RAG | ✅ Done | Tuần 9-12 |
-| Tháng 4: NFC + Hoàn thiện | ⬜ TODO | Tuần 13-16 |
-| Tháng 5: Polish + Báo cáo | ⬜ TODO | Tuần 17-20 |
+| Tháng 4: NFC + Hoàn thiện | ✅ Done | Tuần 13-16 |
+| Tháng 5: Polish + Báo cáo | ✅ Done | Tuần 17-20 |
 
 ---
 
@@ -335,3 +335,24 @@
 | 2026-06-29 | Prepared final domain/HTTPS deployment steps: documented Namecheap DNS records and current VPS `APP_DOMAIN=:80` temporary mode, updated NFC firmware to support deployed HTTPS API calls through `WiFiClientSecure.setInsecure()`, and refreshed NFC config examples for `https://YOUR_DOMAIN/api/nfc/scan`. |
 | 2026-06-29 | Completed production domain switch to `awakenant.app`: Name.com DNS A record points to DigitalOcean VPS `209.97.163.46`, Caddy obtained a Let's Encrypt certificate, HTTP redirects to HTTPS, and smoke checks for frontend plus `/api/books` pass over HTTPS. |
 | 2026-06-28 | Bổ sung tính năng tìm kiếm (search) sinh viên theo Tên/MSSV/Username cho các trang quản trị Quản lý mượn trả và Quản lý đặt trước; tối ưu truy vấn Database thông qua quan hệ thực thể JPA; chạy build/test backend & frontend thành công và Docker stack deploy ổn định. |
+
+---
+
+## Final Submission Checklist - 2026-06-29
+
+- Done: Source code has been committed and pushed to GitHub on `main`.
+- Done: Backend Spring Boot covers the core workflows: auth/roles, books, copies, categories, users, holds, borrows/returns, multi-book borrow slips, notifications, audit logs, dashboard, and NFC.
+- Done: Frontend React covers the three role workspaces: STUDENT, LIBRARIAN, ADMIN, with staff catalog read-only and student-only personal workflows guarded.
+- Done: RAG service uses DeepSeek, PostgreSQL FTS, ChromaDB/BGE-M3 semantic search, RRF merging, incremental book sync, contextual query rewrite, and source-book consistency guard.
+- Done: NFC firmware keeps local secrets in `secrets.h`, supports HTTPS production calls to `https://awakenant.app/api/nfc/scan`, and the ESP32/RC522 wiring is documented in `docs/NFC.md`.
+- Done: Test documentation is summarized in `docs/test/TEST_CASE_SUMMARY.md`, covering backend service/controller/integration tests, frontend Playwright E2E specs, and RAG pytest suites.
+- Done: Demo seed script creates demo librarians, students, and active holds through real REST APIs, idempotently for local and VPS environments.
+- Done: Production deployment runs on DigitalOcean VPS at `209.97.163.46`; domain `awakenant.app` points to the VPS; Caddy serves HTTPS and redirects HTTP to HTTPS.
+- Done: PostgreSQL was restored from local to VPS; ChromaDB uses the pre-ingested local snapshot, avoiding full ingest on the VPS.
+- Done: Main documentation has been updated: `API_SPEC.md`, `BACKEND.md`, `FRONTEND.md`, `DATABASE.md`, `NFC.md`, `RAG_SERVICE.md`, `DEPLOYMENT.md`, `ISSUES.md`, and `docs/test/TEST_CASE_SUMMARY.md`.
+
+### Final Notes
+
+- Production admin account: `admin_prod`; password is stored in VPS `.env.production` and persisted in the database as a BCrypt hash.
+- Real NFC demo still requires flashing ESP32 with local `nfc-firmware/include/secrets.h` containing Wi-Fi credentials, `API_URL=https://awakenant.app/api/nfc/scan`, and the VPS `NFC_API_KEY`.
+- Chatbot/RAG is ready for demo, but semantic search quality still depends on book descriptions and query clarity; note this as a limitation and future improvement in the thesis.
