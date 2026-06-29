@@ -9,6 +9,8 @@ import org.mapstruct.Mapping;
 public interface BookCopyMapper {
 
     @Mapping(source = "book.id", target = "bookId")
+    @Mapping(source = "book.title", target = "title")
+    @Mapping(source = "book.coverImageUrl", target = "coverImageUrl")
     @Mapping(target = "status", expression = "java(bookCopy.getStatus().name())")
     BookCopyResponse toResponse(BookCopy bookCopy);
 }

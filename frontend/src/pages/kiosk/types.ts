@@ -26,6 +26,7 @@ export interface BookCopyData {
   nfcTagUid: string
   status: string
   title?: string
+  coverImageUrl?: string
   conditionNote?: string
 }
 

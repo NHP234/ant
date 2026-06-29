@@ -17,5 +17,7 @@ public class BookCopyResponse {
     private String nfcTagUid;
     private String status;
     private String conditionNote;
+    private String title;
+    private String coverImageUrl;
     private LocalDateTime createdAt;
 }

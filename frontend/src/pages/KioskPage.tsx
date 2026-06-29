@@ -10,6 +10,7 @@ import {
   Library, User as UserIcon, BookOpen, ArrowRightLeft, CreditCard,
 } from 'lucide-react'
 import { getErrorDescription } from '@/lib/errorMessages'
+import BookCover from '@/components/shared/BookCover'
 
 import type { KioskState, KioskUser, BookCopyData, NfcScanEvent, KioskToast } from './kiosk/types'
 import { getCopyStatusLabel } from './kiosk/types'
@@ -310,12 +311,19 @@ function ScanningBorrowView({
                   key={copy.id}
                   className={`p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between hover:border-[var(--kiosk-text-subtle)] transition-colors`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className={`w-8 h-8 rounded-lg ${k.surfaceAlt} border ${k.border} ${k.textSubtle} flex items-center justify-center font-bold text-sm`}>
+                  <div className="flex items-center gap-4 min-w-0">
+                    <span className={`w-8 h-8 rounded-lg ${k.surfaceAlt} border ${k.border} ${k.textSubtle} flex items-center justify-center font-bold text-sm shrink-0`}>
                       {index + 1}
                     </span>
-                    <div>
-                      <h4 className="font-bold">{copy.title || `Sách #${copy.copyNumber}`}</h4>
+                    <div className="w-12 aspect-[2/3] rounded overflow-hidden bg-muted border border-slate-200 shrink-0 shadow-sm">
+                      <BookCover
+                        src={copy.coverImageUrl}
+                        title={copy.title || ''}
+                        fallbackClassName="text-[10px]"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-bold leading-tight truncate">{copy.title || `Sách #${copy.copyNumber}`}</h4>
                       <p className={`text-xs ${k.textMuted}`}>Bản sao #{copy.copyNumber}</p>
                     </div>
                   </div>
@@ -324,7 +332,7 @@ function ScanningBorrowView({
                     size="icon"
                     aria-label="Bỏ sách khỏi danh sách"
                     onClick={() => { onRemoveCopy(copy.id); playBeep('warn') }}
-                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 shrink-0"
                   >
                     <X className="w-5 h-5" />
                   </Button>
