@@ -52,6 +52,18 @@ void setup() {
 }
 
 void loop() {
+  // Tự động kết nối lại nếu mất kết nối Wi-Fi
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.print("Wi-Fi connection lost. Reconnecting");
+    WiFi.disconnect();
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println("\nWi-Fi reconnected. IP: " + WiFi.localIP().toString());
+  }
+
   if (!rfid.PICC_IsNewCardPresent()) {
     return;
   }
