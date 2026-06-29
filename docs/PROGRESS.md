@@ -335,6 +335,7 @@
 | 2026-06-29 | Prepared final domain/HTTPS deployment steps: documented Namecheap DNS records and current VPS `APP_DOMAIN=:80` temporary mode, updated NFC firmware to support deployed HTTPS API calls through `WiFiClientSecure.setInsecure()`, and refreshed NFC config examples for `https://YOUR_DOMAIN/api/nfc/scan`. |
 | 2026-06-29 | Completed production domain switch to `awakenant.app`: Name.com DNS A record points to DigitalOcean VPS `209.97.163.46`, Caddy obtained a Let's Encrypt certificate, HTTP redirects to HTTPS, and smoke checks for frontend plus `/api/books` pass over HTTPS. |
 | 2026-06-28 | Bổ sung tính năng tìm kiếm (search) sinh viên theo Tên/MSSV/Username cho các trang quản trị Quản lý mượn trả và Quản lý đặt trước; tối ưu truy vấn Database thông qua quan hệ thực thể JPA; chạy build/test backend & frontend thành công và Docker stack deploy ổn định. |
+| 2026-06-29 | Sửa lỗi Kiosk không hiển thị ảnh bìa và tên sách khi quét: Bổ sung trường `title` và `coverImageUrl` vào `BookCopyResponse` và map tự động qua MapStruct ở backend; cập nhật kiểu `BookCopyData` và nhúng component `<BookCover />` ở frontend; deploy thành công bản vá lên cả local và production VPS. |
 
 ---
 
