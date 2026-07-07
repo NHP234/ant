@@ -17,7 +17,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     Page<Book> findByTitleContainingIgnoreCase(String title, Pageable pageable);
 
-    @Query(value = "SELECT * FROM books WHERE search_vector @@ to_tsquery('vietnamese', :query)",
+    @Query(value = "SELECT * FROM books WHERE search_vector @@ to_tsquery('vietnamese', :query) " +
+                   "ORDER BY ts_rank_cd(search_vector, to_tsquery('vietnamese', :query)) DESC",
             countQuery = "SELECT count(*) FROM books WHERE search_vector @@ to_tsquery('vietnamese', :query)",
             nativeQuery = true)
     Page<Book> fullTextSearch(@Param("query") String query, Pageable pageable);
