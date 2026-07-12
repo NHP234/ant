@@ -402,6 +402,7 @@
 | 2026-06-27 | Nâng cấp xử lý ngữ cảnh trò chuyện (Chat Context) bằng LLM Query Rewrite (RAG Service) sử dụng DeepSeek v4, loại bỏ hoàn toàn các bộ lọc Regex/Heuristics phức tạp cũ; cập nhật unit tests đạt 100% thành công (39/39 tests passed). |
 | 2026-06-28 | Sửa lỗi sắp xếp Carousel "Mới bổ sung" trên trang Khám phá: Cập nhật API `bookApi.getAll` và `BookCatalogPage.tsx` truyền tham số `sort=id,desc` xuống backend để hiển thị chính xác các sách mới được thêm gần nhất. |
 | 2026-06-28 | Bổ sung tính năng tìm kiếm (search) sinh viên theo Tên/MSSV/Username cho các trang quản trị Quản lý mượn trả và Quản lý đặt trước; tối ưu truy vấn Database thông qua quan hệ thực thể JPA; chạy build/test backend & frontend thành công và Docker stack deploy ổn định. |
+| 2026-07-12 | Rà soát và chỉnh sửa toàn bộ câu từ, nhãn (labels), thông báo (toasts) kém chuyên nghiệp/thiên về kỹ thuật trên Frontend thành các cụm từ tiếng Việt bản địa, thân thiện với nghiệp vụ thư viện (loại bỏ "giao dịch", "backend", "luồng NFC", "UID", "tag"); deploy thành công lên môi trường DigitalOcean VPS. |
 ---
 
 ## Final Submission Checklist - 2026-06-29
