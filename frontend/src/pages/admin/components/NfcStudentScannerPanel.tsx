@@ -63,13 +63,13 @@ export default function NfcStudentScannerPanel({
 
           {status === 'SCANNED' && (
             <p className="break-all text-sm">
-              UID vừa quét: <span className="font-mono font-semibold">{scannedUid}</span>
+              Mã thẻ vừa quét: <span className="font-mono font-semibold">{scannedUid}</span>
             </p>
           )}
 
           {status === 'ERROR' && (
             <p className="text-sm text-destructive">
-              Mất kết nối với luồng NFC. Kiểm tra backend và thử kết nối lại.
+              Mất kết nối với dịch vụ đầu đọc thẻ NFC. Vui lòng kết nối lại.
             </p>
           )}
         </div>

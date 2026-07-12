@@ -187,19 +187,19 @@ export default function CopiesDialog({ open, onOpenChange, bookId }: CopiesDialo
                   {scannerStatus === 'WAITING' && (
                     <p className="flex items-center gap-2 text-sm text-muted-foreground">
                       <ScanLine className="h-4 w-4" />
-                      Đang chờ quét một tag chưa đăng ký.
+                      Đang chờ quét một nhãn NFC chưa đăng ký.
                     </p>
                   )}
 
                   {scannerStatus === 'SCANNED' && (
                     <p className="break-all text-sm">
-                      UID vừa quét: <span className="font-mono font-semibold">{scannedUid}</span>
+                      Mã nhãn vừa quét: <span className="font-mono font-semibold">{scannedUid}</span>
                     </p>
                   )}
 
                   {scannerStatus === 'ERROR' && (
                     <p className="text-sm text-destructive">
-                      Mất kết nối với luồng NFC. Hãy thử kết nối lại.
+                      Mất kết nối với đầu đọc NFC. Hãy thử kết nối lại.
                     </p>
                   )}
                 </div>
@@ -269,7 +269,7 @@ export default function CopiesDialog({ open, onOpenChange, bookId }: CopiesDialo
               <TableRow>
                 <TableHead>#</TableHead>
                 <TableHead>Trạng thái</TableHead>
-                <TableHead>NFC Tag</TableHead>
+                <TableHead>Mã nhãn NFC</TableHead>
                 <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -302,7 +302,7 @@ export default function CopiesDialog({ open, onOpenChange, bookId }: CopiesDialo
                           data-testid={`assign-nfc-copy-${copy.id}`}
                         >
                           <ScanLine className="h-4 w-4" />
-                          {copy.nfcTagUid ? 'Đổi tag' : 'Gán tag'}
+                          {copy.nfcTagUid ? 'Đổi nhãn' : 'Gán nhãn'}
                         </Button>
                         <Button
                           variant="ghost"

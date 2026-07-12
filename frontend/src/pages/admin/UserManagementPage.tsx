@@ -71,6 +71,12 @@ export default function UserManagementPage() {
     STUDENT: 'secondary',
   }
 
+  const roleLabels: Record<string, string> = {
+    ADMIN: 'Quản trị viên',
+    LIBRARIAN: 'Thủ thư',
+    STUDENT: 'Sinh viên',
+  }
+
   const isHoldBanActive = (holdBanUntil: string | null) =>
     Boolean(holdBanUntil && new Date(holdBanUntil).getTime() > renderedAt)
 
@@ -136,7 +142,7 @@ export default function UserManagementPage() {
                   >
                     <option value="STUDENT">Sinh viên</option>
                     <option value="LIBRARIAN">Thủ thư</option>
-                    <option value="ADMIN">Admin</option>
+                    <option value="ADMIN">Quản trị viên</option>
                   </select>
                 </div>
                 <Button type="submit" className="w-full" disabled={createMutation.isPending}>
@@ -176,11 +182,11 @@ export default function UserManagementPage() {
                     <TableCell>{user.username}</TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">{user.email}</TableCell>
                     <TableCell>
-                      <Badge variant={roleColors[user.role] ?? 'secondary'}>{user.role}</Badge>
+                      <Badge variant={roleColors[user.role] ?? 'secondary'}>{roleLabels[user.role] || user.role}</Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={user.isActive ? 'default' : 'secondary'}>
-                        {user.isActive ? 'Active' : 'Inactive'}
+                        {user.isActive ? 'Đang hoạt động' : 'Tạm khóa'}
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">

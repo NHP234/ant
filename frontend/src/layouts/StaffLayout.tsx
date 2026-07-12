@@ -196,7 +196,7 @@ export default function StaffLayout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 rounded-xl">
                 <DropdownMenuItem disabled className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {user?.role}
+                  {user?.role === 'ADMIN' ? 'Quản trị viên' : user?.role === 'LIBRARIAN' ? 'Thủ thư' : user?.role}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate(profilePath)} className="cursor-pointer">

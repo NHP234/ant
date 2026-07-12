@@ -129,7 +129,7 @@ export default function StudentLayout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 rounded-xl">
                 <DropdownMenuItem disabled className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                  {user?.role}
+                  Sinh viên
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">

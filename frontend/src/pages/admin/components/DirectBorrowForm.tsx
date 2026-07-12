@@ -382,7 +382,7 @@ export default function DirectBorrowForm() {
                           <span className="line-clamp-1 text-xs text-muted-foreground">{book.author}</span>
                         </span>
                         <Badge variant={book.availableCopies > 0 ? 'default' : 'destructive'} className="shrink-0">
-                          {book.availableCopies} có sẵn
+                          Còn {book.availableCopies} bản
                         </Badge>
                       </button>
                     ))}

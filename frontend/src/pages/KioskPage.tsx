@@ -366,7 +366,7 @@ function ScanningBorrowView({
               onClick={onCancel}
               className={`w-full ${k.border} hover:${k.surfaceAlt} ${k.textMuted}`}
             >
-              Hủy phiên giao dịch
+              Hủy lượt mượn
             </Button>
           </div>
         </div>
@@ -496,7 +496,7 @@ function ScanningReturnView({
               onClick={onCancel}
               className={`w-full ${k.border} hover:${k.surfaceAlt} ${k.textMuted}`}
             >
-              Hủy phiên giao dịch
+              Hủy lượt trả
             </Button>
           </div>
         </div>
@@ -506,12 +506,14 @@ function ScanningReturnView({
 }
 
 /** STATE: Processing spinner */
-function ProcessingView() {
+function ProcessingView({ mode }: { mode: 'BORROW' | 'RETURN' | null }) {
   return (
     <div className="text-center space-y-6 py-12 animate-in fade-in duration-300">
       <RefreshCw className={`w-16 h-16 ${k.textSubtle} animate-spin mx-auto`} />
       <div className="space-y-2">
-        <h2 className="text-2xl font-bold">Đang xử lý giao dịch...</h2>
+        <h2 className="text-2xl font-bold">
+          Đang xử lý {mode === 'RETURN' ? 'trả sách' : 'mượn sách'}...
+        </h2>
         <p className={`${k.textMuted} text-sm font-medium`}>Vui lòng chờ trong giây lát.</p>
       </div>
     </div>
@@ -519,16 +521,18 @@ function ProcessingView() {
 }
 
 /** STATE: Success */
-function SuccessView() {
+function SuccessView({ mode }: { mode: 'BORROW' | 'RETURN' | null }) {
   return (
     <div className="text-center space-y-6 py-12 max-w-md animate-in zoom-in duration-500">
       <div className={`mx-auto w-24 h-24 ${k.successBgStrong} border ${k.successBorderStrong} rounded-full flex items-center justify-center ${k.successText} shadow-md`}>
         <Check className="w-14 h-14" />
       </div>
       <div className="space-y-3">
-        <h2 className={`text-3xl font-extrabold ${k.successText}`}>Giao dịch thành công!</h2>
+        <h2 className={`text-3xl font-extrabold ${k.successText}`}>
+          {mode === 'RETURN' ? 'Trả sách' : 'Mượn sách'} thành công!
+        </h2>
         <p className="text-lg text-slate-600 font-medium leading-relaxed">
-          Thông báo xác nhận và chi tiết hạn trả đã được gửi vào tài khoản của bạn.
+          Thông báo xác nhận và chi tiết hạn trả đã được cập nhật vào tài khoản của bạn.
         </p>
       </div>
       <p className="text-xs text-slate-400 font-semibold pt-4">Màn hình sẽ tự động quay về sau vài giây...</p>
@@ -537,14 +541,16 @@ function SuccessView() {
 }
 
 /** STATE: Error */
-function ErrorView({ message, onReset }: { message: string; onReset: () => void }) {
+function ErrorView({ message, onReset, mode }: { message: string; onReset: () => void; mode: 'BORROW' | 'RETURN' | null }) {
   return (
     <div className="text-center space-y-6 py-12 max-w-md animate-in zoom-in duration-500">
       <div className={`mx-auto w-24 h-24 ${k.errorBg} border ${k.errorBorder} rounded-full flex items-center justify-center ${k.errorText} shadow-md`}>
         <ShieldAlert className="w-14 h-14" />
       </div>
       <div className="space-y-3">
-        <h2 className={`text-3xl font-extrabold ${k.errorText}`}>Giao dịch thất bại</h2>
+        <h2 className={`text-3xl font-extrabold ${k.errorText}`}>
+          {mode === 'RETURN' ? 'Trả sách' : 'Mượn sách'} thất bại
+        </h2>
         <p className="text-lg text-rose-700 font-medium leading-relaxed">
           {message || 'Đã có lỗi xảy ra. Vui lòng thử lại hoặc liên hệ thủ thư.'}
         </p>
@@ -581,6 +587,7 @@ export default function KioskPage() {
   const [toastMessage, setToastMessage] = useState<KioskToast | null>(null)
   const [transactionError, setTransactionError] = useState('')
   const [countdown, setCountdown] = useState(30)
+  const [activeMode, setActiveMode] = useState<'BORROW' | 'RETURN' | null>(null)
 
   const timeoutRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -618,6 +625,7 @@ export default function KioskPage() {
     setScannedReturnIds([])
     setActiveUserBorrows([])
     setTransactionError('')
+    setActiveMode(null)
   }
 
   // ─── NFC scan event handler ───
@@ -650,7 +658,7 @@ export default function KioskPage() {
         if (u.id === currentUser?.id) {
           showToast('Thẻ sinh viên đã được nhận dạng.', 'warning')
         } else {
-          showToast('Đang có phiên giao dịch khác, không thể quẹt thẻ mới!', 'error')
+          showToast('Hệ thống đang bận xử lý lượt mượn/trả khác, vui lòng chờ!', 'error')
         }
       } else if (type === 'BOOK_COPY') {
         const copy = data as BookCopyData
@@ -701,11 +709,17 @@ export default function KioskPage() {
   const { sseStatus } = useKioskSSE(!!isActivated, handleNfcScanEvent)
 
   // ─── Mode selection handlers ───
-  const handleSelectBorrow = () => { setCountdown(30); setKioskState('SCANNING_BORROW'); playBeep('success') }
+  const handleSelectBorrow = () => {
+    setCountdown(30)
+    setActiveMode('BORROW')
+    setKioskState('SCANNING_BORROW')
+    playBeep('success')
+  }
 
   const handleSelectReturn = async () => {
     if (!currentUser) return
     setCountdown(30)
+    setActiveMode('RETURN')
     setKioskState('PROCESSING')
     playBeep('success')
     try {
@@ -760,7 +774,7 @@ export default function KioskPage() {
   // ─── Session timeout countdown ───
   const handleSessionTimeout = useEffectEvent(() => {
     handleResetKiosk()
-    showToast('Phiên giao dịch đã kết thúc do hết thời gian chờ.', 'warning')
+    showToast('Lượt mượn/trả đã tự động kết thúc do hết thời gian chờ.', 'warning')
   })
 
   useEffect(() => {
@@ -905,9 +919,9 @@ export default function KioskPage() {
           />
         )}
 
-        {kioskState === 'PROCESSING' && <ProcessingView />}
-        {kioskState === 'SUCCESS' && <SuccessView />}
-        {kioskState === 'ERROR' && <ErrorView message={transactionError} onReset={handleResetKiosk} />}
+        {kioskState === 'PROCESSING' && <ProcessingView mode={activeMode} />}
+        {kioskState === 'SUCCESS' && <SuccessView mode={activeMode} />}
+        {kioskState === 'ERROR' && <ErrorView message={transactionError} onReset={handleResetKiosk} mode={activeMode} />}
       </main>
 
       <footer className={`flex justify-between items-center text-xs ${k.textSubtle} border-t ${k.border} pt-4 font-medium uppercase tracking-widest`}>

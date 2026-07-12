@@ -70,7 +70,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Dashboard"
+        title="Tổng quan vận hành"
         description={isAdmin ? 'Tổng quan hệ thống thư viện' : 'Tổng quan vận hành thư viện'}
       />
 
@@ -105,14 +105,14 @@ export default function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Holds đang chờ</CardTitle>
+            <CardTitle className="text-lg">Yêu cầu đặt trước đang chờ</CardTitle>
             <Button variant="ghost" size="sm" asChild>
               <Link to={`${staffBasePath}/holds`}>Xem tất cả</Link>
             </Button>
           </CardHeader>
           <CardContent>
             {pendingHolds.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">Không có holds đang chờ</p>
+              <p className="text-sm text-muted-foreground py-4 text-center">Không có yêu cầu đặt trước nào</p>
             ) : (
               <Table>
                 <TableHeader>

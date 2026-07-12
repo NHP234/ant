@@ -84,7 +84,7 @@ function BorrowSlipRow({ slip }: { slip: BorrowSlip }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Sách</TableHead>
-                    <TableHead>Bản số</TableHead>
+                    <TableHead>Mã bản sao</TableHead>
                     <TableHead>Mượn</TableHead>
                     <TableHead>Trạng thái</TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
