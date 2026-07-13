@@ -674,7 +674,7 @@ export default function KioskPage() {
           showToast('Mỗi phiếu chỉ được mượn tối đa 5 cuốn.', 'warning')
           return
         }
-        if (copy.status !== 'AVAILABLE') {
+        if (copy.status !== 'AVAILABLE' && copy.status !== 'RESERVED') {
           showToast(`Sách này hiện ${getCopyStatusLabel(copy.status).toLowerCase()}, không thể mượn.`, 'error')
           return
         }
